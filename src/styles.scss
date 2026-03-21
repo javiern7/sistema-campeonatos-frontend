@@ -1,0 +1,145 @@
+:root {
+  color-scheme: light;
+  --app-bg: #f3f5f8;
+  --surface: #ffffff;
+  --surface-alt: #eef2f6;
+  --border: #d7dde5;
+  --text: #17212b;
+  --text-soft: #5b6774;
+  --primary: #0a6e5a;
+  --danger: #c2410c;
+  --shadow: 0 12px 32px rgba(17, 24, 39, 0.08);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  background: linear-gradient(180deg, #f7f9fb 0%, #edf2f7 100%);
+  color: var(--text);
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+.app-page {
+  display: grid;
+  gap: 1rem;
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  box-shadow: var(--shadow);
+}
+
+.page-card {
+  padding: 1.25rem;
+}
+
+.filter-row,
+.form-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.actions-row {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: end;
+}
+
+.table-wrapper {
+  overflow: auto;
+}
+
+.muted {
+  color: var(--text-soft);
+}
+
+.w-100 {
+  width: 100%;
+}
+
+.summary-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.summary-card {
+  padding: 1rem 1.25rem;
+}
+
+.summary-label {
+  display: block;
+  color: var(--text-soft);
+  font-size: 0.9rem;
+}
+
+.summary-value {
+  display: block;
+  margin-top: 0.45rem;
+  font-size: 2rem;
+  font-weight: 700;
+}
+
+.placeholder-box {
+  padding: 2rem;
+  text-align: center;
+  border: 1px dashed var(--border);
+  border-radius: 16px;
+  background: var(--surface-alt);
+}
+
+.login-shell {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 1.5rem;
+}
+
+.login-card {
+  width: min(420px, 100%);
+  padding: 1.5rem;
+}
+
+.form-actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: end;
+}
+
+.chip-status {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.chip-status.active {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.chip-status.inactive {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.mat-mdc-form-field {
+  width: 100%;
+}
