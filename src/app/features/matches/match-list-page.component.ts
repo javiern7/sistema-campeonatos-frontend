@@ -1,21 +1,24 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatSelectModule } from '@angular/material/select';
 import { MatTableModule } from '@angular/material/table';
 
+import { AuthorizationService } from '../../core/auth/authorization.service';
 import { ErrorMapper } from '../../core/error/error.mapper';
 import { NotificationService } from '../../core/error/notification.service';
+import { CatalogLoaderService } from '../../core/pagination/catalog-loader.service';
 import { LoadingStateComponent } from '../../shared/loading-state/loading-state.component';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
-import { StageGroup, StageGroupPage } from '../stage-groups/stage-group.models';
+import { StageGroup } from '../stage-groups/stage-group.models';
 import { StageGroupsService } from '../stage-groups/stage-groups.service';
-import { TournamentStage, TournamentStagePage } from '../tournament-stages/tournament-stage.models';
+import { TournamentStage } from '../tournament-stages/tournament-stage.models';
 import { TournamentStagesService } from '../tournament-stages/tournament-stages.service';
-import { Tournament, TournamentPage } from '../tournaments/tournament.models';
+import { Tournament } from '../tournaments/tournament.models';
 import { TournamentsService } from '../tournaments/tournaments.service';
 import { MatchGame, MatchPage, MatchStatus } from './match.models';
 import { MatchesService } from './matches.service';
@@ -28,6 +31,7 @@ import { MatchesService } from './matches.service';
     RouterLink,
     MatButtonModule,
     MatFormFieldModule,
+    MatPaginatorModule,
     MatSelectModule,
     MatTableModule,
     LoadingStateComponent,
@@ -36,7 +40,9 @@ import { MatchesService } from './matches.service';
   template: `
     <section class="app-page">
       <app-page-header title="Matches" subtitle="Partidos conectados a /matches.">
-        <a mat-flat-button color="primary" routerLink="/matches/new">Nuevo partido</a>
+        @if (canManage()) {
+          <a mat-flat-button color="primary" routerLink="/matches/new">Nuevo partido</a>
+        }
       </app-page-header>
 
       <section class="card page-card app-page">
@@ -72,7 +78,7 @@ import { MatchesService } from './matches.service';
           </mat-form-field>
 
           <mat-form-field appearance="outline">
-            <mat-label>Status</mat-label>
+            <mat-label>Estado</mat-label>
             <mat-select formControlName="status">
               <mat-option value="">Todos</mat-option>
               @for (status of statuses; track status) {
@@ -90,6 +96,8 @@ import { MatchesService } from './matches.service';
         @if (loading()) {
           <app-loading-state />
         } @else {
+          <p class="muted">Total: {{ page()?.totalElements ?? 0 }}</p>
+
           <div class="table-wrapper">
             <table mat-table [dataSource]="rows()" class="w-100">
               <ng-container matColumnDef="id">
@@ -101,19 +109,32 @@ import { MatchesService } from './matches.service';
                 <td mat-cell *matCellDef="let row">{{ row.homeTournamentTeamId }} vs {{ row.awayTournamentTeamId }}</td>
               </ng-container>
               <ng-container matColumnDef="status">
-                <th mat-header-cell *matHeaderCellDef>Status</th>
+                <th mat-header-cell *matHeaderCellDef>Estado</th>
                 <td mat-cell *matCellDef="let row">{{ row.status }}</td>
               </ng-container>
               <ng-container matColumnDef="actions">
                 <th mat-header-cell *matHeaderCellDef>Acciones</th>
                 <td mat-cell *matCellDef="let row">
-                  <a mat-button [routerLink]="['/matches', row.id, 'edit']">Editar</a>
+                  @if (canManage()) {
+                    <a mat-button [routerLink]="['/matches', row.id, 'edit']">Editar</a>
+                  }
+                  @if (canDelete()) {
+                    <button mat-button type="button" color="warn" (click)="remove(row)">Eliminar</button>
+                  }
                 </td>
               </ng-container>
-              <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-              <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+              <tr mat-header-row *matHeaderRowDef="displayedColumns()"></tr>
+              <tr mat-row *matRowDef="let row; columns: displayedColumns()"></tr>
             </table>
           </div>
+
+          <mat-paginator
+            [length]="page()?.totalElements ?? 0"
+            [pageIndex]="pageIndex()"
+            [pageSize]="pageSize()"
+            [pageSizeOptions]="pageSizeOptions"
+            (page)="changePage($event)"
+          />
         }
       </section>
     </section>
@@ -126,16 +147,30 @@ export class MatchListPageComponent {
   private readonly tournamentsService = inject(TournamentsService);
   private readonly stagesService = inject(TournamentStagesService);
   private readonly groupsService = inject(StageGroupsService);
+  private readonly catalogLoader = inject(CatalogLoaderService);
   private readonly notifications = inject(NotificationService);
   private readonly errorMapper = inject(ErrorMapper);
+  private readonly authorization = inject(AuthorizationService);
 
   protected readonly loading = signal(true);
+  protected readonly page = signal<MatchPage | null>(null);
   protected readonly rows = signal<MatchGame[]>([]);
   protected readonly tournaments = signal<Tournament[]>([]);
   protected readonly stages = signal<TournamentStage[]>([]);
   protected readonly groups = signal<StageGroup[]>([]);
+  protected readonly pageIndex = signal(0);
+  protected readonly pageSize = signal(20);
+  protected readonly pageSizeOptions = [10, 20, 50];
   protected readonly statuses: MatchStatus[] = ['SCHEDULED', 'PLAYED', 'FORFEIT', 'CANCELLED'];
-  protected readonly displayedColumns = ['id', 'fixture', 'status', 'actions'];
+  protected readonly canManage = computed(() => this.authorization.canManage('matches'));
+  protected readonly canDelete = computed(() => this.authorization.canDelete('matches'));
+  protected readonly displayedColumns = computed(() => {
+    const columns = ['id', 'fixture', 'status'];
+    if (this.canManage() || this.canDelete()) {
+      columns.push('actions');
+    }
+    return columns;
+  });
   protected readonly filtersForm = this.fb.nonNullable.group({
     tournamentId: [''],
     stageId: [''],
@@ -144,15 +179,15 @@ export class MatchListPageComponent {
   });
 
   constructor() {
-    this.tournamentsService.list({ page: 0, size: 100 }).subscribe({
-      next: (page: TournamentPage) => this.tournaments.set(page.content)
-    });
-    this.stagesService.list({ page: 0, size: 100 }).subscribe({
-      next: (page: TournamentStagePage) => this.stages.set(page.content)
-    });
-    this.groupsService.list({ page: 0, size: 100 }).subscribe({
-      next: (page: StageGroupPage) => this.groups.set(page.content)
-    });
+    this.catalogLoader
+      .loadAll((page, size) => this.tournamentsService.list({ page, size }))
+      .subscribe({ next: (items) => this.tournaments.set(items) });
+    this.catalogLoader
+      .loadAll((page, size) => this.stagesService.list({ page, size }))
+      .subscribe({ next: (items) => this.stages.set(items) });
+    this.catalogLoader
+      .loadAll((page, size) => this.groupsService.list({ page, size }))
+      .subscribe({ next: (items) => this.groups.set(items) });
     this.load();
   }
 
@@ -166,18 +201,46 @@ export class MatchListPageComponent {
         stageId: filters.stageId ? Number(filters.stageId) : '',
         groupId: filters.groupId ? Number(filters.groupId) : '',
         status: filters.status,
-        page: 0,
-        size: 20
+        page: this.pageIndex(),
+        size: this.pageSize()
       })
       .pipe(finalize(() => this.loading.set(false)))
       .subscribe({
-        next: (page: MatchPage) => this.rows.set(page.content),
+        next: (page) => {
+          this.page.set(page);
+          this.rows.set(page.content);
+        },
         error: (error: unknown) => this.notifications.error(this.errorMapper.map(error).message)
       });
   }
 
   protected resetFilters(): void {
     this.filtersForm.setValue({ tournamentId: '', stageId: '', groupId: '', status: '' });
+    this.pageIndex.set(0);
     this.load();
+  }
+
+  protected changePage(event: PageEvent): void {
+    this.pageIndex.set(event.pageIndex);
+    this.pageSize.set(event.pageSize);
+    this.load();
+  }
+
+  protected remove(row: MatchGame): void {
+    if (!window.confirm(`Se eliminara el partido #${row.id}. Esta accion no se puede deshacer.`)) {
+      return;
+    }
+
+    this.loading.set(true);
+    this.matchesService
+      .delete(row.id)
+      .pipe(finalize(() => this.loading.set(false)))
+      .subscribe({
+        next: () => {
+          this.notifications.success('Partido eliminado correctamente');
+          this.load();
+        },
+        error: (error: unknown) => this.notifications.error(this.errorMapper.map(error).message)
+      });
   }
 }

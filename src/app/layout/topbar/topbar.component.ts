@@ -3,6 +3,7 @@ import { Router } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatToolbarModule } from '@angular/material/toolbar';
 
+import { AuthorizationService } from '../../core/auth/authorization.service';
 import { AuthService } from '../../core/auth/auth.service';
 import { AuthStore } from '../../core/auth/auth.store';
 
@@ -14,12 +15,15 @@ import { AuthStore } from '../../core/auth/auth.store';
     <mat-toolbar class="topbar">
       <div>
         <div class="topbar-title">Sistema Multideporte</div>
-        <div class="topbar-subtitle">Operación del MVP interno</div>
+        <div class="topbar-subtitle">Operacion interna con Basic Auth temporal</div>
       </div>
 
       <span class="topbar-spacer"></span>
 
-      <div class="topbar-user">{{ username() }}</div>
+      <div class="topbar-user">
+        <div>{{ username() }}</div>
+        <div class="topbar-roles">{{ roles().join(' · ') || 'AUTHENTICATED' }}</div>
+      </div>
       <button mat-stroked-button type="button" (click)="logout()">Salir</button>
     </mat-toolbar>
   `,
@@ -45,8 +49,17 @@ import { AuthStore } from '../../core/auth/auth.store';
       }
 
       .topbar-user {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
         margin-right: 0.75rem;
         color: var(--text-soft);
+      }
+
+      .topbar-roles {
+        font-size: 0.78rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
       }
     `
   ],
@@ -55,9 +68,11 @@ import { AuthStore } from '../../core/auth/auth.store';
 export class TopbarComponent {
   private readonly authService = inject(AuthService);
   private readonly authStore = inject(AuthStore);
+  private readonly authorization = inject(AuthorizationService);
   private readonly router = inject(Router);
 
   protected readonly username = computed(() => this.authStore.username());
+  protected readonly roles = computed(() => this.authorization.roleLabels());
 
   protected logout(): void {
     this.authService.logout();

@@ -23,4 +23,8 @@ export class StageGroupsService {
   update(id: number, payload: Omit<StageGroupFormValue, 'stageId'>): Observable<StageGroup> {
     return this.api.put<StageGroup, Omit<StageGroupFormValue, 'stageId'>>(`/stage-groups/${id}`, payload);
   }
+
+  delete(id: number): Observable<void> {
+    return this.api.delete(`/stage-groups/${id}`);
+  }
 }

@@ -31,4 +31,8 @@ export class TournamentStagesService {
       payload
     );
   }
+
+  delete(id: number): Observable<void> {
+    return this.api.delete(`/tournament-stages/${id}`);
+  }
 }

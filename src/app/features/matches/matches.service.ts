@@ -23,4 +23,8 @@ export class MatchesService {
   update(id: number, payload: Omit<MatchFormValue, 'tournamentId'>): Observable<MatchGame> {
     return this.api.put<MatchGame, Omit<MatchFormValue, 'tournamentId'>>(`/matches/${id}`, payload);
   }
+
+  delete(id: number): Observable<void> {
+    return this.api.delete(`/matches/${id}`);
+  }
 }
