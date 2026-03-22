@@ -11,8 +11,10 @@ export class AuthStore {
   readonly session = computed(() => this.sessionState());
   readonly isAuthenticated = computed(() => !!this.sessionState()?.basicToken);
   readonly username = computed(() => this.sessionState()?.username ?? '');
+  readonly fullName = computed(() => this.sessionState()?.fullName ?? this.sessionState()?.username ?? '');
   readonly basicToken = computed(() => this.sessionState()?.basicToken ?? '');
   readonly roles = computed(() => this.sessionState()?.roles ?? []);
+  readonly permissions = computed(() => this.sessionState()?.permissions ?? []);
   readonly authorizationSource = computed(() => this.sessionState()?.authorizationSource ?? null);
 
   setSession(session: AuthSession): void {

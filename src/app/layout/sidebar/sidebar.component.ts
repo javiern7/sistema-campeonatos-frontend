@@ -1,7 +1,8 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { MatListModule } from '@angular/material/list';
 
+import { AuthorizationService } from '../../core/auth/authorization.service';
 import { APP_NAV_ITEMS } from '../app-nav';
 
 @Component({
@@ -15,7 +16,7 @@ import { APP_NAV_ITEMS } from '../app-nav';
     </div>
 
     <mat-nav-list>
-      @for (item of navItems; track item.path) {
+      @for (item of navItems(); track item.path) {
         <a
           mat-list-item
           [routerLink]="item.path"
@@ -69,5 +70,9 @@ import { APP_NAV_ITEMS } from '../app-nav';
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class SidebarComponent {
-  protected readonly navItems = APP_NAV_ITEMS;
+  private readonly authorization = inject(AuthorizationService);
+
+  protected readonly navItems = computed(() =>
+    APP_NAV_ITEMS.filter((item) => !item.resource || this.authorization.canAccess(item.resource, 'read'))
+  );
 }

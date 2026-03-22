@@ -20,7 +20,7 @@ import { NotificationService } from '../../core/error/notification.service';
       <mat-card class="login-card card">
         <h1>Ingreso al MVP</h1>
         <p class="muted">
-          Usa credenciales validas del backend Spring Boot. El rol frontend se resuelve por contrato temporal.
+          Usa credenciales validas del backend Spring Boot. La autorizacion se resuelve desde backend y solo usa perfil temporal si el contrato real aun no esta disponible.
         </p>
 
         <form [formGroup]="form" (ngSubmit)="submit()" class="app-page">

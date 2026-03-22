@@ -15,14 +15,14 @@ import { AuthStore } from '../../core/auth/auth.store';
     <mat-toolbar class="topbar">
       <div>
         <div class="topbar-title">Sistema Multideporte</div>
-        <div class="topbar-subtitle">Operacion interna con Basic Auth temporal</div>
+        <div class="topbar-subtitle">{{ authorizationSubtitle() }}</div>
       </div>
 
       <span class="topbar-spacer"></span>
 
       <div class="topbar-user">
-        <div>{{ username() }}</div>
-        <div class="topbar-roles">{{ roles().join(' · ') || 'AUTHENTICATED' }}</div>
+        <div>{{ fullName() }}</div>
+        <div class="topbar-roles">{{ roles().join(' | ') || 'AUTHENTICATED' }}</div>
       </div>
       <button mat-stroked-button type="button" (click)="logout()">Salir</button>
     </mat-toolbar>
@@ -71,8 +71,13 @@ export class TopbarComponent {
   private readonly authorization = inject(AuthorizationService);
   private readonly router = inject(Router);
 
-  protected readonly username = computed(() => this.authStore.username());
+  protected readonly fullName = computed(() => this.authStore.fullName());
   protected readonly roles = computed(() => this.authorization.roleLabels());
+  protected readonly authorizationSubtitle = computed(() =>
+    this.authStore.authorizationSource() === 'backend-session'
+      ? 'Autorizacion derivada del backend'
+      : 'Autorizacion temporal de transicion'
+  );
 
   protected logout(): void {
     this.authService.logout();

@@ -1,11 +1,12 @@
 import { AuthContractConfig } from '../app/core/auth/auth.models';
 
 const authContract: AuthContractConfig = {
-  validationPath: '/sports',
-  validationQuery: { activeOnly: true },
+  sessionPath: '/auth/session',
+  allowTemporaryProfileFallback: true,
+  fallbackValidationPath: '/sports',
+  fallbackValidationQuery: { activeOnly: true },
   defaultRoles: ['AUTHENTICATED'],
-  roleProfiles: [],
-  authorizationSource: 'temporary-profile'
+  roleProfiles: []
 };
 
 export const environment = {
