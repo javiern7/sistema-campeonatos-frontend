@@ -31,4 +31,8 @@ export class TournamentTeamsService {
       payload
     );
   }
+
+  delete(id: number): Observable<void> {
+    return this.api.delete(`/tournament-teams/${id}`);
+  }
 }

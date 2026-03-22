@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 
 import { authGuard } from './core/auth/auth.guard';
+import { authorizationGuard } from './core/auth/authorization.guard';
 
 export const appRoutes: Routes = [
   {
@@ -36,12 +37,16 @@ export const appRoutes: Routes = [
       {
         path: 'teams/new',
         title: 'Create Team',
+        canActivate: [authorizationGuard],
+        data: { resource: 'teams', action: 'manage' },
         loadComponent: () =>
           import('./features/teams/team-form-page.component').then((m) => m.TeamFormPageComponent)
       },
       {
         path: 'teams/:id/edit',
         title: 'Edit Team',
+        canActivate: [authorizationGuard],
+        data: { resource: 'teams', action: 'manage' },
         loadComponent: () =>
           import('./features/teams/team-form-page.component').then((m) => m.TeamFormPageComponent)
       },
@@ -54,12 +59,16 @@ export const appRoutes: Routes = [
       {
         path: 'players/new',
         title: 'Create Player',
+        canActivate: [authorizationGuard],
+        data: { resource: 'players', action: 'manage' },
         loadComponent: () =>
           import('./features/players/player-form-page.component').then((m) => m.PlayerFormPageComponent)
       },
       {
         path: 'players/:id/edit',
         title: 'Edit Player',
+        canActivate: [authorizationGuard],
+        data: { resource: 'players', action: 'manage' },
         loadComponent: () =>
           import('./features/players/player-form-page.component').then((m) => m.PlayerFormPageComponent)
       },
@@ -74,6 +83,8 @@ export const appRoutes: Routes = [
       {
         path: 'tournaments/new',
         title: 'Create Tournament',
+        canActivate: [authorizationGuard],
+        data: { resource: 'tournaments', action: 'manage' },
         loadComponent: () =>
           import('./features/tournaments/tournament-form-page.component').then(
             (m) => m.TournamentFormPageComponent
@@ -82,6 +93,8 @@ export const appRoutes: Routes = [
       {
         path: 'tournaments/:id/edit',
         title: 'Edit Tournament',
+        canActivate: [authorizationGuard],
+        data: { resource: 'tournaments', action: 'manage' },
         loadComponent: () =>
           import('./features/tournaments/tournament-form-page.component').then(
             (m) => m.TournamentFormPageComponent
@@ -98,6 +111,8 @@ export const appRoutes: Routes = [
       {
         path: 'tournament-teams/new',
         title: 'Create Tournament Team',
+        canActivate: [authorizationGuard],
+        data: { resource: 'tournamentTeams', action: 'manage' },
         loadComponent: () =>
           import('./features/tournament-teams/tournament-team-form-page.component').then(
             (m) => m.TournamentTeamFormPageComponent
@@ -106,6 +121,8 @@ export const appRoutes: Routes = [
       {
         path: 'tournament-teams/:id/edit',
         title: 'Edit Tournament Team',
+        canActivate: [authorizationGuard],
+        data: { resource: 'tournamentTeams', action: 'manage' },
         loadComponent: () =>
           import('./features/tournament-teams/tournament-team-form-page.component').then(
             (m) => m.TournamentTeamFormPageComponent
@@ -122,6 +139,8 @@ export const appRoutes: Routes = [
       {
         path: 'rosters/new',
         title: 'Create Roster Entry',
+        canActivate: [authorizationGuard],
+        data: { resource: 'rosters', action: 'manage' },
         loadComponent: () =>
           import('./features/rosters/roster-form-page.component').then(
             (m) => m.RosterFormPageComponent
@@ -130,6 +149,8 @@ export const appRoutes: Routes = [
       {
         path: 'rosters/:id/edit',
         title: 'Edit Roster Entry',
+        canActivate: [authorizationGuard],
+        data: { resource: 'rosters', action: 'manage' },
         loadComponent: () =>
           import('./features/rosters/roster-form-page.component').then(
             (m) => m.RosterFormPageComponent
@@ -146,6 +167,8 @@ export const appRoutes: Routes = [
       {
         path: 'tournament-stages/new',
         title: 'Create Tournament Stage',
+        canActivate: [authorizationGuard],
+        data: { resource: 'tournamentStages', action: 'manage' },
         loadComponent: () =>
           import('./features/tournament-stages/tournament-stage-form-page.component').then(
             (m) => m.TournamentStageFormPageComponent
@@ -154,6 +177,8 @@ export const appRoutes: Routes = [
       {
         path: 'tournament-stages/:id/edit',
         title: 'Edit Tournament Stage',
+        canActivate: [authorizationGuard],
+        data: { resource: 'tournamentStages', action: 'manage' },
         loadComponent: () =>
           import('./features/tournament-stages/tournament-stage-form-page.component').then(
             (m) => m.TournamentStageFormPageComponent
@@ -170,6 +195,8 @@ export const appRoutes: Routes = [
       {
         path: 'stage-groups/new',
         title: 'Create Stage Group',
+        canActivate: [authorizationGuard],
+        data: { resource: 'stageGroups', action: 'manage' },
         loadComponent: () =>
           import('./features/stage-groups/stage-group-form-page.component').then(
             (m) => m.StageGroupFormPageComponent
@@ -178,6 +205,8 @@ export const appRoutes: Routes = [
       {
         path: 'stage-groups/:id/edit',
         title: 'Edit Stage Group',
+        canActivate: [authorizationGuard],
+        data: { resource: 'stageGroups', action: 'manage' },
         loadComponent: () =>
           import('./features/stage-groups/stage-group-form-page.component').then(
             (m) => m.StageGroupFormPageComponent
@@ -192,12 +221,16 @@ export const appRoutes: Routes = [
       {
         path: 'matches/new',
         title: 'Create Match',
+        canActivate: [authorizationGuard],
+        data: { resource: 'matches', action: 'manage' },
         loadComponent: () =>
           import('./features/matches/match-form-page.component').then((m) => m.MatchFormPageComponent)
       },
       {
         path: 'matches/:id/edit',
         title: 'Edit Match',
+        canActivate: [authorizationGuard],
+        data: { resource: 'matches', action: 'manage' },
         loadComponent: () =>
           import('./features/matches/match-form-page.component').then((m) => m.MatchFormPageComponent)
       },

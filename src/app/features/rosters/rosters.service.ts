@@ -26,4 +26,8 @@ export class RostersService {
       payload
     );
   }
+
+  delete(id: number): Observable<void> {
+    return this.api.delete(`/rosters/${id}`);
+  }
 }

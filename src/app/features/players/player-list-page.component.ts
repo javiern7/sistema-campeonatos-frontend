@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
@@ -6,8 +6,10 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
+import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatTableModule } from '@angular/material/table';
 
+import { AuthorizationService } from '../../core/auth/authorization.service';
 import { ErrorMapper } from '../../core/error/error.mapper';
 import { NotificationService } from '../../core/error/notification.service';
 import { LoadingStateComponent } from '../../shared/loading-state/loading-state.component';
@@ -25,23 +27,23 @@ import { PlayersService } from './players.service';
     MatCheckboxModule,
     MatFormFieldModule,
     MatInputModule,
+    MatPaginatorModule,
     MatTableModule,
     LoadingStateComponent,
     PageHeaderComponent
   ],
   template: `
     <section class="app-page">
-      <app-page-header
-        title="Players"
-        subtitle="Listado operativo conectado al endpoint /players con búsqueda y filtros mínimos."
-      >
-        <a mat-flat-button color="primary" routerLink="/players/new">Nuevo jugador</a>
+      <app-page-header title="Players" subtitle="Listado operativo conectado al endpoint /players con busqueda y filtros minimos.">
+        @if (canManage()) {
+          <a mat-flat-button color="primary" routerLink="/players/new">Nuevo jugador</a>
+        }
       </app-page-header>
 
       <section class="card page-card app-page">
         <form [formGroup]="filtersForm" class="filter-row">
           <mat-form-field appearance="outline">
-            <mat-label>Búsqueda</mat-label>
+            <mat-label>Busqueda</mat-label>
             <input matInput formControlName="search">
           </mat-form-field>
 
@@ -51,7 +53,7 @@ import { PlayersService } from './players.service';
           </mat-form-field>
 
           <mat-form-field appearance="outline">
-            <mat-label>Número documento</mat-label>
+            <mat-label>Numero documento</mat-label>
             <input matInput formControlName="documentNumber">
           </mat-form-field>
 
@@ -91,7 +93,7 @@ import { PlayersService } from './players.service';
                 <th mat-header-cell *matHeaderCellDef>Estado</th>
                 <td mat-cell *matCellDef="let player">
                   <span class="chip-status" [class.active]="player.active" [class.inactive]="!player.active">
-                    {{ player.active ? 'Active' : 'Inactive' }}
+                    {{ player.active ? 'Activo' : 'Inactivo' }}
                   </span>
                 </td>
               </ng-container>
@@ -99,14 +101,27 @@ import { PlayersService } from './players.service';
               <ng-container matColumnDef="actions">
                 <th mat-header-cell *matHeaderCellDef>Acciones</th>
                 <td mat-cell *matCellDef="let player">
-                  <a mat-button [routerLink]="['/players', player.id, 'edit']">Editar</a>
+                  @if (canManage()) {
+                    <a mat-button [routerLink]="['/players', player.id, 'edit']">Editar</a>
+                  }
+                  @if (canDelete()) {
+                    <button mat-button type="button" color="warn" (click)="remove(player)">Eliminar</button>
+                  }
                 </td>
               </ng-container>
 
-              <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-              <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+              <tr mat-header-row *matHeaderRowDef="displayedColumns()"></tr>
+              <tr mat-row *matRowDef="let row; columns: displayedColumns()"></tr>
             </table>
           </div>
+
+          <mat-paginator
+            [length]="page()?.totalElements ?? 0"
+            [pageIndex]="pageIndex()"
+            [pageSize]="pageSize()"
+            [pageSizeOptions]="pageSizeOptions"
+            (page)="changePage($event)"
+          />
         }
       </section>
     </section>
@@ -118,11 +133,23 @@ export class PlayerListPageComponent {
   private readonly playersService = inject(PlayersService);
   private readonly notifications = inject(NotificationService);
   private readonly errorMapper = inject(ErrorMapper);
+  private readonly authorization = inject(AuthorizationService);
 
   protected readonly loading = signal(true);
   protected readonly page = signal<PlayerPage | null>(null);
   protected readonly rows = signal<Player[]>([]);
-  protected readonly displayedColumns = ['id', 'name', 'document', 'status', 'actions'];
+  protected readonly pageIndex = signal(0);
+  protected readonly pageSize = signal(20);
+  protected readonly pageSizeOptions = [10, 20, 50];
+  protected readonly canManage = computed(() => this.authorization.canManage('players'));
+  protected readonly canDelete = computed(() => this.authorization.canDelete('players'));
+  protected readonly displayedColumns = computed(() => {
+    const columns = ['id', 'name', 'document', 'status'];
+    if (this.canManage() || this.canDelete()) {
+      columns.push('actions');
+    }
+    return columns;
+  });
 
   protected readonly filtersForm = this.fb.nonNullable.group({
     search: [''],
@@ -145,8 +172,8 @@ export class PlayerListPageComponent {
         documentType: filters.documentType,
         documentNumber: filters.documentNumber,
         active: filters.activeOnly ? true : '',
-        page: 0,
-        size: 20
+        page: this.pageIndex(),
+        size: this.pageSize()
       })
       .pipe(finalize(() => this.loading.set(false)))
       .subscribe({
@@ -165,6 +192,31 @@ export class PlayerListPageComponent {
       documentNumber: '',
       activeOnly: true
     });
+    this.pageIndex.set(0);
     this.load();
+  }
+
+  protected changePage(event: PageEvent): void {
+    this.pageIndex.set(event.pageIndex);
+    this.pageSize.set(event.pageSize);
+    this.load();
+  }
+
+  protected remove(player: Player): void {
+    if (!window.confirm(`Se eliminara el jugador "${player.firstName} ${player.lastName}". Esta accion no se puede deshacer.`)) {
+      return;
+    }
+
+    this.loading.set(true);
+    this.playersService
+      .delete(player.id)
+      .pipe(finalize(() => this.loading.set(false)))
+      .subscribe({
+        next: () => {
+          this.notifications.success('Jugador eliminado correctamente');
+          this.load();
+        },
+        error: (error: unknown) => this.notifications.error(this.errorMapper.map(error).message)
+      });
   }
 }

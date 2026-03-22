@@ -23,4 +23,8 @@ export class TournamentsService {
   update(id: number, payload: TournamentFormValue): Observable<Tournament> {
     return this.api.put<Tournament, TournamentFormValue>(`/tournaments/${id}`, payload);
   }
+
+  delete(id: number): Observable<void> {
+    return this.api.delete(`/tournaments/${id}`);
+  }
 }

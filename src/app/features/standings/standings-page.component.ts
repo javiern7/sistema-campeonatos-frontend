@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { finalize } from 'rxjs';
 import { MatButtonModule } from '@angular/material/button';
@@ -6,17 +6,19 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
 import { MatTableModule } from '@angular/material/table';
 
+import { AuthorizationService } from '../../core/auth/authorization.service';
 import { ErrorMapper } from '../../core/error/error.mapper';
 import { NotificationService } from '../../core/error/notification.service';
+import { CatalogLoaderService } from '../../core/pagination/catalog-loader.service';
 import { LoadingStateComponent } from '../../shared/loading-state/loading-state.component';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
-import { StageGroup, StageGroupPage } from '../stage-groups/stage-group.models';
+import { StageGroup } from '../stage-groups/stage-group.models';
 import { StageGroupsService } from '../stage-groups/stage-groups.service';
-import { TournamentStage, TournamentStagePage } from '../tournament-stages/tournament-stage.models';
+import { TournamentStage } from '../tournament-stages/tournament-stage.models';
 import { TournamentStagesService } from '../tournament-stages/tournament-stages.service';
-import { TournamentTeam, TournamentTeamPage } from '../tournament-teams/tournament-team.models';
+import { TournamentTeam } from '../tournament-teams/tournament-team.models';
 import { TournamentTeamsService } from '../tournament-teams/tournament-teams.service';
-import { Tournament, TournamentPage } from '../tournaments/tournament.models';
+import { Tournament } from '../tournaments/tournament.models';
 import { TournamentsService } from '../tournaments/tournaments.service';
 import { Standing, StandingPage, StandingRecalculationResponse } from './standings.models';
 import { StandingsService } from './standings.service';
@@ -36,9 +38,11 @@ import { StandingsService } from './standings.service';
   template: `
     <section class="app-page">
       <app-page-header title="Standings" subtitle="Tabla de posiciones y recalculo conectado a /standings.">
-        <button mat-flat-button color="primary" type="button" (click)="recalculate()" [disabled]="recalculating()">
-          {{ recalculating() ? 'Recalculando...' : 'Recalcular standings' }}
-        </button>
+        @if (canManage()) {
+          <button mat-flat-button color="primary" type="button" (click)="recalculate()" [disabled]="recalculating()">
+            {{ recalculating() ? 'Recalculando...' : 'Recalcular standings' }}
+          </button>
+        }
       </app-page-header>
 
       <section class="card page-card app-page">
@@ -135,8 +139,10 @@ export class StandingsPageComponent {
   private readonly stagesService = inject(TournamentStagesService);
   private readonly groupsService = inject(StageGroupsService);
   private readonly tournamentTeamsService = inject(TournamentTeamsService);
+  private readonly catalogLoader = inject(CatalogLoaderService);
   private readonly notifications = inject(NotificationService);
   private readonly errorMapper = inject(ErrorMapper);
+  private readonly authorization = inject(AuthorizationService);
 
   protected readonly loading = signal(false);
   protected readonly recalculating = signal(false);
@@ -147,6 +153,7 @@ export class StandingsPageComponent {
   protected readonly groups = signal<StageGroup[]>([]);
   protected readonly tournamentTeams = signal<TournamentTeam[]>([]);
   protected readonly displayedColumns = ['rank', 'team', 'played', 'points', 'diff'];
+  protected readonly canManage = computed(() => this.authorization.canManage('standings'));
 
   protected readonly filtersForm = this.fb.nonNullable.group({
     tournamentId: [''],
@@ -156,18 +163,18 @@ export class StandingsPageComponent {
   });
 
   constructor() {
-    this.tournamentsService.list({ page: 0, size: 100 }).subscribe({
-      next: (page: TournamentPage) => this.tournaments.set(page.content)
-    });
-    this.stagesService.list({ page: 0, size: 100 }).subscribe({
-      next: (page: TournamentStagePage) => this.stages.set(page.content)
-    });
-    this.groupsService.list({ page: 0, size: 100 }).subscribe({
-      next: (page: StageGroupPage) => this.groups.set(page.content)
-    });
-    this.tournamentTeamsService.list({ page: 0, size: 100 }).subscribe({
-      next: (page: TournamentTeamPage) => this.tournamentTeams.set(page.content)
-    });
+    this.catalogLoader
+      .loadAll((page, size) => this.tournamentsService.list({ page, size }))
+      .subscribe({ next: (items) => this.tournaments.set(items) });
+    this.catalogLoader
+      .loadAll((page, size) => this.stagesService.list({ page, size }))
+      .subscribe({ next: (items) => this.stages.set(items) });
+    this.catalogLoader
+      .loadAll((page, size) => this.groupsService.list({ page, size }))
+      .subscribe({ next: (items) => this.groups.set(items) });
+    this.catalogLoader
+      .loadAll((page, size) => this.tournamentTeamsService.list({ page, size }))
+      .subscribe({ next: (items) => this.tournamentTeams.set(items) });
   }
 
   protected load(): void {

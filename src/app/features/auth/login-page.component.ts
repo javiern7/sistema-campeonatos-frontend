@@ -19,7 +19,9 @@ import { NotificationService } from '../../core/error/notification.service';
     <div class="login-shell">
       <mat-card class="login-card card">
         <h1>Ingreso al MVP</h1>
-        <p class="muted">Usa las credenciales válidas del backend Spring Boot.</p>
+        <p class="muted">
+          Usa credenciales validas del backend Spring Boot. La autorizacion se resuelve desde backend y solo usa perfil temporal si el contrato real aun no esta disponible.
+        </p>
 
         <form [formGroup]="form" (ngSubmit)="submit()" class="app-page">
           <mat-form-field appearance="outline">
@@ -28,7 +30,7 @@ import { NotificationService } from '../../core/error/notification.service';
           </mat-form-field>
 
           <mat-form-field appearance="outline">
-            <mat-label>Contraseña</mat-label>
+            <mat-label>Contrasena</mat-label>
             <input matInput type="password" formControlName="password" autocomplete="current-password">
           </mat-form-field>
 
@@ -69,7 +71,7 @@ export class LoginPageComponent {
       .pipe(finalize(() => this.loading.set(false)))
       .subscribe({
         next: () => {
-          this.notifications.success('Sesión iniciada correctamente');
+          this.notifications.success('Sesion iniciada correctamente');
           void this.router.navigateByUrl('/dashboard');
         },
         error: (error: unknown) => {
