@@ -1,25 +1,67 @@
+##################################
+# Node / Angular
+##################################
 node_modules/
 dist/
-.angular/
-coverage/
+out-tsc/
+.tmp/
+.cache/
 
+##################################
+# Angular build / cache
+##################################
+.angular/
+.angular/cache/
+
+##################################
 # Logs
+##################################
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
+*.log
 
-# Editors and OS
+##################################
+# VS Code
+##################################
 .vscode/
 .idea/
+
+##################################
+# Sistema Operativo
+##################################
 .DS_Store
 Thumbs.db
 
-# Environment files
+##################################
+# Entornos / secretos
+##################################
 .env
 .env.*
 !.env.example
 
-# Angular cache and temp files
+##################################
+# Archivos temporales
+##################################
 tmp/
-out-tsc/
+temp/
+*.tmp
+*.swp
+
+##################################
+# Archivos de respaldo
+##################################
+*.bak
+*.old
+*.orig
+
+##################################
+# Tests / Coverage
+##################################
+coverage/
+
+##################################
+# Angular Universal (si luego usas SSR)
+##################################
+server/
