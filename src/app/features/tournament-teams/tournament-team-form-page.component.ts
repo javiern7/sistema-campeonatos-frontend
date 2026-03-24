@@ -9,11 +9,12 @@ import { MatSelectModule } from '@angular/material/select';
 
 import { ErrorMapper } from '../../core/error/error.mapper';
 import { NotificationService } from '../../core/error/notification.service';
+import { CatalogLoaderService } from '../../core/pagination/catalog-loader.service';
 import { LoadingStateComponent } from '../../shared/loading-state/loading-state.component';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
-import { Team, TeamPage } from '../teams/team.models';
+import { Team } from '../teams/team.models';
 import { TeamsService } from '../teams/teams.service';
-import { Tournament, TournamentPage } from '../tournaments/tournament.models';
+import { Tournament } from '../tournaments/tournament.models';
 import { TournamentsService } from '../tournaments/tournaments.service';
 import { TournamentTeamFormValue, TournamentTeamRegistrationStatus } from './tournament-team.models';
 import { TournamentTeamsService } from './tournament-teams.service';
@@ -34,7 +35,7 @@ import { TournamentTeamsService } from './tournament-teams.service';
   template: `
     <section class="app-page">
       <app-page-header
-        [title]="isEditMode() ? 'Editar inscripción' : 'Nueva inscripción'"
+        [title]="isEditMode() ? 'Editar inscripcion' : 'Nueva inscripcion'"
         subtitle="Vincula un equipo con un torneo."
       />
 
@@ -104,6 +105,7 @@ export class TournamentTeamFormPageComponent {
   private readonly tournamentsService = inject(TournamentsService);
   private readonly teamsService = inject(TeamsService);
   private readonly tournamentTeamsService = inject(TournamentTeamsService);
+  private readonly catalogLoader = inject(CatalogLoaderService);
   private readonly notifications = inject(NotificationService);
   private readonly errorMapper = inject(ErrorMapper);
 
@@ -124,20 +126,20 @@ export class TournamentTeamFormPageComponent {
   });
 
   constructor() {
-    this.tournamentsService.list({ page: 0, size: 100 }).subscribe({
-      next: (page: TournamentPage) => {
-        this.tournaments.set(page.content);
-        if (!this.isEditMode() && page.content.length > 0) {
-          this.form.patchValue({ tournamentId: page.content[0].id });
+    this.catalogLoader.loadAll((page, size) => this.tournamentsService.list({ page, size })).subscribe({
+      next: (items) => {
+        this.tournaments.set(items);
+        if (!this.isEditMode() && items.length > 0) {
+          this.form.patchValue({ tournamentId: items[0].id });
         }
       }
     });
 
-    this.teamsService.list({ page: 0, size: 100 }).subscribe({
-      next: (page: TeamPage) => {
-        this.teams.set(page.content);
-        if (!this.isEditMode() && page.content.length > 0) {
-          this.form.patchValue({ teamId: page.content[0].id });
+    this.catalogLoader.loadAll((page, size) => this.teamsService.list({ page, size })).subscribe({
+      next: (items) => {
+        this.teams.set(items);
+        if (!this.isEditMode() && items.length > 0) {
+          this.form.patchValue({ teamId: items[0].id });
         }
       }
     });
@@ -188,7 +190,7 @@ export class TournamentTeamFormPageComponent {
 
     request$.pipe(finalize(() => this.saving.set(false))).subscribe({
       next: () => {
-        this.notifications.success('Inscripción guardada correctamente');
+        this.notifications.success('Inscripcion guardada correctamente');
         void this.router.navigateByUrl('/tournament-teams');
       },
       error: (error: unknown) => this.notifications.error(this.errorMapper.map(error).message)

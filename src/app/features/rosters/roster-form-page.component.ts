@@ -10,11 +10,12 @@ import { MatSelectModule } from '@angular/material/select';
 
 import { ErrorMapper } from '../../core/error/error.mapper';
 import { NotificationService } from '../../core/error/notification.service';
+import { CatalogLoaderService } from '../../core/pagination/catalog-loader.service';
 import { LoadingStateComponent } from '../../shared/loading-state/loading-state.component';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
-import { Player, PlayerPage } from '../players/player.models';
+import { Player } from '../players/player.models';
 import { PlayersService } from '../players/players.service';
-import { TournamentTeam, TournamentTeamPage } from '../tournament-teams/tournament-team.models';
+import { TournamentTeam } from '../tournament-teams/tournament-team.models';
 import { TournamentTeamsService } from '../tournament-teams/tournament-teams.service';
 import { RosterFormValue, RosterStatus } from './roster.models';
 import { RostersService } from './rosters.service';
@@ -45,16 +46,16 @@ import { RostersService } from './rosters.service';
             <div class="form-grid">
               @if (!isEditMode()) {
                 <mat-form-field appearance="outline">
-                  <mat-label>Tournament Team</mat-label>
+                  <mat-label>Inscripcion</mat-label>
                   <mat-select formControlName="tournamentTeamId">
                     @for (item of tournamentTeams(); track item.id) {
-                      <mat-option [value]="item.id">#{{ item.id }} T{{ item.tournamentId }} / Team {{ item.teamId }}</mat-option>
+                      <mat-option [value]="item.id">{{ tournamentTeamLabel(item) }}</mat-option>
                     }
                   </mat-select>
                 </mat-form-field>
 
                 <mat-form-field appearance="outline">
-                  <mat-label>Player</mat-label>
+                  <mat-label>Jugador</mat-label>
                   <mat-select formControlName="playerId">
                     @for (item of players(); track item.id) {
                       <mat-option [value]="item.id">{{ item.firstName }} {{ item.lastName }}</mat-option>
@@ -64,12 +65,12 @@ import { RostersService } from './rosters.service';
               }
 
               <mat-form-field appearance="outline">
-                <mat-label>Número camiseta</mat-label>
+                <mat-label>Numero camiseta</mat-label>
                 <input matInput type="number" formControlName="jerseyNumber">
               </mat-form-field>
 
               <mat-form-field appearance="outline">
-                <mat-label>Posición</mat-label>
+                <mat-label>Posicion</mat-label>
                 <input matInput formControlName="positionName">
               </mat-form-field>
 
@@ -93,7 +94,7 @@ import { RostersService } from './rosters.service';
               </mat-form-field>
             </div>
 
-            <mat-checkbox formControlName="captain">Capitán</mat-checkbox>
+            <mat-checkbox formControlName="captain">Capitan</mat-checkbox>
 
             <div class="form-actions">
               <a mat-stroked-button routerLink="/rosters">Cancelar</a>
@@ -115,6 +116,7 @@ export class RosterFormPageComponent {
   private readonly playersService = inject(PlayersService);
   private readonly tournamentTeamsService = inject(TournamentTeamsService);
   private readonly rostersService = inject(RostersService);
+  private readonly catalogLoader = inject(CatalogLoaderService);
   private readonly notifications = inject(NotificationService);
   private readonly errorMapper = inject(ErrorMapper);
 
@@ -138,19 +140,20 @@ export class RosterFormPageComponent {
   });
 
   constructor() {
-    this.playersService.list({ page: 0, size: 100 }).subscribe({
-      next: (page: PlayerPage) => {
-        this.players.set(page.content);
-        if (!this.isEditMode() && page.content.length > 0) {
-          this.form.patchValue({ playerId: page.content[0].id });
+    this.catalogLoader.loadAll((page, size) => this.playersService.list({ page, size })).subscribe({
+      next: (items) => {
+        this.players.set(items);
+        if (!this.isEditMode() && items.length > 0) {
+          this.form.patchValue({ playerId: items[0].id });
         }
       }
     });
-    this.tournamentTeamsService.list({ page: 0, size: 100 }).subscribe({
-      next: (page: TournamentTeamPage) => {
-        this.tournamentTeams.set(page.content);
-        if (!this.isEditMode() && page.content.length > 0) {
-          this.form.patchValue({ tournamentTeamId: page.content[0].id });
+
+    this.catalogLoader.loadAll((page, size) => this.tournamentTeamsService.list({ page, size })).subscribe({
+      next: (items) => {
+        this.tournamentTeams.set(items);
+        if (!this.isEditMode() && items.length > 0) {
+          this.form.patchValue({ tournamentTeamId: items[0].id });
         }
       }
     });
@@ -215,5 +218,9 @@ export class RosterFormPageComponent {
       },
       error: (error: unknown) => this.notifications.error(this.errorMapper.map(error).message)
     });
+  }
+
+  protected tournamentTeamLabel(item: TournamentTeam): string {
+    return `#${item.id} - Torneo ${item.tournamentId} - Equipo ${item.teamId}`;
   }
 }

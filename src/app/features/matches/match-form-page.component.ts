@@ -1,4 +1,5 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
@@ -9,15 +10,16 @@ import { MatSelectModule } from '@angular/material/select';
 
 import { ErrorMapper } from '../../core/error/error.mapper';
 import { NotificationService } from '../../core/error/notification.service';
+import { CatalogLoaderService } from '../../core/pagination/catalog-loader.service';
 import { LoadingStateComponent } from '../../shared/loading-state/loading-state.component';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
-import { StageGroup, StageGroupPage } from '../stage-groups/stage-group.models';
+import { StageGroup } from '../stage-groups/stage-group.models';
 import { StageGroupsService } from '../stage-groups/stage-groups.service';
-import { TournamentStage, TournamentStagePage } from '../tournament-stages/tournament-stage.models';
+import { TournamentStage } from '../tournament-stages/tournament-stage.models';
 import { TournamentStagesService } from '../tournament-stages/tournament-stages.service';
-import { TournamentTeam, TournamentTeamPage } from '../tournament-teams/tournament-team.models';
+import { TournamentTeam } from '../tournament-teams/tournament-team.models';
 import { TournamentTeamsService } from '../tournament-teams/tournament-teams.service';
-import { Tournament, TournamentPage } from '../tournaments/tournament.models';
+import { Tournament } from '../tournaments/tournament.models';
 import { TournamentsService } from '../tournaments/tournaments.service';
 import { MatchFormValue, MatchStatus } from './match.models';
 import { MatchesService } from './matches.service';
@@ -37,7 +39,7 @@ import { MatchesService } from './matches.service';
   ],
   template: `
     <section class="app-page">
-      <app-page-header [title]="isEditMode() ? 'Editar partido' : 'Nuevo partido'" subtitle="Programación y resultado básico." />
+      <app-page-header [title]="isEditMode() ? 'Editar partido' : 'Nuevo partido'" subtitle="Programacion y resultado basico." />
 
       <section class="card page-card">
         @if (pageLoading()) {
@@ -80,7 +82,7 @@ import { MatchesService } from './matches.service';
                 <mat-label>Equipo local</mat-label>
                 <mat-select formControlName="homeTournamentTeamId">
                   @for (item of tournamentTeams(); track item.id) {
-                    <mat-option [value]="item.id">#{{ item.id }} - Team {{ item.teamId }}</mat-option>
+                    <mat-option [value]="item.id">{{ tournamentTeamLabel(item) }}</mat-option>
                   }
                 </mat-select>
               </mat-form-field>
@@ -89,7 +91,7 @@ import { MatchesService } from './matches.service';
                 <mat-label>Equipo visita</mat-label>
                 <mat-select formControlName="awayTournamentTeamId">
                   @for (item of tournamentTeams(); track item.id) {
-                    <mat-option [value]="item.id">#{{ item.id }} - Team {{ item.teamId }}</mat-option>
+                    <mat-option [value]="item.id">{{ tournamentTeamLabel(item) }}</mat-option>
                   }
                 </mat-select>
               </mat-form-field>
@@ -138,7 +140,7 @@ import { MatchesService } from './matches.service';
                 <mat-select formControlName="winnerTournamentTeamId">
                   <mat-option value="">Sin definir</mat-option>
                   @for (item of tournamentTeams(); track item.id) {
-                    <mat-option [value]="item.id">#{{ item.id }} - Team {{ item.teamId }}</mat-option>
+                    <mat-option [value]="item.id">{{ tournamentTeamLabel(item) }}</mat-option>
                   }
                 </mat-select>
               </mat-form-field>
@@ -171,6 +173,7 @@ export class MatchFormPageComponent {
   private readonly groupsService = inject(StageGroupsService);
   private readonly tournamentTeamsService = inject(TournamentTeamsService);
   private readonly matchesService = inject(MatchesService);
+  private readonly catalogLoader = inject(CatalogLoaderService);
   private readonly notifications = inject(NotificationService);
   private readonly errorMapper = inject(ErrorMapper);
 
@@ -179,10 +182,24 @@ export class MatchFormPageComponent {
   protected readonly pageLoading = signal(true);
   protected readonly saving = signal(false);
   protected readonly tournaments = signal<Tournament[]>([]);
-  protected readonly stages = signal<TournamentStage[]>([]);
-  protected readonly groups = signal<StageGroup[]>([]);
-  protected readonly tournamentTeams = signal<TournamentTeam[]>([]);
+  private readonly allStages = signal<TournamentStage[]>([]);
+  private readonly allGroups = signal<StageGroup[]>([]);
+  private readonly allTournamentTeams = signal<TournamentTeam[]>([]);
   protected readonly statuses: MatchStatus[] = ['SCHEDULED', 'PLAYED', 'FORFEIT', 'CANCELLED'];
+  protected readonly stages = computed(() => {
+    const tournamentId = Number(this.form.controls.tournamentId.getRawValue());
+    return tournamentId ? this.allStages().filter((item) => item.tournamentId === tournamentId) : this.allStages();
+  });
+  protected readonly groups = computed(() => {
+    const stageId = Number(this.form.controls.stageId.getRawValue());
+    return stageId ? this.allGroups().filter((item) => item.stageId === stageId) : [];
+  });
+  protected readonly tournamentTeams = computed(() => {
+    const tournamentId = Number(this.form.controls.tournamentId.getRawValue());
+    return tournamentId
+      ? this.allTournamentTeams().filter((item) => item.tournamentId === tournamentId)
+      : this.allTournamentTeams();
+  });
 
   protected readonly form = this.fb.nonNullable.group({
     tournamentId: [0],
@@ -202,29 +219,63 @@ export class MatchFormPageComponent {
   });
 
   constructor() {
-    this.tournamentsService.list({ page: 0, size: 100 }).subscribe({
-      next: (page: TournamentPage) => {
-        this.tournaments.set(page.content);
-        if (!this.isEditMode() && page.content.length > 0) {
-          this.form.patchValue({ tournamentId: page.content[0].id });
+    this.catalogLoader.loadAll((page, size) => this.tournamentsService.list({ page, size })).subscribe({
+      next: (items) => {
+        this.tournaments.set(items);
+        if (!this.isEditMode() && items.length > 0) {
+          this.form.patchValue({ tournamentId: items[0].id });
         }
       }
     });
-    this.stagesService.list({ page: 0, size: 100 }).subscribe({
-      next: (page: TournamentStagePage) => this.stages.set(page.content)
+
+    this.catalogLoader.loadAll((page, size) => this.stagesService.list({ page, size })).subscribe({
+      next: (items) => this.allStages.set(items)
     });
-    this.groupsService.list({ page: 0, size: 100 }).subscribe({
-      next: (page: StageGroupPage) => this.groups.set(page.content)
+    this.catalogLoader.loadAll((page, size) => this.groupsService.list({ page, size })).subscribe({
+      next: (items) => this.allGroups.set(items)
     });
-    this.tournamentTeamsService.list({ page: 0, size: 100 }).subscribe({
-      next: (page: TournamentTeamPage) => {
-        this.tournamentTeams.set(page.content);
-        if (!this.isEditMode() && page.content.length > 1) {
+    this.catalogLoader.loadAll((page, size) => this.tournamentTeamsService.list({ page, size })).subscribe({
+      next: (items) => {
+        this.allTournamentTeams.set(items);
+        if (!this.isEditMode() && items.length > 1) {
           this.form.patchValue({
-            homeTournamentTeamId: page.content[0].id,
-            awayTournamentTeamId: page.content[1].id
+            homeTournamentTeamId: items[0].id,
+            awayTournamentTeamId: items[1].id
           });
         }
+      }
+    });
+
+    this.form.controls.tournamentId.valueChanges.pipe(takeUntilDestroyed()).subscribe((value) => {
+      const tournamentId = Number(value);
+      const validStageIds = new Set(this.allStages().filter((item) => item.tournamentId === tournamentId).map((item) => item.id));
+      const validTeamIds = new Set(
+        this.allTournamentTeams().filter((item) => item.tournamentId === tournamentId).map((item) => item.id)
+      );
+      const currentStageId = Number(this.form.controls.stageId.getRawValue());
+      const currentHomeTeamId = Number(this.form.controls.homeTournamentTeamId.getRawValue());
+      const currentAwayTeamId = Number(this.form.controls.awayTournamentTeamId.getRawValue());
+      const currentWinnerTeamId = Number(this.form.controls.winnerTournamentTeamId.getRawValue());
+
+      this.form.patchValue(
+        {
+          stageId: currentStageId && validStageIds.has(currentStageId) ? String(currentStageId) : '',
+          groupId: '',
+          homeTournamentTeamId: validTeamIds.has(currentHomeTeamId) ? currentHomeTeamId : 0,
+          awayTournamentTeamId: validTeamIds.has(currentAwayTeamId) ? currentAwayTeamId : 0,
+          winnerTournamentTeamId: validTeamIds.has(currentWinnerTeamId) ? String(currentWinnerTeamId) : ''
+        },
+        { emitEvent: false }
+      );
+    });
+
+    this.form.controls.stageId.valueChanges.pipe(takeUntilDestroyed()).subscribe((value) => {
+      const stageId = Number(value);
+      const validGroupIds = new Set(this.allGroups().filter((item) => item.stageId === stageId).map((item) => item.id));
+      const currentGroupId = Number(this.form.controls.groupId.getRawValue());
+
+      if (currentGroupId && !validGroupIds.has(currentGroupId)) {
+        this.form.patchValue({ groupId: '' }, { emitEvent: false });
       }
     });
 
@@ -307,5 +358,9 @@ export class MatchFormPageComponent {
       },
       error: (error: unknown) => this.notifications.error(this.errorMapper.map(error).message)
     });
+  }
+
+  protected tournamentTeamLabel(item: TournamentTeam): string {
+    return `#${item.id} - Equipo ${item.teamId}`;
   }
 }

@@ -10,9 +10,10 @@ import { MatSelectModule } from '@angular/material/select';
 
 import { ErrorMapper } from '../../core/error/error.mapper';
 import { NotificationService } from '../../core/error/notification.service';
+import { CatalogLoaderService } from '../../core/pagination/catalog-loader.service';
 import { LoadingStateComponent } from '../../shared/loading-state/loading-state.component';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
-import { Tournament, TournamentPage } from '../tournaments/tournament.models';
+import { Tournament } from '../tournaments/tournament.models';
 import { TournamentsService } from '../tournaments/tournaments.service';
 import { TournamentStageFormValue, TournamentStageType } from './tournament-stage.models';
 import { TournamentStagesService } from './tournament-stages.service';
@@ -33,7 +34,7 @@ import { TournamentStagesService } from './tournament-stages.service';
   ],
   template: `
     <section class="app-page">
-      <app-page-header [title]="isEditMode() ? 'Editar etapa' : 'Nueva etapa'" subtitle="Configuración de etapas por torneo." />
+      <app-page-header [title]="isEditMode() ? 'Editar etapa' : 'Nueva etapa'" subtitle="Configuracion de etapas por torneo." />
 
       <section class="card page-card">
         @if (pageLoading()) {
@@ -99,6 +100,7 @@ export class TournamentStageFormPageComponent {
   private readonly router = inject(Router);
   private readonly tournamentsService = inject(TournamentsService);
   private readonly stagesService = inject(TournamentStagesService);
+  private readonly catalogLoader = inject(CatalogLoaderService);
   private readonly notifications = inject(NotificationService);
   private readonly errorMapper = inject(ErrorMapper);
 
@@ -120,11 +122,11 @@ export class TournamentStageFormPageComponent {
   });
 
   constructor() {
-    this.tournamentsService.list({ page: 0, size: 100 }).subscribe({
-      next: (page: TournamentPage) => {
-        this.tournaments.set(page.content);
-        if (!this.isEditMode() && page.content.length > 0) {
-          this.form.patchValue({ tournamentId: page.content[0].id });
+    this.catalogLoader.loadAll((page, size) => this.tournamentsService.list({ page, size })).subscribe({
+      next: (items) => {
+        this.tournaments.set(items);
+        if (!this.isEditMode() && items.length > 0) {
+          this.form.patchValue({ tournamentId: items[0].id });
         }
       }
     });

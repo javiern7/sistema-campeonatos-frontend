@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
@@ -16,8 +17,12 @@ import { LoadingStateComponent } from '../../shared/loading-state/loading-state.
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
 import { StageGroup } from '../stage-groups/stage-group.models';
 import { StageGroupsService } from '../stage-groups/stage-groups.service';
+import { Team } from '../teams/team.models';
+import { TeamsService } from '../teams/teams.service';
 import { TournamentStage } from '../tournament-stages/tournament-stage.models';
 import { TournamentStagesService } from '../tournament-stages/tournament-stages.service';
+import { TournamentTeam } from '../tournament-teams/tournament-team.models';
+import { TournamentTeamsService } from '../tournament-teams/tournament-teams.service';
 import { Tournament } from '../tournaments/tournament.models';
 import { TournamentsService } from '../tournaments/tournaments.service';
 import { MatchGame, MatchPage, MatchStatus } from './match.models';
@@ -106,7 +111,9 @@ import { MatchesService } from './matches.service';
               </ng-container>
               <ng-container matColumnDef="fixture">
                 <th mat-header-cell *matHeaderCellDef>Fixture</th>
-                <td mat-cell *matCellDef="let row">{{ row.homeTournamentTeamId }} vs {{ row.awayTournamentTeamId }}</td>
+                <td mat-cell *matCellDef="let row">
+                  {{ tournamentTeamLabel(row.homeTournamentTeamId) }} vs {{ tournamentTeamLabel(row.awayTournamentTeamId) }}
+                </td>
               </ng-container>
               <ng-container matColumnDef="status">
                 <th mat-header-cell *matHeaderCellDef>Estado</th>
@@ -147,6 +154,8 @@ export class MatchListPageComponent {
   private readonly tournamentsService = inject(TournamentsService);
   private readonly stagesService = inject(TournamentStagesService);
   private readonly groupsService = inject(StageGroupsService);
+  private readonly teamsService = inject(TeamsService);
+  private readonly tournamentTeamsService = inject(TournamentTeamsService);
   private readonly catalogLoader = inject(CatalogLoaderService);
   private readonly notifications = inject(NotificationService);
   private readonly errorMapper = inject(ErrorMapper);
@@ -156,14 +165,24 @@ export class MatchListPageComponent {
   protected readonly page = signal<MatchPage | null>(null);
   protected readonly rows = signal<MatchGame[]>([]);
   protected readonly tournaments = signal<Tournament[]>([]);
-  protected readonly stages = signal<TournamentStage[]>([]);
-  protected readonly groups = signal<StageGroup[]>([]);
+  private readonly allStages = signal<TournamentStage[]>([]);
+  private readonly allGroups = signal<StageGroup[]>([]);
+  private readonly teams = signal<Team[]>([]);
+  private readonly tournamentTeams = signal<TournamentTeam[]>([]);
   protected readonly pageIndex = signal(0);
   protected readonly pageSize = signal(20);
   protected readonly pageSizeOptions = [10, 20, 50];
   protected readonly statuses: MatchStatus[] = ['SCHEDULED', 'PLAYED', 'FORFEIT', 'CANCELLED'];
   protected readonly canManage = computed(() => this.authorization.canManage('matches'));
   protected readonly canDelete = computed(() => this.authorization.canDelete('matches'));
+  protected readonly stages = computed(() => {
+    const tournamentId = Number(this.filtersForm.controls.tournamentId.getRawValue());
+    return tournamentId ? this.allStages().filter((item) => item.tournamentId === tournamentId) : this.allStages();
+  });
+  protected readonly groups = computed(() => {
+    const stageId = Number(this.filtersForm.controls.stageId.getRawValue());
+    return stageId ? this.allGroups().filter((item) => item.stageId === stageId) : [];
+  });
   protected readonly displayedColumns = computed(() => {
     const columns = ['id', 'fixture', 'status'];
     if (this.canManage() || this.canDelete()) {
@@ -184,10 +203,41 @@ export class MatchListPageComponent {
       .subscribe({ next: (items) => this.tournaments.set(items) });
     this.catalogLoader
       .loadAll((page, size) => this.stagesService.list({ page, size }))
-      .subscribe({ next: (items) => this.stages.set(items) });
+      .subscribe({ next: (items) => this.allStages.set(items) });
     this.catalogLoader
       .loadAll((page, size) => this.groupsService.list({ page, size }))
-      .subscribe({ next: (items) => this.groups.set(items) });
+      .subscribe({ next: (items) => this.allGroups.set(items) });
+    this.catalogLoader
+      .loadAll((page, size) => this.teamsService.list({ page, size }))
+      .subscribe({ next: (items) => this.teams.set(items) });
+    this.catalogLoader
+      .loadAll((page, size) => this.tournamentTeamsService.list({ page, size }))
+      .subscribe({ next: (items) => this.tournamentTeams.set(items) });
+
+    this.filtersForm.controls.tournamentId.valueChanges.pipe(takeUntilDestroyed()).subscribe((value) => {
+      const tournamentId = Number(value);
+      const validStageIds = new Set(this.allStages().filter((item) => item.tournamentId === tournamentId).map((item) => item.id));
+      const currentStageId = Number(this.filtersForm.controls.stageId.getRawValue());
+
+      this.filtersForm.patchValue(
+        {
+          stageId: currentStageId && validStageIds.has(currentStageId) ? String(currentStageId) : '',
+          groupId: ''
+        },
+        { emitEvent: false }
+      );
+    });
+
+    this.filtersForm.controls.stageId.valueChanges.pipe(takeUntilDestroyed()).subscribe((value) => {
+      const stageId = Number(value);
+      const validGroupIds = new Set(this.allGroups().filter((item) => item.stageId === stageId).map((item) => item.id));
+      const currentGroupId = Number(this.filtersForm.controls.groupId.getRawValue());
+
+      if (currentGroupId && !validGroupIds.has(currentGroupId)) {
+        this.filtersForm.patchValue({ groupId: '' }, { emitEvent: false });
+      }
+    });
+
     this.load();
   }
 
@@ -242,5 +292,15 @@ export class MatchListPageComponent {
         },
         error: (error: unknown) => this.notifications.error(this.errorMapper.map(error).message)
       });
+  }
+
+  protected tournamentTeamLabel(tournamentTeamId: number): string {
+    const registration = this.tournamentTeams().find((item) => item.id === tournamentTeamId);
+    if (!registration) {
+      return `#${tournamentTeamId}`;
+    }
+
+    const team = this.teams().find((item) => item.id === registration.teamId);
+    return team?.name ?? `Equipo ${registration.teamId}`;
   }
 }

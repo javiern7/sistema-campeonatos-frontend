@@ -9,9 +9,10 @@ import { MatSelectModule } from '@angular/material/select';
 
 import { ErrorMapper } from '../../core/error/error.mapper';
 import { NotificationService } from '../../core/error/notification.service';
+import { CatalogLoaderService } from '../../core/pagination/catalog-loader.service';
 import { LoadingStateComponent } from '../../shared/loading-state/loading-state.component';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
-import { TournamentStage, TournamentStagePage } from '../tournament-stages/tournament-stage.models';
+import { TournamentStage } from '../tournament-stages/tournament-stage.models';
 import { TournamentStagesService } from '../tournament-stages/tournament-stages.service';
 import { StageGroupFormValue } from './stage-group.models';
 import { StageGroupsService } from './stage-groups.service';
@@ -31,7 +32,7 @@ import { StageGroupsService } from './stage-groups.service';
   ],
   template: `
     <section class="app-page">
-      <app-page-header [title]="isEditMode() ? 'Editar grupo' : 'Nuevo grupo'" subtitle="Agrupación por etapa." />
+      <app-page-header [title]="isEditMode() ? 'Editar grupo' : 'Nuevo grupo'" subtitle="Agrupacion por etapa." />
 
       <section class="card page-card">
         @if (pageLoading()) {
@@ -51,7 +52,7 @@ import { StageGroupsService } from './stage-groups.service';
               }
 
               <mat-form-field appearance="outline">
-                <mat-label>Código</mat-label>
+                <mat-label>Codigo</mat-label>
                 <input matInput formControlName="code">
               </mat-form-field>
 
@@ -85,6 +86,7 @@ export class StageGroupFormPageComponent {
   private readonly router = inject(Router);
   private readonly stagesService = inject(TournamentStagesService);
   private readonly groupsService = inject(StageGroupsService);
+  private readonly catalogLoader = inject(CatalogLoaderService);
   private readonly notifications = inject(NotificationService);
   private readonly errorMapper = inject(ErrorMapper);
 
@@ -102,11 +104,11 @@ export class StageGroupFormPageComponent {
   });
 
   constructor() {
-    this.stagesService.list({ page: 0, size: 100 }).subscribe({
-      next: (page: TournamentStagePage) => {
-        this.stages.set(page.content);
-        if (!this.isEditMode() && page.content.length > 0) {
-          this.form.patchValue({ stageId: page.content[0].id });
+    this.catalogLoader.loadAll((page, size) => this.stagesService.list({ page, size })).subscribe({
+      next: (items) => {
+        this.stages.set(items);
+        if (!this.isEditMode() && items.length > 0) {
+          this.form.patchValue({ stageId: items[0].id });
         }
       }
     });
