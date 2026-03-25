@@ -77,6 +77,10 @@ import { StageGroupsService } from './stage-groups.service';
                 <th mat-header-cell *matHeaderCellDef>ID</th>
                 <td mat-cell *matCellDef="let row">{{ row.id }}</td>
               </ng-container>
+              <ng-container matColumnDef="stage">
+                <th mat-header-cell *matHeaderCellDef>Etapa</th>
+                <td mat-cell *matCellDef="let row">{{ stageName(row.stageId) }}</td>
+              </ng-container>
               <ng-container matColumnDef="code">
                 <th mat-header-cell *matHeaderCellDef>Codigo</th>
                 <td mat-cell *matCellDef="let row">{{ row.code }}</td>
@@ -133,7 +137,7 @@ export class StageGroupListPageComponent {
   protected readonly canManage = computed(() => this.authorization.canManage('stageGroups'));
   protected readonly canDelete = computed(() => this.authorization.canDelete('stageGroups'));
   protected readonly displayedColumns = computed(() => {
-    const columns = ['id', 'code', 'name'];
+    const columns = ['id', 'stage', 'code', 'name'];
     if (this.canManage() || this.canDelete()) {
       columns.push('actions');
     }
@@ -182,6 +186,10 @@ export class StageGroupListPageComponent {
     this.pageIndex.set(event.pageIndex);
     this.pageSize.set(event.pageSize);
     this.load();
+  }
+
+  protected stageName(id: number): string {
+    return this.stages().find((item) => item.id === id)?.name ?? `#${id}`;
   }
 
   protected remove(row: StageGroup): void {

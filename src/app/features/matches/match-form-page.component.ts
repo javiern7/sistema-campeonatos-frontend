@@ -1,6 +1,13 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import {
+  AbstractControl,
+  FormBuilder,
+  ReactiveFormsModule,
+  ValidationErrors,
+  ValidatorFn,
+  Validators
+} from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 import { MatButtonModule } from '@angular/material/button';
@@ -23,6 +30,41 @@ import { Tournament } from '../tournaments/tournament.models';
 import { TournamentsService } from '../tournaments/tournaments.service';
 import { MatchFormValue, MatchStatus } from './match.models';
 import { MatchesService } from './matches.service';
+
+const positiveSelectionValidator = (fieldName: string): ValidatorFn => {
+  return (control: AbstractControl): ValidationErrors | null => {
+    return Number(control.value) > 0 ? null : { [fieldName]: true };
+  };
+};
+
+const matchConsistencyValidator: ValidatorFn = (control: AbstractControl): ValidationErrors | null => {
+  const homeTeamId = Number(control.get('homeTournamentTeamId')?.value);
+  const awayTeamId = Number(control.get('awayTournamentTeamId')?.value);
+  const winnerTeamId = Number(control.get('winnerTournamentTeamId')?.value);
+  const status = control.get('status')?.value as MatchStatus;
+  const homeScoreValue = control.get('homeScore')?.value;
+  const awayScoreValue = control.get('awayScore')?.value;
+  const hasHomeScore = homeScoreValue !== '' && homeScoreValue !== null;
+  const hasAwayScore = awayScoreValue !== '' && awayScoreValue !== null;
+
+  if (homeTeamId > 0 && awayTeamId > 0 && homeTeamId === awayTeamId) {
+    return { sameTeams: true };
+  }
+
+  if (winnerTeamId && winnerTeamId !== homeTeamId && winnerTeamId !== awayTeamId) {
+    return { invalidWinner: true };
+  }
+
+  if ((hasHomeScore && !hasAwayScore) || (!hasHomeScore && hasAwayScore)) {
+    return { incompleteScore: true };
+  }
+
+  if (status === 'PLAYED' && (!hasHomeScore || !hasAwayScore)) {
+    return { playedMatchWithoutScore: true };
+  }
+
+  return null;
+};
 
 @Component({
   selector: 'app-match-form-page',
@@ -85,6 +127,9 @@ import { MatchesService } from './matches.service';
                     <mat-option [value]="item.id">{{ tournamentTeamLabel(item) }}</mat-option>
                   }
                 </mat-select>
+                @if (form.controls.homeTournamentTeamId.invalid && form.controls.homeTournamentTeamId.touched) {
+                  <mat-error>Selecciona un equipo local valido.</mat-error>
+                }
               </mat-form-field>
 
               <mat-form-field appearance="outline">
@@ -94,6 +139,9 @@ import { MatchesService } from './matches.service';
                     <mat-option [value]="item.id">{{ tournamentTeamLabel(item) }}</mat-option>
                   }
                 </mat-select>
+                @if (form.controls.awayTournamentTeamId.invalid && form.controls.awayTournamentTeamId.touched) {
+                  <mat-error>Selecciona un equipo visita valido.</mat-error>
+                }
               </mat-form-field>
 
               <mat-form-field appearance="outline">
@@ -108,11 +156,17 @@ import { MatchesService } from './matches.service';
               <mat-form-field appearance="outline">
                 <mat-label>Round</mat-label>
                 <input matInput type="number" formControlName="roundNumber">
+                @if (form.controls.roundNumber.hasError('min')) {
+                  <mat-error>Round debe ser mayor a 0.</mat-error>
+                }
               </mat-form-field>
 
               <mat-form-field appearance="outline">
                 <mat-label>Matchday</mat-label>
                 <input matInput type="number" formControlName="matchdayNumber">
+                @if (form.controls.matchdayNumber.hasError('min')) {
+                  <mat-error>Matchday debe ser mayor a 0.</mat-error>
+                }
               </mat-form-field>
 
               <mat-form-field appearance="outline">
@@ -123,16 +177,25 @@ import { MatchesService } from './matches.service';
               <mat-form-field appearance="outline">
                 <mat-label>Sede</mat-label>
                 <input matInput formControlName="venueName">
+                @if (form.controls.venueName.hasError('maxlength')) {
+                  <mat-error>La sede no puede superar 150 caracteres.</mat-error>
+                }
               </mat-form-field>
 
               <mat-form-field appearance="outline">
                 <mat-label>Score local</mat-label>
                 <input matInput type="number" formControlName="homeScore">
+                @if (form.controls.homeScore.hasError('min')) {
+                  <mat-error>El score no puede ser negativo.</mat-error>
+                }
               </mat-form-field>
 
               <mat-form-field appearance="outline">
                 <mat-label>Score visita</mat-label>
                 <input matInput type="number" formControlName="awayScore">
+                @if (form.controls.awayScore.hasError('min')) {
+                  <mat-error>El score no puede ser negativo.</mat-error>
+                }
               </mat-form-field>
 
               <mat-form-field appearance="outline">
@@ -150,6 +213,19 @@ import { MatchesService } from './matches.service';
                 <textarea matInput rows="3" formControlName="notes"></textarea>
               </mat-form-field>
             </div>
+
+            @if (form.hasError('sameTeams')) {
+              <p class="muted">El equipo local y visita no pueden ser el mismo.</p>
+            }
+            @if (form.hasError('invalidWinner')) {
+              <p class="muted">El ganador debe coincidir con uno de los equipos del partido.</p>
+            }
+            @if (form.hasError('incompleteScore')) {
+              <p class="muted">Si informas un score, debes completar ambos marcadores.</p>
+            }
+            @if (form.hasError('playedMatchWithoutScore')) {
+              <p class="muted">Un partido en estado PLAYED debe tener score local y visita.</p>
+            }
 
             <div class="form-actions">
               <a mat-stroked-button routerLink="/matches">Cancelar</a>
@@ -201,22 +277,25 @@ export class MatchFormPageComponent {
       : this.allTournamentTeams();
   });
 
-  protected readonly form = this.fb.nonNullable.group({
-    tournamentId: [0],
-    stageId: [''],
-    groupId: [''],
-    roundNumber: [''],
-    matchdayNumber: [''],
-    homeTournamentTeamId: [0, Validators.required],
-    awayTournamentTeamId: [0, Validators.required],
-    scheduledAt: [''],
-    venueName: [''],
-    status: ['SCHEDULED' as MatchStatus, Validators.required],
-    homeScore: [''],
-    awayScore: [''],
-    winnerTournamentTeamId: [''],
-    notes: ['']
-  });
+  protected readonly form = this.fb.nonNullable.group(
+    {
+      tournamentId: [0],
+      stageId: [''],
+      groupId: [''],
+      roundNumber: ['', [Validators.min(1)]],
+      matchdayNumber: ['', [Validators.min(1)]],
+      homeTournamentTeamId: [0, [positiveSelectionValidator('homeTournamentTeamId')]],
+      awayTournamentTeamId: [0, [positiveSelectionValidator('awayTournamentTeamId')]],
+      scheduledAt: [''],
+      venueName: ['', [Validators.maxLength(150)]],
+      status: ['SCHEDULED' as MatchStatus, Validators.required],
+      homeScore: ['', [Validators.min(0)]],
+      awayScore: ['', [Validators.min(0)]],
+      winnerTournamentTeamId: [''],
+      notes: ['']
+    },
+    { validators: [matchConsistencyValidator] }
+  );
 
   constructor() {
     this.catalogLoader.loadAll((page, size) => this.tournamentsService.list({ page, size })).subscribe({
@@ -310,6 +389,8 @@ export class MatchFormPageComponent {
   }
 
   protected save(): void {
+    this.form.markAllAsTouched();
+
     if (this.form.invalid || this.saving()) {
       return;
     }

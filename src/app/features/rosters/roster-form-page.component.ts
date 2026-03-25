@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors, ValidatorFn, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 import { MatButtonModule } from '@angular/material/button';
@@ -19,6 +19,23 @@ import { TournamentTeam } from '../tournament-teams/tournament-team.models';
 import { TournamentTeamsService } from '../tournament-teams/tournament-teams.service';
 import { RosterFormValue, RosterStatus } from './roster.models';
 import { RostersService } from './rosters.service';
+
+const positiveSelectionValidator = (fieldName: string): ValidatorFn => {
+  return (control: AbstractControl): ValidationErrors | null => {
+    return Number(control.value) > 0 ? null : { [fieldName]: true };
+  };
+};
+
+const dateRangeValidator: ValidatorFn = (control: AbstractControl): ValidationErrors | null => {
+  const startDate = control.get('startDate')?.value;
+  const endDate = control.get('endDate')?.value;
+
+  if (!startDate || !endDate) {
+    return null;
+  }
+
+  return endDate >= startDate ? null : { invalidDateRange: true };
+};
 
 @Component({
   selector: 'app-roster-form-page',
@@ -52,6 +69,9 @@ import { RostersService } from './rosters.service';
                       <mat-option [value]="item.id">{{ tournamentTeamLabel(item) }}</mat-option>
                     }
                   </mat-select>
+                  @if (form.controls.tournamentTeamId.invalid && form.controls.tournamentTeamId.touched) {
+                    <mat-error>Selecciona una inscripcion valida.</mat-error>
+                  }
                 </mat-form-field>
 
                 <mat-form-field appearance="outline">
@@ -61,17 +81,26 @@ import { RostersService } from './rosters.service';
                       <mat-option [value]="item.id">{{ item.firstName }} {{ item.lastName }}</mat-option>
                     }
                   </mat-select>
+                  @if (form.controls.playerId.invalid && form.controls.playerId.touched) {
+                    <mat-error>Selecciona un jugador valido.</mat-error>
+                  }
                 </mat-form-field>
               }
 
               <mat-form-field appearance="outline">
                 <mat-label>Numero camiseta</mat-label>
                 <input matInput type="number" formControlName="jerseyNumber">
+                @if (form.controls.jerseyNumber.hasError('min') || form.controls.jerseyNumber.hasError('max')) {
+                  <mat-error>El numero debe estar entre 0 y 99.</mat-error>
+                }
               </mat-form-field>
 
               <mat-form-field appearance="outline">
                 <mat-label>Posicion</mat-label>
                 <input matInput formControlName="positionName">
+                @if (form.controls.positionName.hasError('maxlength')) {
+                  <mat-error>La posicion no puede superar 50 caracteres.</mat-error>
+                }
               </mat-form-field>
 
               <mat-form-field appearance="outline">
@@ -91,6 +120,9 @@ import { RostersService } from './rosters.service';
               <mat-form-field appearance="outline">
                 <mat-label>Fecha fin</mat-label>
                 <input matInput type="date" formControlName="endDate">
+                @if (form.hasError('invalidDateRange') && form.controls.endDate.touched) {
+                  <mat-error>La fecha fin no puede ser anterior a la fecha inicio.</mat-error>
+                }
               </mat-form-field>
             </div>
 
@@ -128,16 +160,19 @@ export class RosterFormPageComponent {
   protected readonly tournamentTeams = signal<TournamentTeam[]>([]);
   protected readonly statuses: RosterStatus[] = ['ACTIVE', 'INACTIVE', 'SUSPENDED'];
 
-  protected readonly form = this.fb.nonNullable.group({
-    tournamentTeamId: [0],
-    playerId: [0],
-    jerseyNumber: [''],
-    captain: [false],
-    positionName: [''],
-    rosterStatus: ['ACTIVE' as RosterStatus, Validators.required],
-    startDate: ['', Validators.required],
-    endDate: ['']
-  });
+  protected readonly form = this.fb.nonNullable.group(
+    {
+      tournamentTeamId: [0, [positiveSelectionValidator('tournamentTeamId')]],
+      playerId: [0, [positiveSelectionValidator('playerId')]],
+      jerseyNumber: ['', [Validators.min(0), Validators.max(99)]],
+      captain: [false],
+      positionName: ['', [Validators.maxLength(50)]],
+      rosterStatus: ['ACTIVE' as RosterStatus, Validators.required],
+      startDate: ['', Validators.required],
+      endDate: ['']
+    },
+    { validators: [dateRangeValidator] }
+  );
 
   constructor() {
     this.catalogLoader.loadAll((page, size) => this.playersService.list({ page, size })).subscribe({
@@ -183,6 +218,8 @@ export class RosterFormPageComponent {
   }
 
   protected save(): void {
+    this.form.markAllAsTouched();
+
     if (this.form.invalid || this.saving()) {
       return;
     }

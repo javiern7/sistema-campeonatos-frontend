@@ -84,6 +84,10 @@ import { TournamentStagesService } from './tournament-stages.service';
                 <th mat-header-cell *matHeaderCellDef>ID</th>
                 <td mat-cell *matCellDef="let row">{{ row.id }}</td>
               </ng-container>
+              <ng-container matColumnDef="tournament">
+                <th mat-header-cell *matHeaderCellDef>Torneo</th>
+                <td mat-cell *matCellDef="let row">{{ tournamentName(row.tournamentId) }}</td>
+              </ng-container>
               <ng-container matColumnDef="name">
                 <th mat-header-cell *matHeaderCellDef>Etapa</th>
                 <td mat-cell *matCellDef="let row">{{ row.name }}</td>
@@ -141,7 +145,7 @@ export class TournamentStageListPageComponent {
   protected readonly canManage = computed(() => this.authorization.canManage('tournamentStages'));
   protected readonly canDelete = computed(() => this.authorization.canDelete('tournamentStages'));
   protected readonly displayedColumns = computed(() => {
-    const columns = ['id', 'name', 'type'];
+    const columns = ['id', 'tournament', 'name', 'type'];
     if (this.canManage() || this.canDelete()) {
       columns.push('actions');
     }
@@ -192,6 +196,10 @@ export class TournamentStageListPageComponent {
     this.pageIndex.set(event.pageIndex);
     this.pageSize.set(event.pageSize);
     this.load();
+  }
+
+  protected tournamentName(id: number): string {
+    return this.tournaments().find((item) => item.id === id)?.name ?? `#${id}`;
   }
 
   protected remove(row: TournamentStage): void {

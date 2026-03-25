@@ -14,6 +14,10 @@ import { NotificationService } from '../../core/error/notification.service';
 import { CatalogLoaderService } from '../../core/pagination/catalog-loader.service';
 import { LoadingStateComponent } from '../../shared/loading-state/loading-state.component';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
+import { Team } from '../teams/team.models';
+import { TeamsService } from '../teams/teams.service';
+import { Tournament } from '../tournaments/tournament.models';
+import { TournamentsService } from '../tournaments/tournaments.service';
 import { Player } from '../players/player.models';
 import { PlayersService } from '../players/players.service';
 import { TournamentTeam } from '../tournament-teams/tournament-team.models';
@@ -50,7 +54,7 @@ import { RostersService } from './rosters.service';
             <mat-select formControlName="tournamentTeamId">
               <mat-option value="">Todos</mat-option>
               @for (item of tournamentTeams(); track item.id) {
-                <mat-option [value]="item.id">#{{ item.id }}</mat-option>
+                <mat-option [value]="item.id">{{ tournamentTeamLabel(item.id) }}</mat-option>
               }
             </mat-select>
           </mat-form-field>
@@ -91,6 +95,10 @@ import { RostersService } from './rosters.service';
               <ng-container matColumnDef="id">
                 <th mat-header-cell *matHeaderCellDef>ID</th>
                 <td mat-cell *matCellDef="let row">{{ row.id }}</td>
+              </ng-container>
+              <ng-container matColumnDef="registration">
+                <th mat-header-cell *matHeaderCellDef>Inscripcion</th>
+                <td mat-cell *matCellDef="let row">{{ tournamentTeamLabel(row.tournamentTeamId) }}</td>
               </ng-container>
               <ng-container matColumnDef="player">
                 <th mat-header-cell *matHeaderCellDef>Jugador</th>
@@ -138,6 +146,8 @@ export class RosterListPageComponent {
   private readonly rostersService = inject(RostersService);
   private readonly playersService = inject(PlayersService);
   private readonly tournamentTeamsService = inject(TournamentTeamsService);
+  private readonly teamsService = inject(TeamsService);
+  private readonly tournamentsService = inject(TournamentsService);
   private readonly catalogLoader = inject(CatalogLoaderService);
   private readonly notifications = inject(NotificationService);
   private readonly errorMapper = inject(ErrorMapper);
@@ -148,6 +158,8 @@ export class RosterListPageComponent {
   protected readonly rows = signal<RosterEntry[]>([]);
   protected readonly players = signal<Player[]>([]);
   protected readonly tournamentTeams = signal<TournamentTeam[]>([]);
+  protected readonly teams = signal<Team[]>([]);
+  protected readonly tournaments = signal<Tournament[]>([]);
   protected readonly pageIndex = signal(0);
   protected readonly pageSize = signal(20);
   protected readonly pageSizeOptions = [10, 20, 50];
@@ -155,7 +167,7 @@ export class RosterListPageComponent {
   protected readonly canManage = computed(() => this.authorization.canManage('rosters'));
   protected readonly canDelete = computed(() => this.authorization.canDelete('rosters'));
   protected readonly displayedColumns = computed(() => {
-    const columns = ['id', 'player', 'jersey', 'status'];
+    const columns = ['id', 'registration', 'player', 'jersey', 'status'];
     if (this.canManage() || this.canDelete()) {
       columns.push('actions');
     }
@@ -174,6 +186,12 @@ export class RosterListPageComponent {
     this.catalogLoader
       .loadAll((page, size) => this.tournamentTeamsService.list({ page, size }))
       .subscribe({ next: (items) => this.tournamentTeams.set(items) });
+    this.catalogLoader
+      .loadAll((page, size) => this.teamsService.list({ page, size }))
+      .subscribe({ next: (items) => this.teams.set(items) });
+    this.catalogLoader
+      .loadAll((page, size) => this.tournamentsService.list({ page, size }))
+      .subscribe({ next: (items) => this.tournaments.set(items) });
     this.load();
   }
 
@@ -214,6 +232,19 @@ export class RosterListPageComponent {
   protected playerName(id: number): string {
     const player = this.players().find((item) => item.id === id);
     return player ? `${player.firstName} ${player.lastName}` : `#${id}`;
+  }
+
+  protected tournamentTeamLabel(id: number): string {
+    const registration = this.tournamentTeams().find((item) => item.id === id);
+    if (!registration) {
+      return `#${id}`;
+    }
+
+    const team = this.teams().find((item) => item.id === registration.teamId);
+    const tournament = this.tournaments().find((item) => item.id === registration.tournamentId);
+    const teamLabel = team?.name ?? `Equipo ${registration.teamId}`;
+    const tournamentLabel = tournament?.name ?? `Torneo ${registration.tournamentId}`;
+    return `${teamLabel} / ${tournamentLabel}`;
   }
 
   protected remove(row: RosterEntry): void {
