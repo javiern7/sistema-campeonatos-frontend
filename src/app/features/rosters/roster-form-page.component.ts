@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors, ValidatorFn, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
@@ -30,6 +30,15 @@ const positiveSelectionValidator = (fieldName: string): ValidatorFn => {
   };
 };
 
+const parseOptionalNumber = (value: string | number | null | undefined): number | null => {
+  if (value === '' || value === null || value === undefined) {
+    return null;
+  }
+
+  const parsed = Number(value);
+  return Number.isNaN(parsed) ? null : parsed;
+};
+
 const dateRangeValidator: ValidatorFn = (control: AbstractControl): ValidationErrors | null => {
   const startDate = control.get('startDate')?.value;
   const endDate = control.get('endDate')?.value;
@@ -39,6 +48,18 @@ const dateRangeValidator: ValidatorFn = (control: AbstractControl): ValidationEr
   }
 
   return endDate >= startDate ? null : { invalidDateRange: true };
+};
+
+const rosterOperationalValidator: ValidatorFn = (control: AbstractControl): ValidationErrors | null => {
+  const tournamentTeamId = Number(control.get('tournamentTeamId')?.value);
+  const registrationStatus = control.get('registrationStatus')?.value;
+  const rosterStatus = control.get('rosterStatus')?.value as RosterStatus;
+
+  if (tournamentTeamId > 0 && rosterStatus === 'ACTIVE' && registrationStatus && registrationStatus !== 'APPROVED') {
+    return { activeRosterWithoutApprovedRegistration: true };
+  }
+
+  return null;
 };
 
 @Component({
@@ -64,6 +85,13 @@ const dateRangeValidator: ValidatorFn = (control: AbstractControl): ValidationEr
           <app-loading-state />
         } @else {
           <form [formGroup]="form" (ngSubmit)="save()" class="app-page">
+            @if (operationalWarning()) {
+              <div class="context-banner">
+                <strong>Auditoria Sprint 7</strong>
+                <span class="muted">{{ operationalWarning() }}</span>
+              </div>
+            }
+
             <div class="form-grid">
               @if (!isEditMode()) {
                 <mat-form-field appearance="outline">
@@ -132,6 +160,10 @@ const dateRangeValidator: ValidatorFn = (control: AbstractControl): ValidationEr
 
             <mat-checkbox formControlName="captain">Capitan</mat-checkbox>
 
+            @if (form.hasError('activeRosterWithoutApprovedRegistration')) {
+              <p class="muted">Un roster activo requiere una inscripcion aprobada en el torneo.</p>
+            }
+
             <div class="form-actions">
               <a mat-stroked-button routerLink="/rosters">Cancelar</a>
               <button mat-flat-button color="primary" type="submit" [disabled]="form.invalid || saving()">
@@ -167,11 +199,27 @@ export class RosterFormPageComponent {
   protected readonly tournaments = signal<Tournament[]>([]);
   protected readonly tournamentTeams = signal<TournamentTeam[]>([]);
   protected readonly statuses: RosterStatus[] = ['ACTIVE', 'INACTIVE', 'SUSPENDED'];
+  protected readonly selectedTournamentTeam = computed(() =>
+    this.tournamentTeams().find((item) => item.id === Number(this.form.controls.tournamentTeamId.getRawValue())) ?? null
+  );
+  protected readonly operationalWarning = computed(() => {
+    const registration = this.selectedTournamentTeam();
+    if (!registration) {
+      return '';
+    }
+
+    if (registration.registrationStatus !== 'APPROVED' && this.form.controls.rosterStatus.getRawValue() === 'ACTIVE') {
+      return 'La inscripcion seleccionada aun no esta aprobada. No conviene habilitar un roster activo hasta cerrar ese paso.';
+    }
+
+    return '';
+  });
 
   protected readonly form = this.fb.nonNullable.group(
     {
       tournamentTeamId: [0, [positiveSelectionValidator('tournamentTeamId')]],
       playerId: [0, [positiveSelectionValidator('playerId')]],
+      registrationStatus: [''],
       jerseyNumber: ['', [Validators.min(0), Validators.max(99)]],
       captain: [false],
       positionName: ['', [Validators.maxLength(50)]],
@@ -179,7 +227,7 @@ export class RosterFormPageComponent {
       startDate: ['', Validators.required],
       endDate: ['']
     },
-    { validators: [dateRangeValidator] }
+    { validators: [dateRangeValidator, rosterOperationalValidator] }
   );
 
   constructor() {
@@ -204,10 +252,16 @@ export class RosterFormPageComponent {
         if (!this.isEditMode() && items.length > 0) {
           this.form.patchValue({ tournamentTeamId: items[0].id });
         }
+        this.syncRegistrationStatus();
       }
     });
 
+    this.form.controls.tournamentTeamId.valueChanges.subscribe(() => {
+      this.syncRegistrationStatus();
+    });
+
     if (!this.isEditMode()) {
+      this.syncRegistrationStatus();
       this.pageLoading.set(false);
       return;
     }
@@ -220,7 +274,9 @@ export class RosterFormPageComponent {
           this.form.patchValue({
             tournamentTeamId: entry.tournamentTeamId,
             playerId: entry.playerId,
-            jerseyNumber: entry.jerseyNumber ? String(entry.jerseyNumber) : '',
+            registrationStatus:
+              this.tournamentTeams().find((item) => item.id === entry.tournamentTeamId)?.registrationStatus ?? '',
+            jerseyNumber: entry.jerseyNumber !== null ? String(entry.jerseyNumber) : '',
             captain: entry.captain,
             positionName: entry.positionName ?? '',
             rosterStatus: entry.rosterStatus,
@@ -242,7 +298,7 @@ export class RosterFormPageComponent {
     const payload: RosterFormValue = {
       tournamentTeamId: Number(value.tournamentTeamId),
       playerId: Number(value.playerId),
-      jerseyNumber: value.jerseyNumber ? Number(value.jerseyNumber) : null,
+      jerseyNumber: parseOptionalNumber(value.jerseyNumber),
       captain: value.captain,
       positionName: value.positionName || null,
       rosterStatus: value.rosterStatus,
@@ -277,5 +333,13 @@ export class RosterFormPageComponent {
     const teamLabel = team?.name ?? `Equipo ${item.teamId}`;
     const tournamentLabel = tournament?.name ?? `Torneo ${item.tournamentId}`;
     return `${teamLabel} / ${tournamentLabel} (#${item.id})`;
+  }
+
+  private syncRegistrationStatus(): void {
+    const registrationStatus =
+      this.tournamentTeams().find((item) => item.id === Number(this.form.controls.tournamentTeamId.getRawValue()))
+        ?.registrationStatus ?? '';
+
+    this.form.patchValue({ registrationStatus }, { emitEvent: false });
   }
 }

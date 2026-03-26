@@ -41,10 +41,22 @@ const positiveSelectionValidator = (fieldName: string): ValidatorFn => {
   };
 };
 
+const parseOptionalNumber = (value: string | number | null | undefined): number | null => {
+  if (value === '' || value === null || value === undefined) {
+    return null;
+  }
+
+  const parsed = Number(value);
+  return Number.isNaN(parsed) ? null : parsed;
+};
+
 const matchConsistencyValidator: ValidatorFn = (control: AbstractControl): ValidationErrors | null => {
+  const tournamentId = Number(control.get('tournamentId')?.value);
   const homeTeamId = Number(control.get('homeTournamentTeamId')?.value);
   const awayTeamId = Number(control.get('awayTournamentTeamId')?.value);
   const winnerTeamId = Number(control.get('winnerTournamentTeamId')?.value);
+  const homeTeamTournamentId = Number(control.get('homeTeamTournamentId')?.value);
+  const awayTeamTournamentId = Number(control.get('awayTeamTournamentId')?.value);
   const status = control.get('status')?.value as MatchStatus;
   const homeScoreValue = control.get('homeScore')?.value;
   const awayScoreValue = control.get('awayScore')?.value;
@@ -57,6 +69,14 @@ const matchConsistencyValidator: ValidatorFn = (control: AbstractControl): Valid
 
   if (winnerTeamId && winnerTeamId !== homeTeamId && winnerTeamId !== awayTeamId) {
     return { invalidWinner: true };
+  }
+
+  if (
+    tournamentId > 0 &&
+    ((homeTeamId > 0 && homeTeamTournamentId > 0 && homeTeamTournamentId !== tournamentId) ||
+      (awayTeamId > 0 && awayTeamTournamentId > 0 && awayTeamTournamentId !== tournamentId))
+  ) {
+    return { invalidTournamentTeams: true };
   }
 
   if ((hasHomeScore && !hasAwayScore) || (!hasHomeScore && hasAwayScore)) {
@@ -97,7 +117,7 @@ const matchConsistencyValidator: ValidatorFn = (control: AbstractControl): Valid
           <form [formGroup]="form" (ngSubmit)="save()" class="app-page">
             @if (readinessWarning()) {
               <div class="context-banner">
-                <strong>Auditoria Sprint 6</strong>
+                <strong>Auditoria Sprint 7</strong>
                 <span class="muted">{{ readinessWarning() }}</span>
               </div>
             }
@@ -234,6 +254,9 @@ const matchConsistencyValidator: ValidatorFn = (control: AbstractControl): Valid
             @if (form.hasError('invalidWinner')) {
               <p class="muted">El ganador debe coincidir con uno de los equipos del partido.</p>
             }
+            @if (form.hasError('invalidTournamentTeams')) {
+              <p class="muted">Los equipos seleccionados deben pertenecer al torneo activo.</p>
+            }
             @if (form.hasError('incompleteScore')) {
               <p class="muted">Si informas un score, debes completar ambos marcadores.</p>
             }
@@ -354,6 +377,8 @@ export class MatchFormPageComponent {
       matchdayNumber: ['', [Validators.min(1)]],
       homeTournamentTeamId: [0, [positiveSelectionValidator('homeTournamentTeamId')]],
       awayTournamentTeamId: [0, [positiveSelectionValidator('awayTournamentTeamId')]],
+      homeTeamTournamentId: [0],
+      awayTeamTournamentId: [0],
       scheduledAt: [''],
       venueName: ['', [Validators.maxLength(150)]],
       status: ['SCHEDULED' as MatchStatus, Validators.required],
@@ -387,11 +412,8 @@ export class MatchFormPageComponent {
     this.catalogLoader.loadAll((page, size) => this.tournamentTeamsService.list({ page, size })).subscribe({
       next: (items) => {
         this.allTournamentTeams.set(items);
-        if (!this.isEditMode() && items.length > 1) {
-          this.form.patchValue({
-            homeTournamentTeamId: items[0].id,
-            awayTournamentTeamId: items[1].id
-          });
+        if (!this.isEditMode()) {
+          this.applyDefaultTeamsForTournament(Number(this.form.controls.tournamentId.getRawValue()));
         }
       }
     });
@@ -420,6 +442,11 @@ export class MatchFormPageComponent {
         },
         { emitEvent: false }
       );
+
+      if (!this.isEditMode()) {
+        this.applyDefaultTeamsForTournament(tournamentId);
+      }
+      this.syncSelectedTeamTournamentIds();
     });
 
     this.form.controls.stageId.valueChanges.pipe(takeUntilDestroyed()).subscribe((value) => {
@@ -432,7 +459,16 @@ export class MatchFormPageComponent {
       }
     });
 
+    this.form.controls.homeTournamentTeamId.valueChanges.pipe(takeUntilDestroyed()).subscribe(() => {
+      this.syncSelectedTeamTournamentIds();
+    });
+
+    this.form.controls.awayTournamentTeamId.valueChanges.pipe(takeUntilDestroyed()).subscribe(() => {
+      this.syncSelectedTeamTournamentIds();
+    });
+
     if (!this.isEditMode()) {
+      this.syncSelectedTeamTournamentIds();
       this.pageLoading.set(false);
       return;
     }
@@ -441,7 +477,7 @@ export class MatchFormPageComponent {
       .getById(this.matchId)
       .pipe(finalize(() => this.pageLoading.set(false)))
       .subscribe({
-        next: (match) =>
+        next: (match) => {
           this.form.patchValue({
             tournamentId: match.tournamentId,
             stageId: match.stageId ? String(match.stageId) : '',
@@ -457,7 +493,9 @@ export class MatchFormPageComponent {
             awayScore: match.awayScore !== null ? String(match.awayScore) : '',
             winnerTournamentTeamId: match.winnerTournamentTeamId ? String(match.winnerTournamentTeamId) : '',
             notes: match.notes ?? ''
-          }),
+          });
+          this.syncSelectedTeamTournamentIds();
+        },
         error: (error: unknown) => this.notifications.error(this.errorMapper.map(error).message)
       });
   }
@@ -480,18 +518,18 @@ export class MatchFormPageComponent {
     const value = this.form.getRawValue();
     const payload: MatchFormValue = {
       tournamentId: Number(value.tournamentId),
-      stageId: value.stageId ? Number(value.stageId) : null,
-      groupId: value.groupId ? Number(value.groupId) : null,
-      roundNumber: value.roundNumber ? Number(value.roundNumber) : null,
-      matchdayNumber: value.matchdayNumber ? Number(value.matchdayNumber) : null,
+      stageId: parseOptionalNumber(value.stageId),
+      groupId: parseOptionalNumber(value.groupId),
+      roundNumber: parseOptionalNumber(value.roundNumber),
+      matchdayNumber: parseOptionalNumber(value.matchdayNumber),
       homeTournamentTeamId: Number(value.homeTournamentTeamId),
       awayTournamentTeamId: Number(value.awayTournamentTeamId),
       scheduledAt: value.scheduledAt ? new Date(value.scheduledAt).toISOString() : null,
       venueName: value.venueName || null,
       status: value.status,
-      homeScore: value.homeScore ? Number(value.homeScore) : null,
-      awayScore: value.awayScore ? Number(value.awayScore) : null,
-      winnerTournamentTeamId: value.winnerTournamentTeamId ? Number(value.winnerTournamentTeamId) : null,
+      homeScore: parseOptionalNumber(value.homeScore),
+      awayScore: parseOptionalNumber(value.awayScore),
+      winnerTournamentTeamId: parseOptionalNumber(value.winnerTournamentTeamId),
       notes: value.notes || null
     };
 
@@ -564,5 +602,49 @@ export class MatchFormPageComponent {
     };
 
     return labels[status];
+  }
+
+  private applyDefaultTeamsForTournament(tournamentId: number): void {
+    if (!tournamentId) {
+      return;
+    }
+
+    const currentHomeTeamId = Number(this.form.controls.homeTournamentTeamId.getRawValue());
+    const currentAwayTeamId = Number(this.form.controls.awayTournamentTeamId.getRawValue());
+    if (currentHomeTeamId > 0 || currentAwayTeamId > 0) {
+      return;
+    }
+
+    const teams = this.allTournamentTeams().filter((item) => item.tournamentId === tournamentId);
+    if (teams.length < 2) {
+      return;
+    }
+
+    const approvedWithActiveRoster = teams.filter((item) => this.rosterReadyTournamentTeamIds().has(item.id));
+    const preferredTeams = approvedWithActiveRoster.length >= 2 ? approvedWithActiveRoster : teams;
+
+    this.form.patchValue(
+      {
+        homeTournamentTeamId: preferredTeams[0]?.id ?? 0,
+        awayTournamentTeamId: preferredTeams[1]?.id ?? 0
+      },
+      { emitEvent: false }
+    );
+    this.syncSelectedTeamTournamentIds();
+  }
+
+  private syncSelectedTeamTournamentIds(): void {
+    const homeTeamId = Number(this.form.controls.homeTournamentTeamId.getRawValue());
+    const awayTeamId = Number(this.form.controls.awayTournamentTeamId.getRawValue());
+    const homeTournamentId = this.allTournamentTeams().find((item) => item.id === homeTeamId)?.tournamentId ?? 0;
+    const awayTournamentId = this.allTournamentTeams().find((item) => item.id === awayTeamId)?.tournamentId ?? 0;
+
+    this.form.patchValue(
+      {
+        homeTeamTournamentId: homeTournamentId,
+        awayTeamTournamentId: awayTournamentId
+      },
+      { emitEvent: false }
+    );
   }
 }

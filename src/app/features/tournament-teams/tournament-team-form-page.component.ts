@@ -19,6 +19,21 @@ import { TournamentsService } from '../tournaments/tournaments.service';
 import { TournamentTeamFormValue, TournamentTeamRegistrationStatus } from './tournament-team.models';
 import { TournamentTeamsService } from './tournament-teams.service';
 
+const positiveSelectionValidator = (fieldName: string) => {
+  return (control: { value: unknown }) => {
+    return Number(control.value) > 0 ? null : { [fieldName]: true };
+  };
+};
+
+const parseOptionalNumber = (value: string | number | null | undefined): number | null => {
+  if (value === '' || value === null || value === undefined) {
+    return null;
+  }
+
+  const parsed = Number(value);
+  return Number.isNaN(parsed) ? null : parsed;
+};
+
 @Component({
   selector: 'app-tournament-team-form-page',
   standalone: true,
@@ -44,6 +59,13 @@ import { TournamentTeamsService } from './tournament-teams.service';
           <app-loading-state />
         } @else {
           <form [formGroup]="form" (ngSubmit)="save()" class="app-page">
+            @if (registrationWarning()) {
+              <div class="context-banner">
+                <strong>Auditoria Sprint 7</strong>
+                <span class="muted">{{ registrationWarning() }}</span>
+              </div>
+            }
+
             <div class="form-grid">
               @if (!isEditMode()) {
                 <mat-form-field appearance="outline">
@@ -53,6 +75,9 @@ import { TournamentTeamsService } from './tournament-teams.service';
                       <mat-option [value]="item.id">{{ item.name }}</mat-option>
                     }
                   </mat-select>
+                  @if (form.controls.tournamentId.invalid && form.controls.tournamentId.touched) {
+                    <mat-error>Selecciona un torneo valido.</mat-error>
+                  }
                 </mat-form-field>
 
                 <mat-form-field appearance="outline">
@@ -62,6 +87,9 @@ import { TournamentTeamsService } from './tournament-teams.service';
                       <mat-option [value]="item.id">{{ item.name }}</mat-option>
                     }
                   </mat-select>
+                  @if (form.controls.teamId.invalid && form.controls.teamId.touched) {
+                    <mat-error>Selecciona un equipo valido.</mat-error>
+                  }
                 </mat-form-field>
               }
 
@@ -116,6 +144,15 @@ export class TournamentTeamFormPageComponent {
   protected readonly tournaments = signal<Tournament[]>([]);
   protected readonly teams = signal<Team[]>([]);
   protected readonly statuses: TournamentTeamRegistrationStatus[] = ['PENDING', 'APPROVED', 'REJECTED', 'WITHDRAWN'];
+  protected readonly registrationWarning = computed(() => {
+    const status = this.form.controls.registrationStatus.getRawValue();
+
+    if (status === 'APPROVED') {
+      return 'Al aprobar esta inscripcion, el siguiente paso operativo esperado es poblar roster activo antes de avanzar a partidos.';
+    }
+
+    return '';
+  });
   protected readonly pageSubtitle = computed(() => {
     const tournament = this.tournaments().find((item) => item.id === Number(this.form.controls.tournamentId.getRawValue()));
     const team = this.teams().find((item) => item.id === Number(this.form.controls.teamId.getRawValue()));
@@ -125,8 +162,8 @@ export class TournamentTeamFormPageComponent {
   });
 
   protected readonly form = this.fb.nonNullable.group({
-    tournamentId: [0],
-    teamId: [0],
+    tournamentId: [0, [positiveSelectionValidator('tournamentId')]],
+    teamId: [0, [positiveSelectionValidator('teamId')]],
     registrationStatus: ['PENDING' as TournamentTeamRegistrationStatus, Validators.required],
     seedNumber: [''],
     groupDrawPosition: ['']
@@ -165,14 +202,16 @@ export class TournamentTeamFormPageComponent {
             tournamentId: item.tournamentId,
             teamId: item.teamId,
             registrationStatus: item.registrationStatus,
-            seedNumber: item.seedNumber ? String(item.seedNumber) : '',
-            groupDrawPosition: item.groupDrawPosition ? String(item.groupDrawPosition) : ''
+            seedNumber: item.seedNumber !== null ? String(item.seedNumber) : '',
+            groupDrawPosition: item.groupDrawPosition !== null ? String(item.groupDrawPosition) : ''
           }),
         error: (error: unknown) => this.notifications.error(this.errorMapper.map(error).message)
       });
   }
 
   protected save(): void {
+    this.form.markAllAsTouched();
+
     if (this.form.invalid || this.saving()) {
       return;
     }
@@ -182,8 +221,8 @@ export class TournamentTeamFormPageComponent {
       tournamentId: Number(value.tournamentId),
       teamId: Number(value.teamId),
       registrationStatus: value.registrationStatus,
-      seedNumber: value.seedNumber ? Number(value.seedNumber) : null,
-      groupDrawPosition: value.groupDrawPosition ? Number(value.groupDrawPosition) : null
+      seedNumber: parseOptionalNumber(value.seedNumber),
+      groupDrawPosition: parseOptionalNumber(value.groupDrawPosition)
     };
 
     this.saving.set(true);

@@ -117,7 +117,7 @@ type SummaryCard = {
 
         @if (standingsAuditMessage()) {
           <div class="context-banner">
-            <strong>Auditoria Sprint 6</strong>
+            <strong>Auditoria Sprint 7</strong>
             <span class="muted">{{ standingsAuditMessage() }}</span>
           </div>
         }

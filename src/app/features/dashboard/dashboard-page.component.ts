@@ -478,7 +478,7 @@ export class DashboardPageComponent {
     }
 
     if (summary.attentionTournamentCount > 0) {
-      return `Hay ${summary.attentionTournamentCount} torneos con alertas operativas. Sprint 6 debe enfocarse en cerrar esas brechas antes de abrir frentes nuevos.`;
+      return `Hay ${summary.attentionTournamentCount} torneos con alertas operativas. Sprint 7 debe enfocarse en cerrar esas brechas antes de dar por consolidado el frontend.`;
     }
 
     if (summary.registrationCount === 0) {
