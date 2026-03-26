@@ -34,7 +34,7 @@ import { PlayersService } from './players.service';
   ],
   template: `
     <section class="app-page">
-      <app-page-header title="Players" subtitle="Listado operativo conectado al endpoint /players con busqueda y filtros minimos.">
+      <app-page-header title="Jugadores" subtitle="Listado operativo conectado a /players con busqueda y filtros base del padron.">
         @if (canManage()) {
           <a mat-flat-button color="primary" routerLink="/players/new">Nuevo jugador</a>
         }

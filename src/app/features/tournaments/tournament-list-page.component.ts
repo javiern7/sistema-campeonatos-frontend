@@ -36,7 +36,7 @@ import { TournamentsService } from './tournaments.service';
   ],
   template: `
     <section class="app-page">
-      <app-page-header title="Tournaments" subtitle="Operacion de torneos conectada a /tournaments.">
+      <app-page-header title="Torneos" subtitle="Operacion de torneos conectada a /tournaments con lectura multideporte.">
         @if (canManage()) {
           <a mat-flat-button color="primary" routerLink="/tournaments/new">Nuevo torneo</a>
         }

@@ -34,7 +34,7 @@ import { TeamsService } from './teams.service';
   ],
   template: `
     <section class="app-page">
-      <app-page-header title="Teams" subtitle="Listado operativo conectado al endpoint /teams con filtros basicos.">
+      <app-page-header title="Equipos" subtitle="Listado operativo conectado a /teams con filtros base del catalogo deportivo.">
         @if (canManage()) {
           <a mat-flat-button color="primary" routerLink="/teams/new">Nuevo equipo</a>
         }

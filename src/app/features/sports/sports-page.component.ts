@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
-import { finalize } from 'rxjs';
 import { MatTableModule } from '@angular/material/table';
+import { finalize } from 'rxjs';
 
 import { ErrorMapper } from '../../core/error/error.mapper';
 import { NotificationService } from '../../core/error/notification.service';
@@ -16,8 +16,8 @@ import { SportsService } from './sports.service';
   template: `
     <section class="app-page">
       <app-page-header
-        title="Sports"
-        subtitle="Catálogo maestro leído desde /sports del backend."
+        title="Deportes"
+        subtitle="Catalogo maestro multideporte leido desde /sports del backend."
       />
 
       <section class="card page-card">
@@ -32,20 +32,20 @@ import { SportsService } from './sports.service';
               </ng-container>
 
               <ng-container matColumnDef="code">
-                <th mat-header-cell *matHeaderCellDef>Code</th>
+                <th mat-header-cell *matHeaderCellDef>Codigo</th>
                 <td mat-cell *matCellDef="let sport">{{ sport.code }}</td>
               </ng-container>
 
               <ng-container matColumnDef="name">
-                <th mat-header-cell *matHeaderCellDef>Name</th>
+                <th mat-header-cell *matHeaderCellDef>Nombre</th>
                 <td mat-cell *matCellDef="let sport">{{ sport.name }}</td>
               </ng-container>
 
               <ng-container matColumnDef="active">
-                <th mat-header-cell *matHeaderCellDef>Status</th>
+                <th mat-header-cell *matHeaderCellDef>Estado</th>
                 <td mat-cell *matCellDef="let sport">
                   <span class="chip-status" [class.active]="sport.active" [class.inactive]="!sport.active">
-                    {{ sport.active ? 'Active' : 'Inactive' }}
+                    {{ sport.active ? 'Activo' : 'Inactivo' }}
                   </span>
                 </td>
               </ng-container>
