@@ -22,6 +22,8 @@ import { LoadingStateComponent } from '../../shared/loading-state/loading-state.
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
 import { StageGroup } from '../stage-groups/stage-group.models';
 import { StageGroupsService } from '../stage-groups/stage-groups.service';
+import { Team } from '../teams/team.models';
+import { TeamsService } from '../teams/teams.service';
 import { TournamentStage } from '../tournament-stages/tournament-stage.models';
 import { TournamentStagesService } from '../tournament-stages/tournament-stages.service';
 import { TournamentTeam } from '../tournament-teams/tournament-team.models';
@@ -81,7 +83,10 @@ const matchConsistencyValidator: ValidatorFn = (control: AbstractControl): Valid
   ],
   template: `
     <section class="app-page">
-      <app-page-header [title]="isEditMode() ? 'Editar partido' : 'Nuevo partido'" subtitle="Programacion y resultado basico." />
+      <app-page-header
+        [title]="isEditMode() ? 'Editar partido' : 'Nuevo partido'"
+        [subtitle]="pageSubtitle()"
+      />
 
       <section class="card page-card">
         @if (pageLoading()) {
@@ -145,27 +150,27 @@ const matchConsistencyValidator: ValidatorFn = (control: AbstractControl): Valid
               </mat-form-field>
 
               <mat-form-field appearance="outline">
-                <mat-label>Status</mat-label>
+                <mat-label>Estado</mat-label>
                 <mat-select formControlName="status">
                   @for (status of statuses; track status) {
-                    <mat-option [value]="status">{{ status }}</mat-option>
+                    <mat-option [value]="status">{{ statusLabel(status) }}</mat-option>
                   }
                 </mat-select>
               </mat-form-field>
 
               <mat-form-field appearance="outline">
-                <mat-label>Round</mat-label>
+                <mat-label>Ronda</mat-label>
                 <input matInput type="number" formControlName="roundNumber">
                 @if (form.controls.roundNumber.hasError('min')) {
-                  <mat-error>Round debe ser mayor a 0.</mat-error>
+                  <mat-error>La ronda debe ser mayor a 0.</mat-error>
                 }
               </mat-form-field>
 
               <mat-form-field appearance="outline">
-                <mat-label>Matchday</mat-label>
+                <mat-label>Fecha de juego</mat-label>
                 <input matInput type="number" formControlName="matchdayNumber">
                 @if (form.controls.matchdayNumber.hasError('min')) {
-                  <mat-error>Matchday debe ser mayor a 0.</mat-error>
+                  <mat-error>La fecha de juego debe ser mayor a 0.</mat-error>
                 }
               </mat-form-field>
 
@@ -183,7 +188,7 @@ const matchConsistencyValidator: ValidatorFn = (control: AbstractControl): Valid
               </mat-form-field>
 
               <mat-form-field appearance="outline">
-                <mat-label>Score local</mat-label>
+                <mat-label>Marcador local</mat-label>
                 <input matInput type="number" formControlName="homeScore">
                 @if (form.controls.homeScore.hasError('min')) {
                   <mat-error>El score no puede ser negativo.</mat-error>
@@ -191,7 +196,7 @@ const matchConsistencyValidator: ValidatorFn = (control: AbstractControl): Valid
               </mat-form-field>
 
               <mat-form-field appearance="outline">
-                <mat-label>Score visita</mat-label>
+                <mat-label>Marcador visita</mat-label>
                 <input matInput type="number" formControlName="awayScore">
                 @if (form.controls.awayScore.hasError('min')) {
                   <mat-error>El score no puede ser negativo.</mat-error>
@@ -202,7 +207,7 @@ const matchConsistencyValidator: ValidatorFn = (control: AbstractControl): Valid
                 <mat-label>Ganador</mat-label>
                 <mat-select formControlName="winnerTournamentTeamId">
                   <mat-option value="">Sin definir</mat-option>
-                  @for (item of tournamentTeams(); track item.id) {
+                  @for (item of winnerOptions(); track item.id) {
                     <mat-option [value]="item.id">{{ tournamentTeamLabel(item) }}</mat-option>
                   }
                 </mat-select>
@@ -224,7 +229,7 @@ const matchConsistencyValidator: ValidatorFn = (control: AbstractControl): Valid
               <p class="muted">Si informas un score, debes completar ambos marcadores.</p>
             }
             @if (form.hasError('playedMatchWithoutScore')) {
-              <p class="muted">Un partido en estado PLAYED debe tener score local y visita.</p>
+              <p class="muted">Un partido en estado jugado debe tener marcador local y visita.</p>
             }
 
             <div class="form-actions">
@@ -247,6 +252,7 @@ export class MatchFormPageComponent {
   private readonly tournamentsService = inject(TournamentsService);
   private readonly stagesService = inject(TournamentStagesService);
   private readonly groupsService = inject(StageGroupsService);
+  private readonly teamsService = inject(TeamsService);
   private readonly tournamentTeamsService = inject(TournamentTeamsService);
   private readonly matchesService = inject(MatchesService);
   private readonly catalogLoader = inject(CatalogLoaderService);
@@ -258,10 +264,21 @@ export class MatchFormPageComponent {
   protected readonly pageLoading = signal(true);
   protected readonly saving = signal(false);
   protected readonly tournaments = signal<Tournament[]>([]);
+  private readonly teams = signal<Team[]>([]);
   private readonly allStages = signal<TournamentStage[]>([]);
   private readonly allGroups = signal<StageGroup[]>([]);
   private readonly allTournamentTeams = signal<TournamentTeam[]>([]);
   protected readonly statuses: MatchStatus[] = ['SCHEDULED', 'PLAYED', 'FORFEIT', 'CANCELLED'];
+  protected readonly pageSubtitle = computed(() => {
+    const tournamentId = Number(this.form.controls.tournamentId.getRawValue());
+    const stageId = Number(this.form.controls.stageId.getRawValue());
+    const groupId = Number(this.form.controls.groupId.getRawValue());
+    const parts = [this.tournamentName(tournamentId), this.stageName(stageId), this.groupName(groupId)].filter((item) =>
+      Boolean(item)
+    );
+
+    return parts.length > 0 ? parts.join(' / ') : 'Programa el fixture y registra resultados con contexto competitivo.';
+  });
   protected readonly stages = computed(() => {
     const tournamentId = Number(this.form.controls.tournamentId.getRawValue());
     return tournamentId ? this.allStages().filter((item) => item.tournamentId === tournamentId) : this.allStages();
@@ -275,6 +292,14 @@ export class MatchFormPageComponent {
     return tournamentId
       ? this.allTournamentTeams().filter((item) => item.tournamentId === tournamentId)
       : this.allTournamentTeams();
+  });
+  protected readonly winnerOptions = computed(() => {
+    const selectedIds = new Set([
+      Number(this.form.controls.homeTournamentTeamId.getRawValue()),
+      Number(this.form.controls.awayTournamentTeamId.getRawValue())
+    ]);
+
+    return this.tournamentTeams().filter((item) => selectedIds.has(item.id));
   });
 
   protected readonly form = this.fb.nonNullable.group(
@@ -312,6 +337,9 @@ export class MatchFormPageComponent {
     });
     this.catalogLoader.loadAll((page, size) => this.groupsService.list({ page, size })).subscribe({
       next: (items) => this.allGroups.set(items)
+    });
+    this.catalogLoader.loadAll((page, size) => this.teamsService.list({ page, size })).subscribe({
+      next: (items) => this.teams.set(items)
     });
     this.catalogLoader.loadAll((page, size) => this.tournamentTeamsService.list({ page, size })).subscribe({
       next: (items) => {
@@ -442,6 +470,45 @@ export class MatchFormPageComponent {
   }
 
   protected tournamentTeamLabel(item: TournamentTeam): string {
-    return `#${item.id} - Equipo ${item.teamId}`;
+    const team = this.teams().find((entry) => entry.id === item.teamId);
+    const tournament = this.tournaments().find((entry) => entry.id === item.tournamentId);
+    const teamLabel = team?.name ?? `Equipo ${item.teamId}`;
+    const tournamentLabel = tournament?.name ?? `Torneo ${item.tournamentId}`;
+    return `${teamLabel} / ${tournamentLabel} (#${item.id})`;
+  }
+
+  protected tournamentName(id: number): string {
+    if (!id) {
+      return '';
+    }
+
+    return this.tournaments().find((item) => item.id === id)?.name ?? `Torneo ${id}`;
+  }
+
+  protected stageName(id: number): string {
+    if (!id) {
+      return '';
+    }
+
+    return this.allStages().find((item) => item.id === id)?.name ?? `Etapa ${id}`;
+  }
+
+  protected groupName(id: number): string {
+    if (!id) {
+      return '';
+    }
+
+    return this.allGroups().find((item) => item.id === id)?.name ?? `Grupo ${id}`;
+  }
+
+  protected statusLabel(status: MatchStatus): string {
+    const labels: Record<MatchStatus, string> = {
+      SCHEDULED: 'Programado',
+      PLAYED: 'Jugado',
+      FORFEIT: 'Forfeit',
+      CANCELLED: 'Cancelado'
+    };
+
+    return labels[status];
   }
 }

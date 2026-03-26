@@ -28,6 +28,13 @@ import { TournamentsService } from '../tournaments/tournaments.service';
 import { MatchGame, MatchPage, MatchStatus } from './match.models';
 import { MatchesService } from './matches.service';
 
+type SummaryCard = {
+  label: string;
+  value: number;
+  meta: string;
+  accent?: boolean;
+};
+
 @Component({
   selector: 'app-match-list-page',
   standalone: true,
@@ -44,7 +51,7 @@ import { MatchesService } from './matches.service';
   ],
   template: `
     <section class="app-page">
-      <app-page-header title="Matches" subtitle="Partidos conectados a /matches.">
+      <app-page-header title="Partidos" subtitle="Gestion operativa del fixture y sus resultados.">
         @if (canManage()) {
           <a mat-flat-button color="primary" routerLink="/matches/new">Nuevo partido</a>
         }
@@ -87,7 +94,7 @@ import { MatchesService } from './matches.service';
             <mat-select formControlName="status">
               <mat-option value="">Todos</mat-option>
               @for (status of statuses; track status) {
-                <mat-option [value]="status">{{ status }}</mat-option>
+                <mat-option [value]="status">{{ statusLabel(status) }}</mat-option>
               }
             </mat-select>
           </mat-form-field>
@@ -101,39 +108,88 @@ import { MatchesService } from './matches.service';
         @if (loading()) {
           <app-loading-state />
         } @else {
-          <p class="muted">Total: {{ page()?.totalElements ?? 0 }}</p>
-
-          <div class="table-wrapper">
-            <table mat-table [dataSource]="rows()" class="w-100">
-              <ng-container matColumnDef="id">
-                <th mat-header-cell *matHeaderCellDef>ID</th>
-                <td mat-cell *matCellDef="let row">{{ row.id }}</td>
-              </ng-container>
-              <ng-container matColumnDef="fixture">
-                <th mat-header-cell *matHeaderCellDef>Fixture</th>
-                <td mat-cell *matCellDef="let row">
-                  {{ tournamentTeamLabel(row.homeTournamentTeamId) }} vs {{ tournamentTeamLabel(row.awayTournamentTeamId) }}
-                </td>
-              </ng-container>
-              <ng-container matColumnDef="status">
-                <th mat-header-cell *matHeaderCellDef>Estado</th>
-                <td mat-cell *matCellDef="let row">{{ row.status }}</td>
-              </ng-container>
-              <ng-container matColumnDef="actions">
-                <th mat-header-cell *matHeaderCellDef>Acciones</th>
-                <td mat-cell *matCellDef="let row">
-                  @if (canManage()) {
-                    <a mat-button [routerLink]="['/matches', row.id, 'edit']">Editar</a>
-                  }
-                  @if (canDelete()) {
-                    <button mat-button type="button" color="warn" (click)="remove(row)">Eliminar</button>
-                  }
-                </td>
-              </ng-container>
-              <tr mat-header-row *matHeaderRowDef="displayedColumns()"></tr>
-              <tr mat-row *matRowDef="let row; columns: displayedColumns()"></tr>
-            </table>
+          <div class="context-banner">
+            <strong>{{ selectedContextLabel() }}</strong>
+            <span class="muted">Total filtrado: {{ page()?.totalElements ?? 0 }} partidos</span>
           </div>
+
+          <div class="summary-grid">
+            @for (card of summaryCards(); track card.label) {
+              <article class="summary-card card" [class.accent]="card.accent">
+                <span class="summary-label">{{ card.label }}</span>
+                <span class="summary-value">{{ card.value }}</span>
+                <span class="summary-meta">{{ card.meta }}</span>
+              </article>
+            }
+          </div>
+
+          @if (rows().length === 0) {
+            <div class="empty-state">
+              <strong>No hay partidos para este filtro.</strong>
+              <p class="muted">Prueba otro contexto o registra un nuevo partido para comenzar a operar el fixture.</p>
+            </div>
+          } @else {
+            <div class="table-wrapper">
+              <table mat-table [dataSource]="rows()" class="w-100">
+                <ng-container matColumnDef="fixture">
+                  <th mat-header-cell *matHeaderCellDef>Fixture</th>
+                  <td mat-cell *matCellDef="let row">
+                    <div class="stack-sm">
+                      <strong>{{ tournamentTeamLabel(row.homeTournamentTeamId) }} vs {{ tournamentTeamLabel(row.awayTournamentTeamId) }}</strong>
+                      <span class="muted">Partido #{{ row.id }}</span>
+                    </div>
+                  </td>
+                </ng-container>
+                <ng-container matColumnDef="context">
+                  <th mat-header-cell *matHeaderCellDef>Contexto</th>
+                  <td mat-cell *matCellDef="let row">
+                    <div class="stack-sm">
+                      <span>{{ tournamentName(row.tournamentId) }}</span>
+                      <span class="muted">{{ row.stageId ? stageName(row.stageId) : 'Sin etapa' }} / {{ row.groupId ? groupName(row.groupId) : 'Sin grupo' }}</span>
+                      <span class="muted">{{ roundLabel(row) }}</span>
+                    </div>
+                  </td>
+                </ng-container>
+                <ng-container matColumnDef="schedule">
+                  <th mat-header-cell *matHeaderCellDef>Programacion</th>
+                  <td mat-cell *matCellDef="let row">
+                    <div class="stack-sm">
+                      <span>{{ formatDate(row.scheduledAt) }}</span>
+                      <span class="muted">{{ row.venueName || 'Sede por definir' }}</span>
+                    </div>
+                  </td>
+                </ng-container>
+                <ng-container matColumnDef="score">
+                  <th mat-header-cell *matHeaderCellDef>Resultado</th>
+                  <td mat-cell *matCellDef="let row">
+                    <div class="stack-sm">
+                      <strong>{{ scoreLabel(row) }}</strong>
+                      <span class="muted">{{ winnerLabel(row) }}</span>
+                    </div>
+                  </td>
+                </ng-container>
+                <ng-container matColumnDef="status">
+                  <th mat-header-cell *matHeaderCellDef>Estado</th>
+                  <td mat-cell *matCellDef="let row">
+                    <span [class]="statusClass(row.status)">{{ statusLabel(row.status) }}</span>
+                  </td>
+                </ng-container>
+                <ng-container matColumnDef="actions">
+                  <th mat-header-cell *matHeaderCellDef>Acciones</th>
+                  <td mat-cell *matCellDef="let row">
+                    @if (canManage()) {
+                      <a mat-button [routerLink]="['/matches', row.id, 'edit']">Editar</a>
+                    }
+                    @if (canDelete()) {
+                      <button mat-button type="button" color="warn" (click)="remove(row)">Eliminar</button>
+                    }
+                  </td>
+                </ng-container>
+                <tr mat-header-row *matHeaderRowDef="displayedColumns()"></tr>
+                <tr mat-row *matRowDef="let row; columns: displayedColumns()"></tr>
+              </table>
+            </div>
+          }
 
           <mat-paginator
             [length]="page()?.totalElements ?? 0"
@@ -183,8 +239,49 @@ export class MatchListPageComponent {
     const stageId = Number(this.filtersForm.controls.stageId.getRawValue());
     return stageId ? this.allGroups().filter((item) => item.stageId === stageId) : [];
   });
+  protected readonly selectedContextLabel = computed(() => {
+    const filters = this.filtersForm.getRawValue();
+    const labels = [
+      this.tournamentName(Number(filters.tournamentId)),
+      this.stageName(Number(filters.stageId)),
+      this.groupName(Number(filters.groupId)),
+      this.statusLabel(filters.status)
+    ].filter((label) => Boolean(label));
+
+    return labels.length > 0 ? labels.join(' / ') : 'Todos los torneos y estados';
+  });
+  protected readonly summaryCards = computed<SummaryCard[]>(() => {
+    const matches = this.rows();
+    const played = matches.filter((item) => item.status === 'PLAYED').length;
+    const pending = matches.filter((item) => item.status === 'SCHEDULED').length;
+    const unresolved = matches.filter((item) => item.status === 'FORFEIT' || item.status === 'CANCELLED').length;
+
+    return [
+      {
+        label: 'Contexto activo',
+        value: this.page()?.totalElements ?? 0,
+        meta: this.selectedContextLabel(),
+        accent: true
+      },
+      {
+        label: 'Jugados en pagina',
+        value: played,
+        meta: 'Resultados cerrados visibles'
+      },
+      {
+        label: 'Pendientes en pagina',
+        value: pending,
+        meta: 'Programados por disputar'
+      },
+      {
+        label: 'Con novedad',
+        value: unresolved,
+        meta: 'Forfeit o cancelados'
+      }
+    ];
+  });
   protected readonly displayedColumns = computed(() => {
-    const columns = ['id', 'fixture', 'status'];
+    const columns = ['fixture', 'context', 'schedule', 'score', 'status'];
     if (this.canManage() || this.canDelete()) {
       columns.push('actions');
     }
@@ -301,6 +398,84 @@ export class MatchListPageComponent {
     }
 
     const team = this.teams().find((item) => item.id === registration.teamId);
-    return team?.name ?? `Equipo ${registration.teamId}`;
+    return team ? `${team.name} (#${registration.id})` : `Equipo ${registration.teamId} (#${registration.id})`;
+  }
+
+  protected tournamentName(id: number): string {
+    if (!id) {
+      return '';
+    }
+
+    return this.tournaments().find((item) => item.id === id)?.name ?? `Torneo ${id}`;
+  }
+
+  protected stageName(id: number): string {
+    if (!id) {
+      return '';
+    }
+
+    return this.allStages().find((item) => item.id === id)?.name ?? `Etapa ${id}`;
+  }
+
+  protected groupName(id: number): string {
+    if (!id) {
+      return '';
+    }
+
+    return this.allGroups().find((item) => item.id === id)?.name ?? `Grupo ${id}`;
+  }
+
+  protected roundLabel(row: MatchGame): string {
+    const parts = [];
+    if (row.roundNumber) {
+      parts.push(`Ronda ${row.roundNumber}`);
+    }
+    if (row.matchdayNumber) {
+      parts.push(`Fecha ${row.matchdayNumber}`);
+    }
+
+    return parts.length > 0 ? parts.join(' / ') : 'Sin ronda ni fecha';
+  }
+
+  protected formatDate(value: string | null): string {
+    if (!value) {
+      return 'Sin programacion';
+    }
+
+    return new Intl.DateTimeFormat('es-PE', {
+      dateStyle: 'medium',
+      timeStyle: 'short'
+    }).format(new Date(value));
+  }
+
+  protected scoreLabel(row: MatchGame): string {
+    if (row.homeScore === null || row.awayScore === null) {
+      return 'Pendiente';
+    }
+
+    return `${row.homeScore} - ${row.awayScore}`;
+  }
+
+  protected winnerLabel(row: MatchGame): string {
+    if (!row.winnerTournamentTeamId) {
+      return row.status === 'PLAYED' ? 'Sin ganador cargado' : 'Ganador pendiente';
+    }
+
+    return `Ganador: ${this.tournamentTeamLabel(row.winnerTournamentTeamId)}`;
+  }
+
+  protected statusLabel(status: MatchStatus | ''): string {
+    const labels: Record<MatchStatus, string> = {
+      SCHEDULED: 'Programado',
+      PLAYED: 'Jugado',
+      FORFEIT: 'Forfeit',
+      CANCELLED: 'Cancelado'
+    };
+
+    return status ? labels[status] : '';
+  }
+
+  protected statusClass(status: MatchStatus): string {
+    return `status-pill ${status.toLowerCase()}`;
   }
 }

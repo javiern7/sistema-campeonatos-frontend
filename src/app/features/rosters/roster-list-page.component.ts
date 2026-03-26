@@ -14,16 +14,23 @@ import { NotificationService } from '../../core/error/notification.service';
 import { CatalogLoaderService } from '../../core/pagination/catalog-loader.service';
 import { LoadingStateComponent } from '../../shared/loading-state/loading-state.component';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
-import { Team } from '../teams/team.models';
-import { TeamsService } from '../teams/teams.service';
-import { Tournament } from '../tournaments/tournament.models';
-import { TournamentsService } from '../tournaments/tournaments.service';
 import { Player } from '../players/player.models';
 import { PlayersService } from '../players/players.service';
+import { Team } from '../teams/team.models';
+import { TeamsService } from '../teams/teams.service';
 import { TournamentTeam } from '../tournament-teams/tournament-team.models';
 import { TournamentTeamsService } from '../tournament-teams/tournament-teams.service';
+import { Tournament } from '../tournaments/tournament.models';
+import { TournamentsService } from '../tournaments/tournaments.service';
 import { RosterEntry, RosterPage, RosterStatus } from './roster.models';
 import { RostersService } from './rosters.service';
+
+type SummaryCard = {
+  label: string;
+  value: number;
+  meta: string;
+  accent?: boolean;
+};
 
 @Component({
   selector: 'app-roster-list-page',
@@ -41,7 +48,7 @@ import { RostersService } from './rosters.service';
   ],
   template: `
     <section class="app-page">
-      <app-page-header title="Rosters" subtitle="Roster por inscripcion conectado a /rosters.">
+      <app-page-header title="Rosters" subtitle="Jugadores habilitados por inscripcion y torneo.">
         @if (canManage()) {
           <a mat-flat-button color="primary" routerLink="/rosters/new">Nuevo registro</a>
         }
@@ -74,7 +81,7 @@ import { RostersService } from './rosters.service';
             <mat-select formControlName="rosterStatus">
               <mat-option value="">Todos</mat-option>
               @for (status of statuses; track status) {
-                <mat-option [value]="status">{{ status }}</mat-option>
+                <mat-option [value]="status">{{ statusLabel(status) }}</mat-option>
               }
             </mat-select>
           </mat-form-field>
@@ -88,45 +95,77 @@ import { RostersService } from './rosters.service';
         @if (loading()) {
           <app-loading-state />
         } @else {
-          <p class="muted">Total: {{ page()?.totalElements ?? 0 }}</p>
-
-          <div class="table-wrapper">
-            <table mat-table [dataSource]="rows()" class="w-100">
-              <ng-container matColumnDef="id">
-                <th mat-header-cell *matHeaderCellDef>ID</th>
-                <td mat-cell *matCellDef="let row">{{ row.id }}</td>
-              </ng-container>
-              <ng-container matColumnDef="registration">
-                <th mat-header-cell *matHeaderCellDef>Inscripcion</th>
-                <td mat-cell *matCellDef="let row">{{ tournamentTeamLabel(row.tournamentTeamId) }}</td>
-              </ng-container>
-              <ng-container matColumnDef="player">
-                <th mat-header-cell *matHeaderCellDef>Jugador</th>
-                <td mat-cell *matCellDef="let row">{{ playerName(row.playerId) }}</td>
-              </ng-container>
-              <ng-container matColumnDef="jersey">
-                <th mat-header-cell *matHeaderCellDef>Camiseta</th>
-                <td mat-cell *matCellDef="let row">{{ row.jerseyNumber ?? '-' }}</td>
-              </ng-container>
-              <ng-container matColumnDef="status">
-                <th mat-header-cell *matHeaderCellDef>Estado</th>
-                <td mat-cell *matCellDef="let row">{{ row.rosterStatus }}</td>
-              </ng-container>
-              <ng-container matColumnDef="actions">
-                <th mat-header-cell *matHeaderCellDef>Acciones</th>
-                <td mat-cell *matCellDef="let row">
-                  @if (canManage()) {
-                    <a mat-button [routerLink]="['/rosters', row.id, 'edit']">Editar</a>
-                  }
-                  @if (canDelete()) {
-                    <button mat-button type="button" color="warn" (click)="remove(row)">Eliminar</button>
-                  }
-                </td>
-              </ng-container>
-              <tr mat-header-row *matHeaderRowDef="displayedColumns()"></tr>
-              <tr mat-row *matRowDef="let row; columns: displayedColumns()"></tr>
-            </table>
+          <div class="context-banner">
+            <strong>{{ selectedContextLabel() }}</strong>
+            <span class="muted">Total filtrado: {{ page()?.totalElements ?? 0 }} registros de roster</span>
           </div>
+
+          <div class="summary-grid">
+            @for (card of summaryCards(); track card.label) {
+              <article class="summary-card card" [class.accent]="card.accent">
+                <span class="summary-label">{{ card.label }}</span>
+                <span class="summary-value">{{ card.value }}</span>
+                <span class="summary-meta">{{ card.meta }}</span>
+              </article>
+            }
+          </div>
+
+          @if (rows().length === 0) {
+            <div class="empty-state">
+              <strong>No hay registros de roster para este filtro.</strong>
+              <p class="muted">Crea un nuevo roster o ajusta el filtro para continuar la operacion del torneo.</p>
+            </div>
+          } @else {
+            <div class="table-wrapper">
+              <table mat-table [dataSource]="rows()" class="w-100">
+                <ng-container matColumnDef="registration">
+                  <th mat-header-cell *matHeaderCellDef>Inscripcion</th>
+                  <td mat-cell *matCellDef="let row">{{ tournamentTeamLabel(row.tournamentTeamId) }}</td>
+                </ng-container>
+                <ng-container matColumnDef="player">
+                  <th mat-header-cell *matHeaderCellDef>Jugador</th>
+                  <td mat-cell *matCellDef="let row">
+                    <div class="stack-sm">
+                      <strong>{{ playerName(row.playerId) }}</strong>
+                      <span class="muted">{{ row.positionName || 'Posicion sin definir' }}</span>
+                    </div>
+                  </td>
+                </ng-container>
+                <ng-container matColumnDef="jersey">
+                  <th mat-header-cell *matHeaderCellDef>Camiseta</th>
+                  <td mat-cell *matCellDef="let row">
+                    <div class="stack-sm">
+                      <span>{{ row.jerseyNumber ?? '-' }}</span>
+                      <span class="muted">{{ row.captain ? 'Capitan' : 'Jugador de campo' }}</span>
+                    </div>
+                  </td>
+                </ng-container>
+                <ng-container matColumnDef="status">
+                  <th mat-header-cell *matHeaderCellDef>Estado</th>
+                  <td mat-cell *matCellDef="let row">
+                    <span [class]="statusClass(row.rosterStatus)">{{ statusLabel(row.rosterStatus) }}</span>
+                  </td>
+                </ng-container>
+                <ng-container matColumnDef="window">
+                  <th mat-header-cell *matHeaderCellDef>Vigencia</th>
+                  <td mat-cell *matCellDef="let row">{{ row.startDate }}{{ row.endDate ? ' a ' + row.endDate : ' en adelante' }}</td>
+                </ng-container>
+                <ng-container matColumnDef="actions">
+                  <th mat-header-cell *matHeaderCellDef>Acciones</th>
+                  <td mat-cell *matCellDef="let row">
+                    @if (canManage()) {
+                      <a mat-button [routerLink]="['/rosters', row.id, 'edit']">Editar</a>
+                    }
+                    @if (canDelete()) {
+                      <button mat-button type="button" color="warn" (click)="remove(row)">Eliminar</button>
+                    }
+                  </td>
+                </ng-container>
+                <tr mat-header-row *matHeaderRowDef="displayedColumns()"></tr>
+                <tr mat-row *matRowDef="let row; columns: displayedColumns()"></tr>
+              </table>
+            </div>
+          }
 
           <mat-paginator
             [length]="page()?.totalElements ?? 0"
@@ -166,8 +205,42 @@ export class RosterListPageComponent {
   protected readonly statuses: RosterStatus[] = ['ACTIVE', 'INACTIVE', 'SUSPENDED'];
   protected readonly canManage = computed(() => this.authorization.canManage('rosters'));
   protected readonly canDelete = computed(() => this.authorization.canDelete('rosters'));
+  protected readonly selectedContextLabel = computed(() => {
+    const filters = this.filtersForm.getRawValue();
+    const labels = [
+      this.tournamentTeamLabel(Number(filters.tournamentTeamId)),
+      this.playerName(Number(filters.playerId)),
+      this.statusLabel(filters.rosterStatus)
+    ].filter((label) => Boolean(label));
+
+    return labels.length > 0 ? labels.join(' / ') : 'Todos los registros de roster';
+  });
+  protected readonly summaryCards = computed<SummaryCard[]>(() => {
+    const rows = this.rows();
+    const active = rows.filter((item) => item.rosterStatus === 'ACTIVE').length;
+    const captains = rows.filter((item) => item.captain).length;
+
+    return [
+      {
+        label: 'Contexto activo',
+        value: this.page()?.totalElements ?? 0,
+        meta: this.selectedContextLabel(),
+        accent: true
+      },
+      {
+        label: 'Activos en pagina',
+        value: active,
+        meta: 'Jugadores habilitados'
+      },
+      {
+        label: 'Capitanes en pagina',
+        value: captains,
+        meta: 'Referentes visibles'
+      }
+    ];
+  });
   protected readonly displayedColumns = computed(() => {
-    const columns = ['id', 'registration', 'player', 'jersey', 'status'];
+    const columns = ['registration', 'player', 'jersey', 'status', 'window'];
     if (this.canManage() || this.canDelete()) {
       columns.push('actions');
     }
@@ -230,11 +303,19 @@ export class RosterListPageComponent {
   }
 
   protected playerName(id: number): string {
+    if (!id) {
+      return '';
+    }
+
     const player = this.players().find((item) => item.id === id);
     return player ? `${player.firstName} ${player.lastName}` : `#${id}`;
   }
 
   protected tournamentTeamLabel(id: number): string {
+    if (!id) {
+      return '';
+    }
+
     const registration = this.tournamentTeams().find((item) => item.id === id);
     if (!registration) {
       return `#${id}`;
@@ -245,6 +326,26 @@ export class RosterListPageComponent {
     const teamLabel = team?.name ?? `Equipo ${registration.teamId}`;
     const tournamentLabel = tournament?.name ?? `Torneo ${registration.tournamentId}`;
     return `${teamLabel} / ${tournamentLabel}`;
+  }
+
+  protected statusLabel(status: RosterStatus | ''): string {
+    const labels: Record<RosterStatus, string> = {
+      ACTIVE: 'Activo',
+      INACTIVE: 'Inactivo',
+      SUSPENDED: 'Suspendido'
+    };
+
+    return status ? labels[status] : '';
+  }
+
+  protected statusClass(status: RosterStatus): string {
+    const statusMap: Record<RosterStatus, string> = {
+      ACTIVE: 'status-pill played',
+      INACTIVE: 'status-pill cancelled',
+      SUSPENDED: 'status-pill forfeit'
+    };
+
+    return statusMap[status];
   }
 
   protected remove(row: RosterEntry): void {

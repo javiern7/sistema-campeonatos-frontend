@@ -25,6 +25,13 @@ import {
 } from './tournament-team.models';
 import { TournamentTeamsService } from './tournament-teams.service';
 
+type SummaryCard = {
+  label: string;
+  value: number;
+  meta: string;
+  accent?: boolean;
+};
+
 @Component({
   selector: 'app-tournament-team-list-page',
   standalone: true,
@@ -41,7 +48,7 @@ import { TournamentTeamsService } from './tournament-teams.service';
   ],
   template: `
     <section class="app-page">
-      <app-page-header title="Tournament Teams" subtitle="Inscripciones conectadas a /tournament-teams.">
+      <app-page-header title="Inscripciones" subtitle="Relacion operativa entre torneo y equipo.">
         @if (canManage()) {
           <a mat-flat-button color="primary" routerLink="/tournament-teams/new">Nueva inscripcion</a>
         }
@@ -74,7 +81,7 @@ import { TournamentTeamsService } from './tournament-teams.service';
             <mat-select formControlName="registrationStatus">
               <mat-option value="">Todos</mat-option>
               @for (status of statuses; track status) {
-                <mat-option [value]="status">{{ status }}</mat-option>
+                <mat-option [value]="status">{{ statusLabel(status) }}</mat-option>
               }
             </mat-select>
           </mat-form-field>
@@ -88,41 +95,73 @@ import { TournamentTeamsService } from './tournament-teams.service';
         @if (loading()) {
           <app-loading-state />
         } @else {
-          <p class="muted">Total: {{ page()?.totalElements ?? 0 }}</p>
-
-          <div class="table-wrapper">
-            <table mat-table [dataSource]="rows()" class="w-100">
-              <ng-container matColumnDef="id">
-                <th mat-header-cell *matHeaderCellDef>ID</th>
-                <td mat-cell *matCellDef="let row">{{ row.id }}</td>
-              </ng-container>
-              <ng-container matColumnDef="tournament">
-                <th mat-header-cell *matHeaderCellDef>Torneo</th>
-                <td mat-cell *matCellDef="let row">{{ tournamentName(row.tournamentId) }}</td>
-              </ng-container>
-              <ng-container matColumnDef="team">
-                <th mat-header-cell *matHeaderCellDef>Equipo</th>
-                <td mat-cell *matCellDef="let row">{{ teamName(row.teamId) }}</td>
-              </ng-container>
-              <ng-container matColumnDef="status">
-                <th mat-header-cell *matHeaderCellDef>Estado</th>
-                <td mat-cell *matCellDef="let row">{{ row.registrationStatus }}</td>
-              </ng-container>
-              <ng-container matColumnDef="actions">
-                <th mat-header-cell *matHeaderCellDef>Acciones</th>
-                <td mat-cell *matCellDef="let row">
-                  @if (canManage()) {
-                    <a mat-button [routerLink]="['/tournament-teams', row.id, 'edit']">Editar</a>
-                  }
-                  @if (canDelete()) {
-                    <button mat-button type="button" color="warn" (click)="remove(row)">Eliminar</button>
-                  }
-                </td>
-              </ng-container>
-              <tr mat-header-row *matHeaderRowDef="displayedColumns()"></tr>
-              <tr mat-row *matRowDef="let row; columns: displayedColumns()"></tr>
-            </table>
+          <div class="context-banner">
+            <strong>{{ selectedContextLabel() }}</strong>
+            <span class="muted">Total filtrado: {{ page()?.totalElements ?? 0 }} inscripciones</span>
           </div>
+
+          <div class="summary-grid">
+            @for (card of summaryCards(); track card.label) {
+              <article class="summary-card card" [class.accent]="card.accent">
+                <span class="summary-label">{{ card.label }}</span>
+                <span class="summary-value">{{ card.value }}</span>
+                <span class="summary-meta">{{ card.meta }}</span>
+              </article>
+            }
+          </div>
+
+          @if (rows().length === 0) {
+            <div class="empty-state">
+              <strong>No hay inscripciones para este filtro.</strong>
+              <p class="muted">Ajusta el contexto o registra una nueva inscripcion para habilitar rosters, partidos y standings.</p>
+            </div>
+          } @else {
+            <div class="table-wrapper">
+              <table mat-table [dataSource]="rows()" class="w-100">
+                <ng-container matColumnDef="tournament">
+                  <th mat-header-cell *matHeaderCellDef>Torneo</th>
+                  <td mat-cell *matCellDef="let row">{{ tournamentName(row.tournamentId) }}</td>
+                </ng-container>
+                <ng-container matColumnDef="team">
+                  <th mat-header-cell *matHeaderCellDef>Equipo</th>
+                  <td mat-cell *matCellDef="let row">
+                    <div class="stack-sm">
+                      <strong>{{ teamName(row.teamId) }}</strong>
+                      <span class="muted">Inscripcion #{{ row.id }}</span>
+                    </div>
+                  </td>
+                </ng-container>
+                <ng-container matColumnDef="seeding">
+                  <th mat-header-cell *matHeaderCellDef>Siembra</th>
+                  <td mat-cell *matCellDef="let row">
+                    <div class="stack-sm">
+                      <span>{{ row.seedNumber ?? '-' }}</span>
+                      <span class="muted">Sorteo: {{ row.groupDrawPosition ?? '-' }}</span>
+                    </div>
+                  </td>
+                </ng-container>
+                <ng-container matColumnDef="status">
+                  <th mat-header-cell *matHeaderCellDef>Estado</th>
+                  <td mat-cell *matCellDef="let row">
+                    <span [class]="statusClass(row.registrationStatus)">{{ statusLabel(row.registrationStatus) }}</span>
+                  </td>
+                </ng-container>
+                <ng-container matColumnDef="actions">
+                  <th mat-header-cell *matHeaderCellDef>Acciones</th>
+                  <td mat-cell *matCellDef="let row">
+                    @if (canManage()) {
+                      <a mat-button [routerLink]="['/tournament-teams', row.id, 'edit']">Editar</a>
+                    }
+                    @if (canDelete()) {
+                      <button mat-button type="button" color="warn" (click)="remove(row)">Eliminar</button>
+                    }
+                  </td>
+                </ng-container>
+                <tr mat-header-row *matHeaderRowDef="displayedColumns()"></tr>
+                <tr mat-row *matRowDef="let row; columns: displayedColumns()"></tr>
+              </table>
+            </div>
+          }
 
           <mat-paginator
             [length]="page()?.totalElements ?? 0"
@@ -158,8 +197,42 @@ export class TournamentTeamListPageComponent {
   protected readonly statuses: TournamentTeamRegistrationStatus[] = ['PENDING', 'APPROVED', 'REJECTED', 'WITHDRAWN'];
   protected readonly canManage = computed(() => this.authorization.canManage('tournamentTeams'));
   protected readonly canDelete = computed(() => this.authorization.canDelete('tournamentTeams'));
+  protected readonly selectedContextLabel = computed(() => {
+    const filters = this.filtersForm.getRawValue();
+    const labels = [
+      this.tournamentName(Number(filters.tournamentId)),
+      this.teamName(Number(filters.teamId)),
+      this.statusLabel(filters.registrationStatus)
+    ].filter((label) => Boolean(label));
+
+    return labels.length > 0 ? labels.join(' / ') : 'Todas las inscripciones';
+  });
+  protected readonly summaryCards = computed<SummaryCard[]>(() => {
+    const rows = this.rows();
+    const approved = rows.filter((item) => item.registrationStatus === 'APPROVED').length;
+    const pending = rows.filter((item) => item.registrationStatus === 'PENDING').length;
+
+    return [
+      {
+        label: 'Contexto activo',
+        value: this.page()?.totalElements ?? 0,
+        meta: this.selectedContextLabel(),
+        accent: true
+      },
+      {
+        label: 'Aprobadas en pagina',
+        value: approved,
+        meta: 'Listas para operar'
+      },
+      {
+        label: 'Pendientes en pagina',
+        value: pending,
+        meta: 'Pendientes de decision'
+      }
+    ];
+  });
   protected readonly displayedColumns = computed(() => {
-    const columns = ['id', 'tournament', 'team', 'status'];
+    const columns = ['tournament', 'team', 'seeding', 'status'];
     if (this.canManage() || this.canDelete()) {
       columns.push('actions');
     }
@@ -216,11 +289,41 @@ export class TournamentTeamListPageComponent {
   }
 
   protected tournamentName(id: number): string {
-    return this.tournaments().find((item) => item.id === id)?.name ?? `#${id}`;
+    if (!id) {
+      return '';
+    }
+
+    return this.tournaments().find((item) => item.id === id)?.name ?? `Torneo ${id}`;
   }
 
   protected teamName(id: number): string {
-    return this.teams().find((item) => item.id === id)?.name ?? `#${id}`;
+    if (!id) {
+      return '';
+    }
+
+    return this.teams().find((item) => item.id === id)?.name ?? `Equipo ${id}`;
+  }
+
+  protected statusLabel(status: TournamentTeamRegistrationStatus | ''): string {
+    const labels: Record<TournamentTeamRegistrationStatus, string> = {
+      PENDING: 'Pendiente',
+      APPROVED: 'Aprobada',
+      REJECTED: 'Rechazada',
+      WITHDRAWN: 'Retirada'
+    };
+
+    return status ? labels[status] : '';
+  }
+
+  protected statusClass(status: TournamentTeamRegistrationStatus): string {
+    const statusMap: Record<TournamentTeamRegistrationStatus, string> = {
+      PENDING: 'status-pill scheduled',
+      APPROVED: 'status-pill played',
+      REJECTED: 'status-pill cancelled',
+      WITHDRAWN: 'status-pill forfeit'
+    };
+
+    return statusMap[status];
   }
 
   protected remove(row: TournamentTeam): void {

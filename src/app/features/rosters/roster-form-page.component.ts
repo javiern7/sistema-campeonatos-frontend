@@ -15,8 +15,12 @@ import { LoadingStateComponent } from '../../shared/loading-state/loading-state.
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
 import { Player } from '../players/player.models';
 import { PlayersService } from '../players/players.service';
+import { Team } from '../teams/team.models';
+import { TeamsService } from '../teams/teams.service';
 import { TournamentTeam } from '../tournament-teams/tournament-team.models';
 import { TournamentTeamsService } from '../tournament-teams/tournament-teams.service';
+import { Tournament } from '../tournaments/tournament.models';
+import { TournamentsService } from '../tournaments/tournaments.service';
 import { RosterFormValue, RosterStatus } from './roster.models';
 import { RostersService } from './rosters.service';
 
@@ -146,6 +150,8 @@ export class RosterFormPageComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly playersService = inject(PlayersService);
+  private readonly teamsService = inject(TeamsService);
+  private readonly tournamentsService = inject(TournamentsService);
   private readonly tournamentTeamsService = inject(TournamentTeamsService);
   private readonly rostersService = inject(RostersService);
   private readonly catalogLoader = inject(CatalogLoaderService);
@@ -157,6 +163,8 @@ export class RosterFormPageComponent {
   protected readonly pageLoading = signal(true);
   protected readonly saving = signal(false);
   protected readonly players = signal<Player[]>([]);
+  protected readonly teams = signal<Team[]>([]);
+  protected readonly tournaments = signal<Tournament[]>([]);
   protected readonly tournamentTeams = signal<TournamentTeam[]>([]);
   protected readonly statuses: RosterStatus[] = ['ACTIVE', 'INACTIVE', 'SUSPENDED'];
 
@@ -182,6 +190,12 @@ export class RosterFormPageComponent {
           this.form.patchValue({ playerId: items[0].id });
         }
       }
+    });
+    this.catalogLoader.loadAll((page, size) => this.teamsService.list({ page, size })).subscribe({
+      next: (items) => this.teams.set(items)
+    });
+    this.catalogLoader.loadAll((page, size) => this.tournamentsService.list({ page, size })).subscribe({
+      next: (items) => this.tournaments.set(items)
     });
 
     this.catalogLoader.loadAll((page, size) => this.tournamentTeamsService.list({ page, size })).subscribe({
@@ -258,6 +272,10 @@ export class RosterFormPageComponent {
   }
 
   protected tournamentTeamLabel(item: TournamentTeam): string {
-    return `#${item.id} - Torneo ${item.tournamentId} - Equipo ${item.teamId}`;
+    const team = this.teams().find((entry) => entry.id === item.teamId);
+    const tournament = this.tournaments().find((entry) => entry.id === item.tournamentId);
+    const teamLabel = team?.name ?? `Equipo ${item.teamId}`;
+    const tournamentLabel = tournament?.name ?? `Torneo ${item.tournamentId}`;
+    return `${teamLabel} / ${tournamentLabel} (#${item.id})`;
   }
 }

@@ -27,6 +27,13 @@ import { TournamentsService } from '../tournaments/tournaments.service';
 import { Standing, StandingPage, StandingRecalculationResponse } from './standings.models';
 import { StandingsService } from './standings.service';
 
+type SummaryCard = {
+  label: string;
+  value: number;
+  meta: string;
+  accent?: boolean;
+};
+
 @Component({
   selector: 'app-standings-page',
   standalone: true,
@@ -42,9 +49,15 @@ import { StandingsService } from './standings.service';
   ],
   template: `
     <section class="app-page">
-      <app-page-header title="Standings" subtitle="Tabla de posiciones y recalculo conectada a /standings.">
+      <app-page-header title="Tabla de posiciones" subtitle="Seguimiento competitivo y recalculo por contexto.">
         @if (canManage()) {
-          <button mat-flat-button color="primary" type="button" (click)="recalculate()" [disabled]="recalculating()">
+          <button
+            mat-flat-button
+            color="primary"
+            type="button"
+            (click)="recalculate()"
+            [disabled]="recalculating() || !filtersForm.controls.tournamentId.getRawValue()"
+          >
             {{ recalculating() ? 'Recalculando...' : 'Recalcular standings' }}
           </button>
         }
@@ -55,7 +68,7 @@ import { StandingsService } from './standings.service';
           <mat-form-field appearance="outline">
             <mat-label>Torneo</mat-label>
             <mat-select formControlName="tournamentId">
-              <mat-option value="">Selecciona</mat-option>
+              <mat-option value="">Todos</mat-option>
               @for (item of tournaments(); track item.id) {
                 <mat-option [value]="item.id">{{ item.name }}</mat-option>
               }
@@ -83,7 +96,7 @@ import { StandingsService } from './standings.service';
           </mat-form-field>
 
           <mat-form-field appearance="outline">
-            <mat-label>Tournament Team</mat-label>
+            <mat-label>Inscripcion</mat-label>
             <mat-select formControlName="tournamentTeamId">
               <mat-option value="">Todos</mat-option>
               @for (item of filteredTournamentTeams(); track item.id) {
@@ -105,34 +118,68 @@ import { StandingsService } from './standings.service';
         @if (loading()) {
           <app-loading-state />
         } @else {
-          <p class="muted">Total: {{ page()?.totalElements ?? 0 }}</p>
-
-          <div class="table-wrapper">
-            <table mat-table [dataSource]="rows()" class="w-100">
-              <ng-container matColumnDef="rank">
-                <th mat-header-cell *matHeaderCellDef>Rank</th>
-                <td mat-cell *matCellDef="let row">{{ row.rankPosition ?? '-' }}</td>
-              </ng-container>
-              <ng-container matColumnDef="team">
-                <th mat-header-cell *matHeaderCellDef>Team</th>
-                <td mat-cell *matCellDef="let row">{{ tournamentTeamLabel(row.tournamentTeamId) }}</td>
-              </ng-container>
-              <ng-container matColumnDef="played">
-                <th mat-header-cell *matHeaderCellDef>PJ</th>
-                <td mat-cell *matCellDef="let row">{{ row.played }}</td>
-              </ng-container>
-              <ng-container matColumnDef="points">
-                <th mat-header-cell *matHeaderCellDef>Pts</th>
-                <td mat-cell *matCellDef="let row">{{ row.points }}</td>
-              </ng-container>
-              <ng-container matColumnDef="diff">
-                <th mat-header-cell *matHeaderCellDef>Diff</th>
-                <td mat-cell *matCellDef="let row">{{ row.scoreDiff }}</td>
-              </ng-container>
-              <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-              <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
-            </table>
+          <div class="context-banner">
+            <strong>{{ selectedContextLabel() }}</strong>
+            <span class="muted">Total filtrado: {{ page()?.totalElements ?? 0 }} registros de tabla</span>
           </div>
+
+          <div class="summary-grid">
+            @for (card of summaryCards(); track card.label) {
+              <article class="summary-card card" [class.accent]="card.accent">
+                <span class="summary-label">{{ card.label }}</span>
+                <span class="summary-value">{{ card.value }}</span>
+                <span class="summary-meta">{{ card.meta }}</span>
+              </article>
+            }
+          </div>
+
+          @if (rows().length === 0) {
+            <div class="empty-state">
+              <strong>No hay standings para este contexto.</strong>
+              <p class="muted">Aplica filtros, recalcula la tabla o valida que ya existan partidos jugados en ese alcance.</p>
+            </div>
+          } @else {
+            <div class="table-wrapper">
+              <table mat-table [dataSource]="rows()" class="w-100">
+                <ng-container matColumnDef="rank">
+                  <th mat-header-cell *matHeaderCellDef>Pos.</th>
+                  <td mat-cell *matCellDef="let row">{{ row.rankPosition ?? '-' }}</td>
+                </ng-container>
+                <ng-container matColumnDef="team">
+                  <th mat-header-cell *matHeaderCellDef>Equipo</th>
+                  <td mat-cell *matCellDef="let row">
+                    <div class="stack-sm">
+                      <strong>{{ tournamentTeamLabel(row.tournamentTeamId) }}</strong>
+                      <span class="muted">{{ standingContext(row) }}</span>
+                    </div>
+                  </td>
+                </ng-container>
+                <ng-container matColumnDef="record">
+                  <th mat-header-cell *matHeaderCellDef>Balance</th>
+                  <td mat-cell *matCellDef="let row">
+                    <div class="stack-sm">
+                      <span>PJ {{ row.played }} / G {{ row.wins }} / E {{ row.draws }} / P {{ row.losses }}</span>
+                      <span class="muted">Dif. {{ row.scoreDiff }}</span>
+                    </div>
+                  </td>
+                </ng-container>
+                <ng-container matColumnDef="scoring">
+                  <th mat-header-cell *matHeaderCellDef>Anotacion</th>
+                  <td mat-cell *matCellDef="let row">{{ row.pointsFor }} a favor / {{ row.pointsAgainst }} en contra</td>
+                </ng-container>
+                <ng-container matColumnDef="points">
+                  <th mat-header-cell *matHeaderCellDef>Pts</th>
+                  <td mat-cell *matCellDef="let row">{{ row.points }}</td>
+                </ng-container>
+                <ng-container matColumnDef="updatedAt">
+                  <th mat-header-cell *matHeaderCellDef>Actualizado</th>
+                  <td mat-cell *matCellDef="let row">{{ formatDate(row.updatedAt) }}</td>
+                </ng-container>
+                <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+                <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+              </table>
+            </div>
+          }
 
           <mat-paginator
             [length]="page()?.totalElements ?? 0"
@@ -170,11 +217,56 @@ export class StandingsPageComponent {
   protected readonly groups = signal<StageGroup[]>([]);
   protected readonly tournamentTeams = signal<TournamentTeam[]>([]);
   protected readonly teams = signal<Team[]>([]);
-  protected readonly displayedColumns = ['rank', 'team', 'played', 'points', 'diff'];
+  protected readonly displayedColumns = ['rank', 'team', 'record', 'scoring', 'points', 'updatedAt'];
   protected readonly pageIndex = signal(0);
   protected readonly pageSize = signal(20);
   protected readonly pageSizeOptions = [10, 20, 50];
   protected readonly canManage = computed(() => this.authorization.canManage('standings'));
+  protected readonly selectedContextLabel = computed(() => {
+    const filters = this.filtersForm.getRawValue();
+    const labels = [
+      this.tournamentName(Number(filters.tournamentId)),
+      this.stageName(Number(filters.stageId)),
+      this.groupName(Number(filters.groupId))
+    ].filter((label) => Boolean(label));
+
+    return labels.length > 0 ? labels.join(' / ') : 'Vista general';
+  });
+  protected readonly summaryCards = computed<SummaryCard[]>(() => {
+    const rows = this.rows();
+    const topTeam = rows[0];
+    const totalPoints = rows.reduce((acc, item) => acc + item.points, 0);
+    const totalPlayed = rows.reduce((acc, item) => acc + item.played, 0);
+
+    return [
+      {
+        label: 'Contexto activo',
+        value: this.page()?.totalElements ?? 0,
+        meta: this.selectedContextLabel(),
+        accent: true
+      },
+      {
+        label: 'Equipos en pagina',
+        value: rows.length,
+        meta: 'Registros visibles en la tabla'
+      },
+      {
+        label: 'Partidos acumulados',
+        value: totalPlayed,
+        meta: 'Suma de PJ del bloque visible'
+      },
+      {
+        label: 'Lider actual',
+        value: topTeam?.points ?? 0,
+        meta: topTeam ? this.tournamentTeamLabel(topTeam.tournamentTeamId) : 'Sin datos'
+      },
+      {
+        label: 'Puntos visibles',
+        value: totalPoints,
+        meta: 'Suma de puntos en pagina'
+      }
+    ];
+  });
   protected readonly filteredStages = computed(() => {
     const tournamentId = Number(this.filtersForm.controls.tournamentId.getRawValue());
     return tournamentId ? this.stages().filter((item) => item.tournamentId === tournamentId) : this.stages();
@@ -242,6 +334,8 @@ export class StandingsPageComponent {
         this.filtersForm.patchValue({ groupId: '' }, { emitEvent: false });
       }
     });
+
+    this.load();
   }
 
   protected load(): void {
@@ -298,9 +392,8 @@ export class StandingsPageComponent {
   protected resetFilters(): void {
     this.filtersForm.setValue({ tournamentId: '', stageId: '', groupId: '', tournamentTeamId: '' });
     this.pageIndex.set(0);
-    this.rows.set([]);
-    this.page.set(null);
     this.message.set('');
+    this.load();
   }
 
   protected changePage(event: PageEvent): void {
@@ -317,5 +410,42 @@ export class StandingsPageComponent {
 
     const team = this.teams().find((item) => item.id === registration.teamId);
     return team ? `${team.name} (#${registration.id})` : `Equipo ${registration.teamId} (#${registration.id})`;
+  }
+
+  protected standingContext(row: Standing): string {
+    return [this.stageName(row.stageId ?? 0), this.groupName(row.groupId ?? 0)]
+      .filter((item) => Boolean(item))
+      .join(' / ') || this.tournamentName(row.tournamentId);
+  }
+
+  protected tournamentName(id: number): string {
+    if (!id) {
+      return '';
+    }
+
+    return this.tournaments().find((item) => item.id === id)?.name ?? `Torneo ${id}`;
+  }
+
+  protected stageName(id: number): string {
+    if (!id) {
+      return '';
+    }
+
+    return this.stages().find((item) => item.id === id)?.name ?? `Etapa ${id}`;
+  }
+
+  protected groupName(id: number): string {
+    if (!id) {
+      return '';
+    }
+
+    return this.groups().find((item) => item.id === id)?.name ?? `Grupo ${id}`;
+  }
+
+  protected formatDate(value: string): string {
+    return new Intl.DateTimeFormat('es-PE', {
+      dateStyle: 'medium',
+      timeStyle: 'short'
+    }).format(new Date(value));
   }
 }

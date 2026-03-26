@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
@@ -36,7 +36,7 @@ import { TournamentTeamsService } from './tournament-teams.service';
     <section class="app-page">
       <app-page-header
         [title]="isEditMode() ? 'Editar inscripcion' : 'Nueva inscripcion'"
-        subtitle="Vincula un equipo con un torneo."
+        [subtitle]="pageSubtitle()"
       />
 
       <section class="card page-card">
@@ -69,7 +69,7 @@ import { TournamentTeamsService } from './tournament-teams.service';
                 <mat-label>Estado</mat-label>
                 <mat-select formControlName="registrationStatus">
                   @for (status of statuses; track status) {
-                    <mat-option [value]="status">{{ status }}</mat-option>
+                    <mat-option [value]="status">{{ statusLabel(status) }}</mat-option>
                   }
                 </mat-select>
               </mat-form-field>
@@ -80,7 +80,7 @@ import { TournamentTeamsService } from './tournament-teams.service';
               </mat-form-field>
 
               <mat-form-field appearance="outline">
-                <mat-label>Group draw position</mat-label>
+                <mat-label>Posicion de sorteo</mat-label>
                 <input matInput type="number" formControlName="groupDrawPosition">
               </mat-form-field>
             </div>
@@ -116,6 +116,13 @@ export class TournamentTeamFormPageComponent {
   protected readonly tournaments = signal<Tournament[]>([]);
   protected readonly teams = signal<Team[]>([]);
   protected readonly statuses: TournamentTeamRegistrationStatus[] = ['PENDING', 'APPROVED', 'REJECTED', 'WITHDRAWN'];
+  protected readonly pageSubtitle = computed(() => {
+    const tournament = this.tournaments().find((item) => item.id === Number(this.form.controls.tournamentId.getRawValue()));
+    const team = this.teams().find((item) => item.id === Number(this.form.controls.teamId.getRawValue()));
+    const labels = [tournament?.name, team?.name].filter((item) => Boolean(item));
+
+    return labels.length > 0 ? labels.join(' / ') : 'Vincula un equipo con un torneo y define su estado operativo.';
+  });
 
   protected readonly form = this.fb.nonNullable.group({
     tournamentId: [0],
@@ -195,5 +202,16 @@ export class TournamentTeamFormPageComponent {
       },
       error: (error: unknown) => this.notifications.error(this.errorMapper.map(error).message)
     });
+  }
+
+  protected statusLabel(status: TournamentTeamRegistrationStatus): string {
+    const labels: Record<TournamentTeamRegistrationStatus, string> = {
+      PENDING: 'Pendiente',
+      APPROVED: 'Aprobada',
+      REJECTED: 'Rechazada',
+      WITHDRAWN: 'Retirada'
+    };
+
+    return labels[status];
   }
 }
