@@ -231,6 +231,27 @@ export class DashboardService {
     health: DashboardHealth;
     nextAction: string;
   } {
+    if (summary.status === 'DRAFT' && summary.registrationCount === 0) {
+      return {
+        health: 'warning',
+        nextAction: 'Sigue en borrador y aun no inicia operacion. Conviene decidir si se activara, se limpiara o se mantendra solo como registro QA.'
+      };
+    }
+
+    if (summary.playedMatchCount > 0 && summary.activeRosterCount === 0 && summary.standingsCount === 0) {
+      return {
+        health: 'attention',
+        nextAction: 'Ya hay resultados cargados, pero faltan rosters activos y tabla visible. Conviene auditar la trazabilidad competitiva de punta a punta.'
+      };
+    }
+
+    if (summary.playedMatchCount > 0 && summary.activeRosterCount === 0) {
+      return {
+        health: 'attention',
+        nextAction: 'Ya hay partidos jugados, pero no hay rosters activos asociados. Conviene revisar la consistencia operativa entre inscripciones, rosters y fixture.'
+      };
+    }
+
     if (summary.registrationCount === 0) {
       return {
         health: 'attention',
