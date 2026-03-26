@@ -31,7 +31,7 @@ type DashboardCard = {
     <section class="app-page">
       <app-page-header
         title="Dashboard Ejecutivo"
-        subtitle="Reporting transversal del estado multideporte, la cobertura operativa y los torneos que necesitan accion."
+        subtitle="Reporting transversal del estado multideporte, la cobertura operativa y la auditoria de trazabilidad por torneo."
       />
 
       @if (loading()) {
@@ -61,6 +61,71 @@ type DashboardCard = {
             </mat-card>
           }
         </div>
+
+        <section class="card page-card app-page">
+          <div class="section-heading">
+            <div>
+              <h2>Auditoria operativa</h2>
+              <p class="muted">Lectura del flujo inscripciones -> roster -> partidos -> standings sobre torneos con actividad real.</p>
+            </div>
+            <span class="section-badge">{{ operationalSummaries().length }} en foco</span>
+          </div>
+
+          @if (operationalSummaries().length === 0) {
+            <div class="empty-state">
+              <strong>No hay torneos operativos para auditar.</strong>
+              <p class="muted">El foco actual esta en configurar la base o depurar registros QA fuera del radar principal.</p>
+            </div>
+          } @else {
+            <div class="tournament-grid">
+              @for (tournament of operationalSummaries(); track tournament.tournamentId) {
+                <article class="tournament-card card">
+                  <div class="alert-header">
+                    <div class="stack-sm">
+                      <strong>{{ tournament.tournamentName }}</strong>
+                      <span class="muted">{{ tournament.sportName }} / {{ statusLabel(tournament.status) }}</span>
+                    </div>
+                    <span class="health-pill" [class]="healthClass(tournament.health)">{{ auditLabel(tournament.auditStatus) }}</span>
+                  </div>
+
+                  <div class="progress-metrics">
+                    <div>
+                      <span class="progress-label">Madurez operativa</span>
+                      <strong>{{ tournament.readinessScore }}%</strong>
+                    </div>
+                    <div>
+                      <span class="progress-label">Cobertura roster</span>
+                      <strong>{{ tournament.registrationsWithActiveRosterCount }}/{{ tournament.approvedRegistrationCount }}</strong>
+                    </div>
+                    <div>
+                      <span class="progress-label">Cobertura standings</span>
+                      <strong>{{ tournament.standingsCoverageCount }}/{{ tournament.approvedRegistrationCount }}</strong>
+                    </div>
+                  </div>
+
+                  <div class="mini-metrics">
+                    <span>Inscripciones aprobadas: {{ tournament.approvedRegistrationCount }}</span>
+                    <span>Sin roster activo: {{ tournament.rosterGapCount }}</span>
+                    <span>Partidos jugados: {{ tournament.playedMatchCount }}/{{ tournament.matchCount }}</span>
+                    <span>Standings: {{ tournament.standingsCount }}</span>
+                  </div>
+
+                  <p class="muted">{{ tournament.auditMessage }}</p>
+
+                  @if (tournament.blockers.length > 0) {
+                    <div class="blocker-list">
+                      @for (blocker of tournament.blockers; track blocker) {
+                        <span class="blocker-chip">{{ blocker }}</span>
+                      }
+                    </div>
+                  }
+
+                  <p class="muted">{{ tournament.nextAction }}</p>
+                </article>
+              }
+            </div>
+          }
+        </section>
 
         <section class="card page-card app-page">
           <div class="section-heading">
@@ -96,7 +161,7 @@ type DashboardCard = {
           <div class="section-heading">
             <div>
               <h2>Radar por deporte</h2>
-              <p class="muted">Lectura ejecutiva para detectar dónde ya hay operación madura y dónde aún falta cerrar el flujo.</p>
+              <p class="muted">Lectura ejecutiva para detectar donde ya hay operacion madura y donde aun falta cerrar el flujo.</p>
             </div>
           </div>
 
@@ -142,7 +207,7 @@ type DashboardCard = {
                   <div class="alert-header">
                     <div class="stack-sm">
                       <strong>{{ tournament.tournamentName }}</strong>
-                      <span class="muted">{{ tournament.sportName }} · {{ statusLabel(tournament.status) }}</span>
+                      <span class="muted">{{ tournament.sportName }} / {{ statusLabel(tournament.status) }} / {{ segmentLabel(tournament.reportingSegment) }}</span>
                     </div>
                     <span class="health-pill" [class]="healthClass(tournament.health)">{{ healthLabel(tournament.health) }}</span>
                   </div>
@@ -151,6 +216,7 @@ type DashboardCard = {
                     <span>Etapas: {{ tournament.stageCount }}</span>
                     <span>Grupos: {{ tournament.groupCount }}</span>
                     <span>Inscripciones: {{ tournament.registrationCount }}</span>
+                    <span>Con roster: {{ tournament.registrationsWithActiveRosterCount }}/{{ tournament.approvedRegistrationCount }}</span>
                     <span>Rosters activos: {{ tournament.activeRosterCount }}</span>
                     <span>Partidos: {{ tournament.playedMatchCount }}/{{ tournament.matchCount }} jugados</span>
                     <span>Incidencias: {{ tournament.incidentMatchCount }}</span>
@@ -158,6 +224,36 @@ type DashboardCard = {
                     <span>Lider: {{ leaderLabel(tournament) }}</span>
                   </div>
 
+                  <p class="muted">{{ tournament.nextAction }}</p>
+                </article>
+              }
+            </div>
+          }
+        </section>
+
+        <section class="card page-card app-page">
+          <div class="section-heading">
+            <div>
+              <h2>QA y borradores</h2>
+              <p class="muted">Torneos que hoy conviene mantener fuera del reporting ejecutivo principal para reducir ruido.</p>
+            </div>
+            <span class="section-badge">{{ sandboxSummaries().length }} aislados</span>
+          </div>
+
+          @if (sandboxSummaries().length === 0) {
+            <div class="empty-state">
+              <strong>No hay torneos QA o borrador fuera del foco principal.</strong>
+              <p class="muted">La lectura ejecutiva actual ya se apoya solo en torneos con valor operativo.</p>
+            </div>
+          } @else {
+            <div class="alert-grid">
+              @for (tournament of sandboxSummaries(); track tournament.tournamentId) {
+                <article class="alert-card card">
+                  <div class="alert-header">
+                    <strong>{{ tournament.tournamentName }}</strong>
+                    <span class="health-pill warning">{{ segmentLabel(tournament.reportingSegment) }}</span>
+                  </div>
+                  <p class="muted">{{ tournament.auditMessage }}</p>
                   <p class="muted">{{ tournament.nextAction }}</p>
                 </article>
               }
@@ -250,12 +346,46 @@ type DashboardCard = {
         color: #b91c1c;
       }
 
-      .mini-metrics {
+      .mini-metrics,
+      .progress-metrics {
         display: grid;
         gap: 0.55rem;
         grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      }
+
+      .mini-metrics {
         color: var(--text-soft);
         font-size: 0.88rem;
+      }
+
+      .progress-metrics div {
+        display: grid;
+        gap: 0.2rem;
+        padding: 0.8rem;
+        border-radius: 0.85rem;
+        background: var(--surface-alt);
+      }
+
+      .progress-label {
+        color: var(--text-soft);
+        font-size: 0.78rem;
+      }
+
+      .blocker-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+      }
+
+      .blocker-chip {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.35rem 0.65rem;
+        border-radius: 999px;
+        background: #fff7ed;
+        color: #9a3412;
+        font-size: 0.78rem;
+        font-weight: 600;
       }
     `
   ],
@@ -280,13 +410,13 @@ export class DashboardPageComponent {
       {
         label: 'Torneos',
         value: summary?.tournamentCount ?? 0,
-        meta: `${summary?.activeTournamentCount ?? 0} abiertos o en curso`,
+        meta: `${summary?.operationalTournamentCount ?? 0} con actividad real`,
         accent: true
       },
       {
-        label: 'Equipos',
-        value: summary?.teamCount ?? 0,
-        meta: 'Equipos disponibles'
+        label: 'QA / borrador',
+        value: summary?.sandboxTournamentCount ?? 0,
+        meta: 'Fuera del radar principal'
       },
       {
         label: 'Jugadores',
@@ -305,9 +435,9 @@ export class DashboardPageComponent {
         meta: `${summary?.approvedRegistrationCount ?? 0} aprobadas`
       },
       {
-        label: 'Rosters activos',
-        value: summary?.activeRosterCount ?? 0,
-        meta: 'Jugadores habilitados hoy'
+        label: 'Brecha de roster',
+        value: summary?.rosterGapTournamentCount ?? 0,
+        meta: 'Torneos con aprobadas sin roster activo'
       },
       {
         label: 'Partidos jugados',
@@ -315,14 +445,14 @@ export class DashboardPageComponent {
         meta: `${summary?.scheduledMatchCount ?? 0} programados por disputar`
       },
       {
-        label: 'Standings',
-        value: summary?.standingsCount ?? 0,
-        meta: 'Registros de tabla generados'
+        label: 'Brecha de standings',
+        value: summary?.standingsGapTournamentCount ?? 0,
+        meta: 'Torneos con resultados sin tabla'
       },
       {
-        label: 'Torneos con alerta',
-        value: summary?.attentionTournamentCount ?? 0,
-        meta: 'Requieren seguimiento ejecutivo'
+        label: 'Torneos listos',
+        value: summary?.readyTournamentCount ?? 0,
+        meta: 'Flujo consistente de punta a punta'
       }
     ];
   });
@@ -330,6 +460,12 @@ export class DashboardPageComponent {
   protected readonly sportSummaries = computed<DashboardSportSummary[]>(() => this.summary()?.sportSummaries ?? []);
   protected readonly tournamentSummaries = computed<DashboardTournamentSummary[]>(
     () => this.summary()?.tournamentSummaries ?? []
+  );
+  protected readonly operationalSummaries = computed<DashboardTournamentSummary[]>(() =>
+    this.tournamentSummaries().filter((item) => item.reportingSegment === 'operational')
+  );
+  protected readonly sandboxSummaries = computed<DashboardTournamentSummary[]>(() =>
+    this.tournamentSummaries().filter((item) => item.reportingSegment === 'sandbox')
   );
   protected readonly healthMessage = computed(() => {
     const summary = this.summary();
@@ -342,7 +478,7 @@ export class DashboardPageComponent {
     }
 
     if (summary.attentionTournamentCount > 0) {
-      return `Hay ${summary.attentionTournamentCount} torneos con alertas operativas. Sprint 5 puede enfocarse en cerrar esas brechas sin abrir frentes nuevos.`;
+      return `Hay ${summary.attentionTournamentCount} torneos con alertas operativas. Sprint 6 debe enfocarse en cerrar esas brechas antes de abrir frentes nuevos.`;
     }
 
     if (summary.registrationCount === 0) {
@@ -380,6 +516,16 @@ export class DashboardPageComponent {
     return health;
   }
 
+  protected auditLabel(status: DashboardTournamentSummary['auditStatus']): string {
+    const labels: Record<DashboardTournamentSummary['auditStatus'], string> = {
+      blocked: 'Bloqueado',
+      partial: 'Parcial',
+      ready: 'Listo'
+    };
+
+    return labels[status];
+  }
+
   protected statusLabel(status: TournamentStatus): string {
     const labels: Record<TournamentStatus, string> = {
       DRAFT: 'Borrador',
@@ -390,6 +536,16 @@ export class DashboardPageComponent {
     };
 
     return labels[status];
+  }
+
+  protected segmentLabel(segment: DashboardTournamentSummary['reportingSegment']): string {
+    const labels: Record<DashboardTournamentSummary['reportingSegment'], string> = {
+      operational: 'Operativo',
+      setup: 'Preparacion',
+      sandbox: 'QA / borrador'
+    };
+
+    return labels[segment];
   }
 
   protected leaderLabel(tournament: DashboardTournamentSummary): string {

@@ -23,7 +23,9 @@ import { Tournament } from '../tournaments/tournament.models';
 import { TournamentsService } from '../tournaments/tournaments.service';
 import {
   DashboardAlert,
+  DashboardAuditStatus,
   DashboardHealth,
+  DashboardReportingSegment,
   DashboardSportSummary,
   DashboardSummary,
   DashboardTournamentSummary
@@ -121,6 +123,9 @@ export class DashboardService {
       tournamentCount: tournaments.length,
       activeTournamentCount: tournaments.filter((item) => item.status === 'OPEN' || item.status === 'IN_PROGRESS').length,
       liveTournamentCount: tournaments.filter((item) => item.status === 'IN_PROGRESS').length,
+      operationalTournamentCount: tournamentSummaries.filter((item) => item.reportingSegment === 'operational').length,
+      setupTournamentCount: tournamentSummaries.filter((item) => item.reportingSegment === 'setup').length,
+      sandboxTournamentCount: tournamentSummaries.filter((item) => item.reportingSegment === 'sandbox').length,
       registrationCount: registrations.length,
       approvedRegistrationCount: registrations.filter((item) => item.registrationStatus === 'APPROVED').length,
       matchCount: matches.length,
@@ -129,6 +134,11 @@ export class DashboardService {
       activeRosterCount: rosters.filter((item) => item.rosterStatus === 'ACTIVE').length,
       standingsCount: standings.length,
       attentionTournamentCount: tournamentSummaries.filter((item) => item.health !== 'healthy').length,
+      rosterGapTournamentCount: tournamentSummaries.filter((item) => item.rosterGapCount > 0).length,
+      standingsGapTournamentCount: tournamentSummaries.filter(
+        (item) => item.playedMatchCount > 0 && item.standingsCount === 0
+      ).length,
+      readyTournamentCount: tournamentSummaries.filter((item) => item.auditStatus === 'ready').length,
       sportSummaries,
       tournamentSummaries,
       alerts
@@ -153,10 +163,15 @@ export class DashboardService {
     const stageIds = new Set(tournamentStages.map((item) => item.id));
     const tournamentGroups = groups.filter((item) => stageIds.has(item.stageId));
     const tournamentRegistrations = registrations.filter((item) => item.tournamentId === tournament.id);
+    const approvedTournamentRegistrations = tournamentRegistrations.filter((item) => item.registrationStatus === 'APPROVED');
     const registrationIds = new Set(tournamentRegistrations.map((item) => item.id));
     const tournamentRosters = rosters.filter((item) => registrationIds.has(item.tournamentTeamId));
+    const activeRosterRegistrationIds = new Set(
+      tournamentRosters.filter((item) => item.rosterStatus === 'ACTIVE').map((item) => item.tournamentTeamId)
+    );
     const tournamentMatches = matches.filter((item) => item.tournamentId === tournament.id);
     const tournamentStandings = standings.filter((item) => item.tournamentId === tournament.id);
+    const standingTournamentTeamIds = new Set(tournamentStandings.map((item) => item.tournamentTeamId));
     const leaderStanding = [...tournamentStandings].sort((left, right) => {
       const leftRank = left.rankPosition ?? Number.MAX_SAFE_INTEGER;
       const rightRank = right.rankPosition ?? Number.MAX_SAFE_INTEGER;
@@ -168,21 +183,41 @@ export class DashboardService {
     })[0];
     const leaderRegistration = leaderStanding ? registrationById.get(leaderStanding.tournamentTeamId) : null;
     const leaderTeam = leaderRegistration ? teamById.get(leaderRegistration.teamId) : null;
+    const registrationsWithActiveRosterCount = approvedTournamentRegistrations.filter((item) =>
+      activeRosterRegistrationIds.has(item.id)
+    ).length;
+    const standingsCoverageCount = approvedTournamentRegistrations.filter((item) =>
+      standingTournamentTeamIds.has(item.id)
+    ).length;
+    const rosterGapCount = Math.max(approvedTournamentRegistrations.length - registrationsWithActiveRosterCount, 0);
+    const reportingSegment = this.resolveReportingSegment({
+      tournament,
+      approvedRegistrationCount: approvedTournamentRegistrations.length,
+      activeRosterCount: tournamentRosters.filter((item) => item.rosterStatus === 'ACTIVE').length,
+      matchCount: tournamentMatches.length,
+      standingsCount: tournamentStandings.length
+    });
+    const qaSignal = this.hasQaSignal(tournament);
     const summaryBase = {
       tournamentId: tournament.id,
       tournamentName: tournament.name,
       sportName: sportById.get(tournament.sportId)?.name ?? `Deporte ${tournament.sportId}`,
       status: tournament.status,
+      reportingSegment,
+      qaSignal,
       stageCount: tournamentStages.length,
       groupCount: tournamentGroups.length,
       registrationCount: tournamentRegistrations.length,
-      approvedRegistrationCount: tournamentRegistrations.filter((item) => item.registrationStatus === 'APPROVED').length,
+      approvedRegistrationCount: approvedTournamentRegistrations.length,
+      registrationsWithActiveRosterCount,
+      rosterGapCount,
       activeRosterCount: tournamentRosters.filter((item) => item.rosterStatus === 'ACTIVE').length,
       matchCount: tournamentMatches.length,
       playedMatchCount: tournamentMatches.filter((item) => item.status === 'PLAYED').length,
       scheduledMatchCount: tournamentMatches.filter((item) => item.status === 'SCHEDULED').length,
       incidentMatchCount: tournamentMatches.filter((item) => item.status === 'FORFEIT' || item.status === 'CANCELLED').length,
       standingsCount: tournamentStandings.length,
+      standingsCoverageCount,
       leaderName: leaderTeam?.name ?? null,
       leaderPoints: leaderStanding?.points ?? null
     };
@@ -191,6 +226,10 @@ export class DashboardService {
     return {
       ...summaryBase,
       health: evaluation.health,
+      readinessScore: evaluation.readinessScore,
+      auditStatus: evaluation.auditStatus,
+      auditMessage: evaluation.auditMessage,
+      blockers: evaluation.blockers,
       nextAction: evaluation.nextAction
     };
   }
@@ -227,20 +266,93 @@ export class DashboardService {
     };
   }
 
-  private evaluateTournament(summary: Omit<DashboardTournamentSummary, 'health' | 'nextAction'>): {
+  private evaluateTournament(summary: Omit<DashboardTournamentSummary, 'health' | 'nextAction' | 'readinessScore' | 'auditStatus' | 'auditMessage' | 'blockers'>): {
     health: DashboardHealth;
+    readinessScore: number;
+    auditStatus: DashboardAuditStatus;
+    auditMessage: string;
+    blockers: string[];
     nextAction: string;
   } {
-    if (summary.status === 'DRAFT' && summary.registrationCount === 0) {
+    const blockers: string[] = [];
+    let readinessScore = 0;
+
+    if (summary.approvedRegistrationCount > 0) {
+      readinessScore += 25;
+    }
+    if (summary.registrationsWithActiveRosterCount === summary.approvedRegistrationCount && summary.approvedRegistrationCount > 0) {
+      readinessScore += 25;
+    } else if (summary.registrationsWithActiveRosterCount > 0) {
+      readinessScore += 10;
+    }
+    if (summary.matchCount > 0) {
+      readinessScore += 25;
+    }
+    if (summary.standingsCount > 0) {
+      readinessScore += 25;
+    }
+
+    if (summary.registrationCount === 0) {
+      blockers.push('Sin inscripciones');
+    }
+    if (summary.approvedRegistrationCount > 0 && summary.rosterGapCount > 0) {
+      blockers.push(`${summary.rosterGapCount} inscripciones aprobadas sin roster activo`);
+    }
+    if (summary.approvedRegistrationCount > 1 && summary.matchCount === 0) {
+      blockers.push('Sin fixture cargado');
+    }
+    if (summary.playedMatchCount > 0 && summary.standingsCount === 0) {
+      blockers.push('Resultados sin standings');
+    }
+    if (summary.playedMatchCount > 0 && summary.registrationsWithActiveRosterCount === 0) {
+      blockers.push('Partidos jugados sin soporte de roster');
+    }
+    if (summary.reportingSegment === 'sandbox') {
+      blockers.push('Torneo QA o borrador fuera del foco ejecutivo principal');
+    }
+
+    const auditStatus: DashboardAuditStatus =
+      summary.reportingSegment === 'sandbox'
+        ? 'partial'
+        : blockers.some((item) =>
+              item === 'Sin inscripciones' ||
+              item.includes('sin roster activo') ||
+              item === 'Resultados sin standings' ||
+              item === 'Partidos jugados sin soporte de roster'
+            )
+          ? 'blocked'
+          : blockers.length > 0
+            ? 'partial'
+            : 'ready';
+
+    const auditMessage =
+      auditStatus === 'ready'
+        ? 'El torneo ya sostiene continuidad visible entre inscripciones, roster, partidos y standings.'
+        : auditStatus === 'blocked'
+          ? 'La continuidad competitiva esta interrumpida y conviene corregir la base antes de seguir escalando operacion.'
+          : summary.reportingSegment === 'sandbox'
+            ? 'Este torneo hoy funciona mas como ruido de QA o borrador que como referencia ejecutiva principal.'
+            : 'El torneo ya avanzo, pero todavia necesita uno o mas cierres para consolidar su trazabilidad.';
+
+    if (summary.reportingSegment === 'sandbox') {
       return {
         health: 'warning',
-        nextAction: 'Sigue en borrador y aun no inicia operacion. Conviene decidir si se activara, se limpiara o se mantendra solo como registro QA.'
+        readinessScore,
+        auditStatus,
+        auditMessage,
+        blockers,
+        nextAction:
+          'Conviene separar este torneo del radar ejecutivo principal y decidir si se depura, se mantiene como QA o se transforma en operacion real.'
       };
     }
 
     if (summary.playedMatchCount > 0 && summary.activeRosterCount === 0 && summary.standingsCount === 0) {
       return {
         health: 'attention',
+        readinessScore,
+        auditStatus,
+        auditMessage,
+        blockers,
         nextAction: 'Ya hay resultados cargados, pero faltan rosters activos y tabla visible. Conviene auditar la trazabilidad competitiva de punta a punta.'
       };
     }
@@ -248,13 +360,22 @@ export class DashboardService {
     if (summary.playedMatchCount > 0 && summary.activeRosterCount === 0) {
       return {
         health: 'attention',
-        nextAction: 'Ya hay partidos jugados, pero no hay rosters activos asociados. Conviene revisar la consistencia operativa entre inscripciones, rosters y fixture.'
+        readinessScore,
+        auditStatus,
+        auditMessage,
+        blockers,
+        nextAction:
+          'Ya hay partidos jugados, pero no hay rosters activos asociados. Conviene revisar la consistencia operativa entre inscripciones, rosters y fixture.'
       };
     }
 
     if (summary.registrationCount === 0) {
       return {
         health: 'attention',
+        readinessScore,
+        auditStatus,
+        auditMessage,
+        blockers,
         nextAction: 'Aun no tiene inscripciones. El siguiente paso operativo es vincular equipos al torneo.'
       };
     }
@@ -262,6 +383,10 @@ export class DashboardService {
     if (summary.approvedRegistrationCount > 0 && summary.activeRosterCount === 0) {
       return {
         health: 'attention',
+        readinessScore,
+        auditStatus,
+        auditMessage,
+        blockers,
         nextAction: 'Ya hay equipos aprobados, pero falta poblar rosters activos para habilitar la competencia.'
       };
     }
@@ -269,6 +394,10 @@ export class DashboardService {
     if (summary.approvedRegistrationCount > 1 && summary.matchCount === 0) {
       return {
         health: 'warning',
+        readinessScore,
+        auditStatus,
+        auditMessage,
+        blockers,
         nextAction: 'La base competitiva ya existe. Conviene programar partidos para activar resultados y standings.'
       };
     }
@@ -276,6 +405,10 @@ export class DashboardService {
     if (summary.playedMatchCount > 0 && summary.standingsCount === 0) {
       return {
         health: 'attention',
+        readinessScore,
+        auditStatus,
+        auditMessage,
+        blockers,
         nextAction: 'Ya hay resultados cargados, pero todavia no se refleja tabla de posiciones para este torneo.'
       };
     }
@@ -283,14 +416,48 @@ export class DashboardService {
     if (summary.status === 'IN_PROGRESS' && summary.playedMatchCount === 0) {
       return {
         health: 'warning',
+        readinessScore,
+        auditStatus,
+        auditMessage,
+        blockers,
         nextAction: 'El torneo esta en curso, pero aun no registra partidos jugados.'
       };
     }
 
     return {
       health: 'healthy',
+      readinessScore,
+      auditStatus,
+      auditMessage,
+      blockers,
       nextAction: 'Mantiene trazabilidad visible desde la inscripcion hasta la tabla de posiciones.'
     };
+  }
+
+  private resolveReportingSegment(input: {
+    tournament: Tournament;
+    approvedRegistrationCount: number;
+    activeRosterCount: number;
+    matchCount: number;
+    standingsCount: number;
+  }): DashboardReportingSegment {
+    const { tournament, approvedRegistrationCount, activeRosterCount, matchCount, standingsCount } = input;
+    const hasOperationalActivity = approvedRegistrationCount > 0 || activeRosterCount > 0 || matchCount > 0 || standingsCount > 0;
+
+    if (!hasOperationalActivity && (tournament.status === 'DRAFT' || this.hasQaSignal(tournament))) {
+      return 'sandbox';
+    }
+
+    if (!hasOperationalActivity) {
+      return 'setup';
+    }
+
+    return 'operational';
+  }
+
+  private hasQaSignal(tournament: Tournament): boolean {
+    const normalized = `${tournament.name} ${tournament.slug} ${tournament.description ?? ''}`.toLowerCase();
+    return ['qa', 'draft', 'postman', 'test', 'demo', 'sandbox'].some((token) => normalized.includes(token));
   }
 
   private toAlert(summary: DashboardTournamentSummary): DashboardAlert {

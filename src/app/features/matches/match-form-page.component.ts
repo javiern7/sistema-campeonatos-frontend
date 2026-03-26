@@ -20,6 +20,8 @@ import { NotificationService } from '../../core/error/notification.service';
 import { CatalogLoaderService } from '../../core/pagination/catalog-loader.service';
 import { LoadingStateComponent } from '../../shared/loading-state/loading-state.component';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
+import { RosterEntry } from '../rosters/roster.models';
+import { RostersService } from '../rosters/rosters.service';
 import { StageGroup } from '../stage-groups/stage-group.models';
 import { StageGroupsService } from '../stage-groups/stage-groups.service';
 import { Team } from '../teams/team.models';
@@ -93,6 +95,13 @@ const matchConsistencyValidator: ValidatorFn = (control: AbstractControl): Valid
           <app-loading-state />
         } @else {
           <form [formGroup]="form" (ngSubmit)="save()" class="app-page">
+            @if (readinessWarning()) {
+              <div class="context-banner">
+                <strong>Auditoria Sprint 6</strong>
+                <span class="muted">{{ readinessWarning() }}</span>
+              </div>
+            }
+
             <div class="form-grid">
               @if (!isEditMode()) {
                 <mat-form-field appearance="outline">
@@ -254,6 +263,7 @@ export class MatchFormPageComponent {
   private readonly groupsService = inject(StageGroupsService);
   private readonly teamsService = inject(TeamsService);
   private readonly tournamentTeamsService = inject(TournamentTeamsService);
+  private readonly rostersService = inject(RostersService);
   private readonly matchesService = inject(MatchesService);
   private readonly catalogLoader = inject(CatalogLoaderService);
   private readonly notifications = inject(NotificationService);
@@ -268,6 +278,7 @@ export class MatchFormPageComponent {
   private readonly allStages = signal<TournamentStage[]>([]);
   private readonly allGroups = signal<StageGroup[]>([]);
   private readonly allTournamentTeams = signal<TournamentTeam[]>([]);
+  private readonly allRosters = signal<RosterEntry[]>([]);
   protected readonly statuses: MatchStatus[] = ['SCHEDULED', 'PLAYED', 'FORFEIT', 'CANCELLED'];
   protected readonly pageSubtitle = computed(() => {
     const tournamentId = Number(this.form.controls.tournamentId.getRawValue());
@@ -300,6 +311,38 @@ export class MatchFormPageComponent {
     ]);
 
     return this.tournamentTeams().filter((item) => selectedIds.has(item.id));
+  });
+  protected readonly rosterReadyTournamentTeamIds = computed(() => {
+    const activeRosterIds = new Set(
+      this.allRosters()
+        .filter((item) => item.rosterStatus === 'ACTIVE')
+        .map((item) => item.tournamentTeamId)
+    );
+
+    return new Set(
+      this.tournamentTeams()
+        .filter((item) => item.registrationStatus === 'APPROVED' && activeRosterIds.has(item.id))
+        .map((item) => item.id)
+    );
+  });
+  protected readonly readinessWarning = computed(() => {
+    const tournamentId = Number(this.form.controls.tournamentId.getRawValue());
+    const approvedCount = this.tournamentTeams().filter((item) => item.registrationStatus === 'APPROVED').length;
+    const rosterReadyCount = this.rosterReadyTournamentTeamIds().size;
+
+    if (!tournamentId) {
+      return '';
+    }
+
+    if (approvedCount === 0) {
+      return 'Este torneo aun no tiene inscripciones aprobadas. Completa ese paso antes de programar competencia.';
+    }
+
+    if (rosterReadyCount < 2) {
+      return `Solo ${rosterReadyCount} inscripciones aprobadas tienen roster activo. Se recomienda no avanzar a partidos hasta llegar al menos a 2.`;
+    }
+
+    return '';
   });
 
   protected readonly form = this.fb.nonNullable.group(
@@ -351,6 +394,9 @@ export class MatchFormPageComponent {
           });
         }
       }
+    });
+    this.catalogLoader.loadAll((page, size) => this.rostersService.list({ page, size })).subscribe({
+      next: (items) => this.allRosters.set(items)
     });
 
     this.form.controls.tournamentId.valueChanges.pipe(takeUntilDestroyed()).subscribe((value) => {
@@ -420,6 +466,14 @@ export class MatchFormPageComponent {
     this.form.markAllAsTouched();
 
     if (this.form.invalid || this.saving()) {
+      return;
+    }
+
+    const status = this.form.controls.status.getRawValue();
+    if ((status === 'SCHEDULED' || status === 'PLAYED' || status === 'FORFEIT') && this.rosterReadyTournamentTeamIds().size < 2) {
+      this.notifications.error(
+        'El torneo no tiene base suficiente de roster activo para avanzar a competencia. Revisa inscripciones aprobadas y rosters antes de guardar.'
+      );
       return;
     }
 

@@ -14,6 +14,10 @@ import { NotificationService } from '../../core/error/notification.service';
 import { CatalogLoaderService } from '../../core/pagination/catalog-loader.service';
 import { LoadingStateComponent } from '../../shared/loading-state/loading-state.component';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
+import { MatchGame } from '../matches/match.models';
+import { MatchesService } from '../matches/matches.service';
+import { RosterEntry } from '../rosters/roster.models';
+import { RostersService } from '../rosters/rosters.service';
 import { StageGroup } from '../stage-groups/stage-group.models';
 import { StageGroupsService } from '../stage-groups/stage-groups.service';
 import { Team } from '../teams/team.models';
@@ -111,6 +115,13 @@ type SummaryCard = {
           <button mat-flat-button color="primary" type="button" (click)="load()">Buscar</button>
         </div>
 
+        @if (standingsAuditMessage()) {
+          <div class="context-banner">
+            <strong>Auditoria Sprint 6</strong>
+            <span class="muted">{{ standingsAuditMessage() }}</span>
+          </div>
+        }
+
         @if (message()) {
           <p class="muted">{{ message() }}</p>
         }
@@ -202,6 +213,8 @@ export class StandingsPageComponent {
   private readonly groupsService = inject(StageGroupsService);
   private readonly teamsService = inject(TeamsService);
   private readonly tournamentTeamsService = inject(TournamentTeamsService);
+  private readonly rostersService = inject(RostersService);
+  private readonly matchesService = inject(MatchesService);
   private readonly catalogLoader = inject(CatalogLoaderService);
   private readonly notifications = inject(NotificationService);
   private readonly errorMapper = inject(ErrorMapper);
@@ -217,6 +230,8 @@ export class StandingsPageComponent {
   protected readonly groups = signal<StageGroup[]>([]);
   protected readonly tournamentTeams = signal<TournamentTeam[]>([]);
   protected readonly teams = signal<Team[]>([]);
+  protected readonly allRosters = signal<RosterEntry[]>([]);
+  protected readonly allMatches = signal<MatchGame[]>([]);
   protected readonly displayedColumns = ['rank', 'team', 'record', 'scoring', 'points', 'updatedAt'];
   protected readonly pageIndex = signal(0);
   protected readonly pageSize = signal(20);
@@ -281,6 +296,41 @@ export class StandingsPageComponent {
       ? this.tournamentTeams().filter((item) => item.tournamentId === tournamentId)
       : this.tournamentTeams();
   });
+  protected readonly standingsAuditMessage = computed(() => {
+    const tournamentId = Number(this.filtersForm.controls.tournamentId.getRawValue());
+    if (!tournamentId) {
+      return '';
+    }
+
+    const registrations = this.tournamentTeams().filter((item) => item.tournamentId === tournamentId);
+    const approvedRegistrations = registrations.filter((item) => item.registrationStatus === 'APPROVED');
+    const activeRosterIds = new Set(
+      this.allRosters()
+        .filter((item) => item.rosterStatus === 'ACTIVE')
+        .map((item) => item.tournamentTeamId)
+    );
+    const rosterReadyCount = approvedRegistrations.filter((item) => activeRosterIds.has(item.id)).length;
+    const playedMatches = this.allMatches().filter((item) => item.tournamentId === tournamentId && item.status === 'PLAYED').length;
+    const standingsCount = this.rows().length;
+
+    if (approvedRegistrations.length === 0) {
+      return 'Este torneo aun no tiene inscripciones aprobadas. La tabla no deberia ser el siguiente paso operativo.';
+    }
+
+    if (playedMatches > 0 && rosterReadyCount === 0) {
+      return 'Se detectan partidos jugados sin soporte visible de roster activo. Conviene corregir la trazabilidad antes de confiar en la tabla.';
+    }
+
+    if (playedMatches > 0 && standingsCount === 0) {
+      return 'Hay partidos jugados en este torneo pero el filtro actual no muestra standings. Recalcula o revisa el contexto cargado.';
+    }
+
+    if (rosterReadyCount < approvedRegistrations.length) {
+      return `Solo ${rosterReadyCount} de ${approvedRegistrations.length} inscripciones aprobadas tienen roster activo. La tabla puede no reflejar una base operativa completa.`;
+    }
+
+    return '';
+  });
 
   protected readonly filtersForm = this.fb.nonNullable.group({
     tournamentId: [''],
@@ -305,6 +355,12 @@ export class StandingsPageComponent {
     this.catalogLoader
       .loadAll((page, size) => this.tournamentTeamsService.list({ page, size }))
       .subscribe({ next: (items) => this.tournamentTeams.set(items) });
+    this.catalogLoader
+      .loadAll((page, size) => this.rostersService.list({ page, size }))
+      .subscribe({ next: (items) => this.allRosters.set(items) });
+    this.catalogLoader
+      .loadAll((page, size) => this.matchesService.list({ page, size }))
+      .subscribe({ next: (items) => this.allMatches.set(items) });
 
     this.filtersForm.controls.tournamentId.valueChanges.pipe(takeUntilDestroyed()).subscribe((value) => {
       const tournamentId = Number(value);

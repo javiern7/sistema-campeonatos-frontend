@@ -1,6 +1,8 @@
 import { TournamentStatus } from '../tournaments/tournament.models';
 
 export type DashboardHealth = 'healthy' | 'warning' | 'attention';
+export type DashboardReportingSegment = 'operational' | 'setup' | 'sandbox';
+export type DashboardAuditStatus = 'blocked' | 'partial' | 'ready';
 
 export interface DashboardAlert {
   title: string;
@@ -32,16 +34,25 @@ export interface DashboardTournamentSummary {
   tournamentName: string;
   sportName: string;
   status: TournamentStatus;
+  reportingSegment: DashboardReportingSegment;
+  qaSignal: boolean;
   stageCount: number;
   groupCount: number;
   registrationCount: number;
   approvedRegistrationCount: number;
+  registrationsWithActiveRosterCount: number;
+  rosterGapCount: number;
   activeRosterCount: number;
   matchCount: number;
   playedMatchCount: number;
   scheduledMatchCount: number;
   incidentMatchCount: number;
   standingsCount: number;
+  standingsCoverageCount: number;
+  readinessScore: number;
+  auditStatus: DashboardAuditStatus;
+  auditMessage: string;
+  blockers: string[];
   leaderName: string | null;
   leaderPoints: number | null;
   health: DashboardHealth;
@@ -55,6 +66,9 @@ export interface DashboardSummary {
   tournamentCount: number;
   activeTournamentCount: number;
   liveTournamentCount: number;
+  operationalTournamentCount: number;
+  setupTournamentCount: number;
+  sandboxTournamentCount: number;
   registrationCount: number;
   approvedRegistrationCount: number;
   matchCount: number;
@@ -63,6 +77,9 @@ export interface DashboardSummary {
   activeRosterCount: number;
   standingsCount: number;
   attentionTournamentCount: number;
+  rosterGapTournamentCount: number;
+  standingsGapTournamentCount: number;
+  readyTournamentCount: number;
   sportSummaries: DashboardSportSummary[];
   tournamentSummaries: DashboardTournamentSummary[];
   alerts: DashboardAlert[];
