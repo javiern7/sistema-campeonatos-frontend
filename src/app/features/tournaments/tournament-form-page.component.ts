@@ -70,14 +70,22 @@ import { TournamentsService } from './tournaments.service';
                 </mat-select>
               </mat-form-field>
 
-              <mat-form-field appearance="outline">
-                <mat-label>Estado</mat-label>
-                <mat-select formControlName="status">
-                  @for (status of statuses; track status) {
-                    <mat-option [value]="status">{{ status }}</mat-option>
-                  }
-                </mat-select>
-              </mat-form-field>
+              @if (!isEditMode()) {
+                <mat-form-field appearance="outline">
+                  <mat-label>Estado</mat-label>
+                  <mat-select formControlName="status">
+                    @for (status of statuses; track status) {
+                      <mat-option [value]="status">{{ status }}</mat-option>
+                    }
+                  </mat-select>
+                </mat-form-field>
+              } @else {
+                <mat-form-field appearance="outline">
+                  <mat-label>Estado actual</mat-label>
+                  <input matInput [value]="currentStatus()" readonly>
+                  <mat-hint>Los cambios de estado se gestionan por la transicion operativa del torneo.</mat-hint>
+                </mat-form-field>
+              }
 
               <mat-form-field appearance="outline">
                 <mat-label>Inicio</mat-label>
@@ -142,6 +150,7 @@ export class TournamentFormPageComponent {
   protected readonly pageLoading = signal(true);
   protected readonly saving = signal(false);
   protected readonly sports = signal<Sport[]>([]);
+  protected readonly currentStatus = signal<TournamentStatus>('DRAFT');
   protected readonly formats: TournamentFormat[] = ['LEAGUE', 'GROUPS_THEN_KNOCKOUT', 'KNOCKOUT'];
   protected readonly statuses: TournamentStatus[] = ['DRAFT', 'OPEN', 'IN_PROGRESS', 'FINISHED', 'CANCELLED'];
 
@@ -179,7 +188,8 @@ export class TournamentFormPageComponent {
       .getById(this.tournamentId)
       .pipe(finalize(() => this.pageLoading.set(false)))
       .subscribe({
-        next: (tournament) =>
+        next: (tournament) => {
+          this.currentStatus.set(tournament.status);
           this.form.patchValue({
             sportId: tournament.sportId,
             name: tournament.name,
@@ -193,7 +203,8 @@ export class TournamentFormPageComponent {
             pointsWin: tournament.pointsWin,
             pointsDraw: tournament.pointsDraw,
             pointsLoss: tournament.pointsLoss
-          }),
+          });
+        },
         error: (error: unknown) => this.notifications.error(this.errorMapper.map(error).message)
       });
   }
@@ -209,7 +220,7 @@ export class TournamentFormPageComponent {
       name: value.name,
       seasonName: value.seasonName,
       format: value.format,
-      status: value.status,
+      status: this.isEditMode() ? this.currentStatus() : value.status,
       description: value.description || null,
       startDate: value.startDate || null,
       endDate: value.endDate || null,

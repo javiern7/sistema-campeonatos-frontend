@@ -10,9 +10,10 @@ export class CatalogLoaderService {
     size = 100
   ): Observable<T[]> {
     return fetchPage(0, size).pipe(
-      expand((pageResponse) =>
-        pageResponse.number + 1 < pageResponse.totalPages ? fetchPage(pageResponse.number + 1, size) : EMPTY
-      ),
+      expand((pageResponse) => {
+        const currentPage = pageResponse.page ?? pageResponse.number ?? 0;
+        return currentPage + 1 < pageResponse.totalPages ? fetchPage(currentPage + 1, size) : EMPTY;
+      }),
       reduce((items, pageResponse) => [...items, ...pageResponse.content], [] as T[])
     );
   }

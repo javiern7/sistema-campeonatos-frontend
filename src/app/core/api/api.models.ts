@@ -9,10 +9,13 @@ export interface ApiResponse<T> {
 
 export interface PageResponse<T> {
   content: T[];
+  page: number;
+  number?: number;
   totalElements: number;
   totalPages: number;
   size: number;
-  number: number;
+  first?: boolean;
+  last?: boolean;
 }
 
 export type QueryParamValue = string | number | boolean | null | undefined;

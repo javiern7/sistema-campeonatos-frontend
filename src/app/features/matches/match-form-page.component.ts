@@ -348,6 +348,17 @@ export class MatchFormPageComponent {
         .map((item) => item.id)
     );
   });
+  protected readonly selectedTeamsRosterReady = computed(() => {
+    const activeIds = this.rosterReadyTournamentTeamIds();
+    const homeId = Number(this.form.controls.homeTournamentTeamId.getRawValue());
+    const awayId = Number(this.form.controls.awayTournamentTeamId.getRawValue());
+
+    if (!homeId || !awayId) {
+      return true;
+    }
+
+    return activeIds.has(homeId) && activeIds.has(awayId);
+  });
   protected readonly readinessWarning = computed(() => {
     const tournamentId = Number(this.form.controls.tournamentId.getRawValue());
     const approvedCount = this.tournamentTeams().filter((item) => item.registrationStatus === 'APPROVED').length;
@@ -511,6 +522,13 @@ export class MatchFormPageComponent {
     if ((status === 'SCHEDULED' || status === 'PLAYED' || status === 'FORFEIT') && this.rosterReadyTournamentTeamIds().size < 2) {
       this.notifications.error(
         'El torneo no tiene base suficiente de roster activo para avanzar a competencia. Revisa inscripciones aprobadas y rosters antes de guardar.'
+      );
+      return;
+    }
+
+    if ((status === 'SCHEDULED' || status === 'PLAYED' || status === 'FORFEIT') && !this.selectedTeamsRosterReady()) {
+      this.notifications.error(
+        'Los equipos seleccionados deben tener roster activo para avanzar a competencia. Revisa las inscripciones elegidas antes de guardar.'
       );
       return;
     }

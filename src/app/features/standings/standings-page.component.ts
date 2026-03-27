@@ -331,6 +331,35 @@ export class StandingsPageComponent {
 
     return '';
   });
+  protected readonly hasPlayedMatchesWithoutRosterSupport = computed(() => {
+    const tournamentId = Number(this.filtersForm.controls.tournamentId.getRawValue());
+    if (!tournamentId) {
+      return false;
+    }
+
+    const stageId = Number(this.filtersForm.controls.stageId.getRawValue());
+    const groupId = Number(this.filtersForm.controls.groupId.getRawValue());
+    const activeRosterIds = new Set(
+      this.allRosters()
+        .filter((item) => item.rosterStatus === 'ACTIVE')
+        .map((item) => item.tournamentTeamId)
+    );
+
+    return this.allMatches()
+      .filter((item) => {
+        if (item.tournamentId !== tournamentId) {
+          return false;
+        }
+        if (stageId && item.stageId !== stageId) {
+          return false;
+        }
+        if (groupId && item.groupId !== groupId) {
+          return false;
+        }
+        return item.status === 'PLAYED' || item.status === 'FORFEIT';
+      })
+      .some((item) => !activeRosterIds.has(item.homeTournamentTeamId) || !activeRosterIds.has(item.awayTournamentTeamId));
+  });
 
   protected readonly filtersForm = this.fb.nonNullable.group({
     tournamentId: [''],
@@ -422,6 +451,13 @@ export class StandingsPageComponent {
     const filters = this.filtersForm.getRawValue();
     if (!filters.tournamentId) {
       this.notifications.error('Selecciona al menos un torneo para recalcular');
+      return;
+    }
+
+    if (this.hasPlayedMatchesWithoutRosterSupport()) {
+      this.notifications.error(
+        'No conviene recalcular standings mientras existan partidos cerrados sin roster activo para todos los participantes.'
+      );
       return;
     }
 
