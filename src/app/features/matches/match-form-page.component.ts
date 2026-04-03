@@ -18,6 +18,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { ErrorMapper } from '../../core/error/error.mapper';
 import { NotificationService } from '../../core/error/notification.service';
 import { CatalogLoaderService } from '../../core/pagination/catalog-loader.service';
+import { toDateTimeLocalInputValue, toIsoFromDateTimeLocalInput } from '../../shared/date/date-time.utils';
 import { LoadingStateComponent } from '../../shared/loading-state/loading-state.component';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
 import { RosterEntry } from '../rosters/roster.models';
@@ -296,6 +297,10 @@ export class MatchFormPageComponent {
   protected readonly isEditMode = signal(this.matchId > 0);
   protected readonly pageLoading = signal(true);
   protected readonly saving = signal(false);
+  private readonly selectedTournamentId = signal(0);
+  private readonly selectedStageId = signal(0);
+  private readonly selectedHomeTournamentTeamId = signal(0);
+  private readonly selectedAwayTournamentTeamId = signal(0);
   protected readonly tournaments = signal<Tournament[]>([]);
   private readonly teams = signal<Team[]>([]);
   private readonly allStages = signal<TournamentStage[]>([]);
@@ -304,8 +309,8 @@ export class MatchFormPageComponent {
   private readonly allRosters = signal<RosterEntry[]>([]);
   protected readonly statuses: MatchStatus[] = ['SCHEDULED', 'PLAYED', 'FORFEIT', 'CANCELLED'];
   protected readonly pageSubtitle = computed(() => {
-    const tournamentId = Number(this.form.controls.tournamentId.getRawValue());
-    const stageId = Number(this.form.controls.stageId.getRawValue());
+    const tournamentId = this.selectedTournamentId();
+    const stageId = this.selectedStageId();
     const groupId = Number(this.form.controls.groupId.getRawValue());
     const parts = [this.tournamentName(tournamentId), this.stageName(stageId), this.groupName(groupId)].filter((item) =>
       Boolean(item)
@@ -314,23 +319,23 @@ export class MatchFormPageComponent {
     return parts.length > 0 ? parts.join(' / ') : 'Programa el fixture y registra resultados con contexto competitivo.';
   });
   protected readonly stages = computed(() => {
-    const tournamentId = Number(this.form.controls.tournamentId.getRawValue());
+    const tournamentId = this.selectedTournamentId();
     return tournamentId ? this.allStages().filter((item) => item.tournamentId === tournamentId) : this.allStages();
   });
   protected readonly groups = computed(() => {
-    const stageId = Number(this.form.controls.stageId.getRawValue());
+    const stageId = this.selectedStageId();
     return stageId ? this.allGroups().filter((item) => item.stageId === stageId) : [];
   });
   protected readonly tournamentTeams = computed(() => {
-    const tournamentId = Number(this.form.controls.tournamentId.getRawValue());
+    const tournamentId = this.selectedTournamentId();
     return tournamentId
       ? this.allTournamentTeams().filter((item) => item.tournamentId === tournamentId)
       : this.allTournamentTeams();
   });
   protected readonly winnerOptions = computed(() => {
     const selectedIds = new Set([
-      Number(this.form.controls.homeTournamentTeamId.getRawValue()),
-      Number(this.form.controls.awayTournamentTeamId.getRawValue())
+      this.selectedHomeTournamentTeamId(),
+      this.selectedAwayTournamentTeamId()
     ]);
 
     return this.tournamentTeams().filter((item) => selectedIds.has(item.id));
@@ -350,8 +355,8 @@ export class MatchFormPageComponent {
   });
   protected readonly selectedTeamsRosterReady = computed(() => {
     const activeIds = this.rosterReadyTournamentTeamIds();
-    const homeId = Number(this.form.controls.homeTournamentTeamId.getRawValue());
-    const awayId = Number(this.form.controls.awayTournamentTeamId.getRawValue());
+    const homeId = this.selectedHomeTournamentTeamId();
+    const awayId = this.selectedAwayTournamentTeamId();
 
     if (!homeId || !awayId) {
       return true;
@@ -360,7 +365,7 @@ export class MatchFormPageComponent {
     return activeIds.has(homeId) && activeIds.has(awayId);
   });
   protected readonly readinessWarning = computed(() => {
-    const tournamentId = Number(this.form.controls.tournamentId.getRawValue());
+    const tournamentId = this.selectedTournamentId();
     const approvedCount = this.tournamentTeams().filter((item) => item.registrationStatus === 'APPROVED').length;
     const rosterReadyCount = this.rosterReadyTournamentTeamIds().size;
 
@@ -407,6 +412,7 @@ export class MatchFormPageComponent {
         this.tournaments.set(items);
         if (!this.isEditMode() && items.length > 0) {
           this.form.patchValue({ tournamentId: items[0].id });
+          this.selectedTournamentId.set(items[0].id);
         }
       }
     });
@@ -434,6 +440,7 @@ export class MatchFormPageComponent {
 
     this.form.controls.tournamentId.valueChanges.pipe(takeUntilDestroyed()).subscribe((value) => {
       const tournamentId = Number(value);
+      this.selectedTournamentId.set(tournamentId);
       const validStageIds = new Set(this.allStages().filter((item) => item.tournamentId === tournamentId).map((item) => item.id));
       const validTeamIds = new Set(
         this.allTournamentTeams().filter((item) => item.tournamentId === tournamentId).map((item) => item.id)
@@ -462,6 +469,7 @@ export class MatchFormPageComponent {
 
     this.form.controls.stageId.valueChanges.pipe(takeUntilDestroyed()).subscribe((value) => {
       const stageId = Number(value);
+      this.selectedStageId.set(stageId);
       const validGroupIds = new Set(this.allGroups().filter((item) => item.stageId === stageId).map((item) => item.id));
       const currentGroupId = Number(this.form.controls.groupId.getRawValue());
 
@@ -472,10 +480,12 @@ export class MatchFormPageComponent {
 
     this.form.controls.homeTournamentTeamId.valueChanges.pipe(takeUntilDestroyed()).subscribe(() => {
       this.syncSelectedTeamTournamentIds();
+      this.syncWinnerSelection();
     });
 
     this.form.controls.awayTournamentTeamId.valueChanges.pipe(takeUntilDestroyed()).subscribe(() => {
       this.syncSelectedTeamTournamentIds();
+      this.syncWinnerSelection();
     });
 
     if (!this.isEditMode()) {
@@ -497,7 +507,7 @@ export class MatchFormPageComponent {
             matchdayNumber: match.matchdayNumber ? String(match.matchdayNumber) : '',
             homeTournamentTeamId: match.homeTournamentTeamId,
             awayTournamentTeamId: match.awayTournamentTeamId,
-            scheduledAt: match.scheduledAt ? match.scheduledAt.slice(0, 16) : '',
+            scheduledAt: toDateTimeLocalInputValue(match.scheduledAt),
             venueName: match.venueName ?? '',
             status: match.status,
             homeScore: match.homeScore !== null ? String(match.homeScore) : '',
@@ -505,7 +515,10 @@ export class MatchFormPageComponent {
             winnerTournamentTeamId: match.winnerTournamentTeamId ? String(match.winnerTournamentTeamId) : '',
             notes: match.notes ?? ''
           });
+          this.selectedTournamentId.set(match.tournamentId);
+          this.selectedStageId.set(match.stageId ?? 0);
           this.syncSelectedTeamTournamentIds();
+          this.syncWinnerSelection();
         },
         error: (error: unknown) => this.notifications.error(this.errorMapper.map(error).message)
       });
@@ -542,7 +555,7 @@ export class MatchFormPageComponent {
       matchdayNumber: parseOptionalNumber(value.matchdayNumber),
       homeTournamentTeamId: Number(value.homeTournamentTeamId),
       awayTournamentTeamId: Number(value.awayTournamentTeamId),
-      scheduledAt: value.scheduledAt ? new Date(value.scheduledAt).toISOString() : null,
+      scheduledAt: toIsoFromDateTimeLocalInput(value.scheduledAt),
       venueName: value.venueName || null,
       status: value.status,
       homeScore: parseOptionalNumber(value.homeScore),
@@ -654,6 +667,8 @@ export class MatchFormPageComponent {
   private syncSelectedTeamTournamentIds(): void {
     const homeTeamId = Number(this.form.controls.homeTournamentTeamId.getRawValue());
     const awayTeamId = Number(this.form.controls.awayTournamentTeamId.getRawValue());
+    this.selectedHomeTournamentTeamId.set(homeTeamId);
+    this.selectedAwayTournamentTeamId.set(awayTeamId);
     const homeTournamentId = this.allTournamentTeams().find((item) => item.id === homeTeamId)?.tournamentId ?? 0;
     const awayTournamentId = this.allTournamentTeams().find((item) => item.id === awayTeamId)?.tournamentId ?? 0;
 
@@ -664,5 +679,15 @@ export class MatchFormPageComponent {
       },
       { emitEvent: false }
     );
+  }
+
+  private syncWinnerSelection(): void {
+    const winnerId = Number(this.form.controls.winnerTournamentTeamId.getRawValue());
+    const homeId = this.selectedHomeTournamentTeamId();
+    const awayId = this.selectedAwayTournamentTeamId();
+
+    if (winnerId && winnerId !== homeId && winnerId !== awayId) {
+      this.form.patchValue({ winnerTournamentTeamId: '' }, { emitEvent: false });
+    }
   }
 }

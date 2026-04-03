@@ -2,7 +2,14 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 
 import { ApiClientService } from '../../core/api/api-client.service';
-import { Tournament, TournamentFilters, TournamentFormValue, TournamentPage } from './tournament.models';
+import {
+  Tournament,
+  TournamentFilters,
+  TournamentFormValue,
+  TournamentPage,
+  TournamentStatus,
+  TournamentStatusTransitionPayload
+} from './tournament.models';
 
 @Injectable({ providedIn: 'root' })
 export class TournamentsService {
@@ -22,6 +29,11 @@ export class TournamentsService {
 
   update(id: number, payload: TournamentFormValue): Observable<Tournament> {
     return this.api.put<Tournament, TournamentFormValue>(`/tournaments/${id}`, payload);
+  }
+
+  transitionStatus(id: number, targetStatus: TournamentStatus): Observable<Tournament> {
+    const payload: TournamentStatusTransitionPayload = { targetStatus };
+    return this.api.post<Tournament, TournamentStatusTransitionPayload>(`/tournaments/${id}/status-transition`, payload);
   }
 
   delete(id: number): Observable<void> {

@@ -50,4 +50,8 @@ export interface TournamentFormValue {
   pointsLoss: number;
 }
 
+export interface TournamentStatusTransitionPayload {
+  targetStatus: TournamentStatus;
+}
+
 export type TournamentPage = PageResponse<Tournament>;

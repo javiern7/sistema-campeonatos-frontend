@@ -12,6 +12,7 @@ import { AuthorizationService } from '../../core/auth/authorization.service';
 import { ErrorMapper } from '../../core/error/error.mapper';
 import { NotificationService } from '../../core/error/notification.service';
 import { CatalogLoaderService } from '../../core/pagination/catalog-loader.service';
+import { parseBackendDateTime } from '../../shared/date/date-time.utils';
 import { LoadingStateComponent } from '../../shared/loading-state/loading-state.component';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
 import { MatchGame } from '../matches/match.models';
@@ -237,12 +238,13 @@ export class StandingsPageComponent {
   protected readonly pageSize = signal(20);
   protected readonly pageSizeOptions = [10, 20, 50];
   protected readonly canManage = computed(() => this.authorization.canManage('standings'));
+  private readonly selectedTournamentId = signal(0);
+  private readonly selectedStageId = signal(0);
   protected readonly selectedContextLabel = computed(() => {
-    const filters = this.filtersForm.getRawValue();
     const labels = [
-      this.tournamentName(Number(filters.tournamentId)),
-      this.stageName(Number(filters.stageId)),
-      this.groupName(Number(filters.groupId))
+      this.tournamentName(this.selectedTournamentId()),
+      this.stageName(this.selectedStageId()),
+      this.groupName(Number(this.filtersForm.controls.groupId.getRawValue()))
     ].filter((label) => Boolean(label));
 
     return labels.length > 0 ? labels.join(' / ') : 'Vista general';
@@ -283,21 +285,21 @@ export class StandingsPageComponent {
     ];
   });
   protected readonly filteredStages = computed(() => {
-    const tournamentId = Number(this.filtersForm.controls.tournamentId.getRawValue());
+    const tournamentId = this.selectedTournamentId();
     return tournamentId ? this.stages().filter((item) => item.tournamentId === tournamentId) : this.stages();
   });
   protected readonly filteredGroups = computed(() => {
-    const stageId = Number(this.filtersForm.controls.stageId.getRawValue());
+    const stageId = this.selectedStageId();
     return stageId ? this.groups().filter((item) => item.stageId === stageId) : [];
   });
   protected readonly filteredTournamentTeams = computed(() => {
-    const tournamentId = Number(this.filtersForm.controls.tournamentId.getRawValue());
+    const tournamentId = this.selectedTournamentId();
     return tournamentId
       ? this.tournamentTeams().filter((item) => item.tournamentId === tournamentId)
       : this.tournamentTeams();
   });
   protected readonly standingsAuditMessage = computed(() => {
-    const tournamentId = Number(this.filtersForm.controls.tournamentId.getRawValue());
+    const tournamentId = this.selectedTournamentId();
     if (!tournamentId) {
       return '';
     }
@@ -332,12 +334,12 @@ export class StandingsPageComponent {
     return '';
   });
   protected readonly hasPlayedMatchesWithoutRosterSupport = computed(() => {
-    const tournamentId = Number(this.filtersForm.controls.tournamentId.getRawValue());
+    const tournamentId = this.selectedTournamentId();
     if (!tournamentId) {
       return false;
     }
 
-    const stageId = Number(this.filtersForm.controls.stageId.getRawValue());
+    const stageId = this.selectedStageId();
     const groupId = Number(this.filtersForm.controls.groupId.getRawValue());
     const activeRosterIds = new Set(
       this.allRosters()
@@ -393,6 +395,7 @@ export class StandingsPageComponent {
 
     this.filtersForm.controls.tournamentId.valueChanges.pipe(takeUntilDestroyed()).subscribe((value) => {
       const tournamentId = Number(value);
+      this.selectedTournamentId.set(tournamentId);
       const validStageIds = new Set(this.stages().filter((item) => item.tournamentId === tournamentId).map((item) => item.id));
       const validTeamIds = new Set(
         this.tournamentTeams().filter((item) => item.tournamentId === tournamentId).map((item) => item.id)
@@ -412,6 +415,7 @@ export class StandingsPageComponent {
 
     this.filtersForm.controls.stageId.valueChanges.pipe(takeUntilDestroyed()).subscribe((value) => {
       const stageId = Number(value);
+      this.selectedStageId.set(stageId);
       const validGroupIds = new Set(this.groups().filter((item) => item.stageId === stageId).map((item) => item.id));
       const currentGroupId = Number(this.filtersForm.controls.groupId.getRawValue());
 
@@ -535,9 +539,14 @@ export class StandingsPageComponent {
   }
 
   protected formatDate(value: string): string {
+    const parsed = parseBackendDateTime(value);
+    if (!parsed) {
+      return 'Sin fecha';
+    }
+
     return new Intl.DateTimeFormat('es-PE', {
       dateStyle: 'medium',
       timeStyle: 'short'
-    }).format(new Date(value));
+    }).format(parsed);
   }
 }

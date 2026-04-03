@@ -13,6 +13,7 @@ import { AuthorizationService } from '../../core/auth/authorization.service';
 import { ErrorMapper } from '../../core/error/error.mapper';
 import { NotificationService } from '../../core/error/notification.service';
 import { CatalogLoaderService } from '../../core/pagination/catalog-loader.service';
+import { parseBackendDateTime } from '../../shared/date/date-time.utils';
 import { LoadingStateComponent } from '../../shared/loading-state/loading-state.component';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
 import { StageGroup } from '../stage-groups/stage-group.models';
@@ -216,6 +217,9 @@ export class MatchListPageComponent {
   private readonly notifications = inject(NotificationService);
   private readonly errorMapper = inject(ErrorMapper);
   private readonly authorization = inject(AuthorizationService);
+  private readonly selectedTournamentId = signal(0);
+  private readonly selectedStageId = signal(0);
+  private readonly selectedStatus = signal<MatchStatus | ''>('');
 
   protected readonly loading = signal(true);
   protected readonly page = signal<MatchPage | null>(null);
@@ -232,20 +236,19 @@ export class MatchListPageComponent {
   protected readonly canManage = computed(() => this.authorization.canManage('matches'));
   protected readonly canDelete = computed(() => this.authorization.canDelete('matches'));
   protected readonly stages = computed(() => {
-    const tournamentId = Number(this.filtersForm.controls.tournamentId.getRawValue());
+    const tournamentId = this.selectedTournamentId();
     return tournamentId ? this.allStages().filter((item) => item.tournamentId === tournamentId) : this.allStages();
   });
   protected readonly groups = computed(() => {
-    const stageId = Number(this.filtersForm.controls.stageId.getRawValue());
+    const stageId = this.selectedStageId();
     return stageId ? this.allGroups().filter((item) => item.stageId === stageId) : [];
   });
   protected readonly selectedContextLabel = computed(() => {
-    const filters = this.filtersForm.getRawValue();
     const labels = [
-      this.tournamentName(Number(filters.tournamentId)),
-      this.stageName(Number(filters.stageId)),
-      this.groupName(Number(filters.groupId)),
-      this.statusLabel(filters.status)
+      this.tournamentName(this.selectedTournamentId()),
+      this.stageName(this.selectedStageId()),
+      this.groupName(Number(this.filtersForm.controls.groupId.getRawValue())),
+      this.statusLabel(this.selectedStatus())
     ].filter((label) => Boolean(label));
 
     return labels.length > 0 ? labels.join(' / ') : 'Todos los torneos y estados';
@@ -313,6 +316,7 @@ export class MatchListPageComponent {
 
     this.filtersForm.controls.tournamentId.valueChanges.pipe(takeUntilDestroyed()).subscribe((value) => {
       const tournamentId = Number(value);
+      this.selectedTournamentId.set(tournamentId);
       const validStageIds = new Set(this.allStages().filter((item) => item.tournamentId === tournamentId).map((item) => item.id));
       const currentStageId = Number(this.filtersForm.controls.stageId.getRawValue());
 
@@ -327,12 +331,17 @@ export class MatchListPageComponent {
 
     this.filtersForm.controls.stageId.valueChanges.pipe(takeUntilDestroyed()).subscribe((value) => {
       const stageId = Number(value);
+      this.selectedStageId.set(stageId);
       const validGroupIds = new Set(this.allGroups().filter((item) => item.stageId === stageId).map((item) => item.id));
       const currentGroupId = Number(this.filtersForm.controls.groupId.getRawValue());
 
       if (currentGroupId && !validGroupIds.has(currentGroupId)) {
         this.filtersForm.patchValue({ groupId: '' }, { emitEvent: false });
       }
+    });
+
+    this.filtersForm.controls.status.valueChanges.pipe(takeUntilDestroyed()).subscribe((value) => {
+      this.selectedStatus.set(value);
     });
 
     this.load();
@@ -438,14 +447,15 @@ export class MatchListPageComponent {
   }
 
   protected formatDate(value: string | null): string {
-    if (!value) {
+    const parsed = parseBackendDateTime(value);
+    if (!parsed) {
       return 'Sin programacion';
     }
 
     return new Intl.DateTimeFormat('es-PE', {
       dateStyle: 'medium',
       timeStyle: 'short'
-    }).format(new Date(value));
+    }).format(parsed);
   }
 
   protected scoreLabel(row: MatchGame): string {

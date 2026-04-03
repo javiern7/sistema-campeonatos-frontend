@@ -141,11 +141,14 @@ export class TournamentTeamFormPageComponent {
   protected readonly isEditMode = signal(this.registrationId > 0);
   protected readonly pageLoading = signal(true);
   protected readonly saving = signal(false);
+  private readonly selectedTournamentId = signal(0);
+  private readonly selectedTeamId = signal(0);
+  private readonly selectedRegistrationStatus = signal<TournamentTeamRegistrationStatus>('PENDING');
   protected readonly tournaments = signal<Tournament[]>([]);
   protected readonly teams = signal<Team[]>([]);
   protected readonly statuses: TournamentTeamRegistrationStatus[] = ['PENDING', 'APPROVED', 'REJECTED', 'WITHDRAWN'];
   protected readonly registrationWarning = computed(() => {
-    const status = this.form.controls.registrationStatus.getRawValue();
+    const status = this.selectedRegistrationStatus();
 
     if (status === 'APPROVED') {
       return 'Al aprobar esta inscripcion, el siguiente paso operativo esperado es poblar roster activo antes de avanzar a partidos.';
@@ -154,8 +157,8 @@ export class TournamentTeamFormPageComponent {
     return '';
   });
   protected readonly pageSubtitle = computed(() => {
-    const tournament = this.tournaments().find((item) => item.id === Number(this.form.controls.tournamentId.getRawValue()));
-    const team = this.teams().find((item) => item.id === Number(this.form.controls.teamId.getRawValue()));
+    const tournament = this.tournaments().find((item) => item.id === this.selectedTournamentId());
+    const team = this.teams().find((item) => item.id === this.selectedTeamId());
     const labels = [tournament?.name, team?.name].filter((item) => Boolean(item));
 
     return labels.length > 0 ? labels.join(' / ') : 'Vincula un equipo con un torneo y define su estado operativo.';
@@ -175,6 +178,7 @@ export class TournamentTeamFormPageComponent {
         this.tournaments.set(items);
         if (!this.isEditMode() && items.length > 0) {
           this.form.patchValue({ tournamentId: items[0].id });
+          this.selectedTournamentId.set(items[0].id);
         }
       }
     });
@@ -184,8 +188,19 @@ export class TournamentTeamFormPageComponent {
         this.teams.set(items);
         if (!this.isEditMode() && items.length > 0) {
           this.form.patchValue({ teamId: items[0].id });
+          this.selectedTeamId.set(items[0].id);
         }
       }
+    });
+
+    this.form.controls.tournamentId.valueChanges.subscribe((value) => {
+      this.selectedTournamentId.set(Number(value));
+    });
+    this.form.controls.teamId.valueChanges.subscribe((value) => {
+      this.selectedTeamId.set(Number(value));
+    });
+    this.form.controls.registrationStatus.valueChanges.subscribe((value) => {
+      this.selectedRegistrationStatus.set(value);
     });
 
     if (!this.isEditMode()) {
@@ -197,14 +212,18 @@ export class TournamentTeamFormPageComponent {
       .getById(this.registrationId)
       .pipe(finalize(() => this.pageLoading.set(false)))
       .subscribe({
-        next: (item) =>
+        next: (item) => {
           this.form.patchValue({
             tournamentId: item.tournamentId,
             teamId: item.teamId,
             registrationStatus: item.registrationStatus,
             seedNumber: item.seedNumber !== null ? String(item.seedNumber) : '',
             groupDrawPosition: item.groupDrawPosition !== null ? String(item.groupDrawPosition) : ''
-          }),
+          });
+          this.selectedTournamentId.set(item.tournamentId);
+          this.selectedTeamId.set(item.teamId);
+          this.selectedRegistrationStatus.set(item.registrationStatus);
+        },
         error: (error: unknown) => this.notifications.error(this.errorMapper.map(error).message)
       });
   }

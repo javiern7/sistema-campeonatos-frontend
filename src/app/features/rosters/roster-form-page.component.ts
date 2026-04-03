@@ -194,13 +194,15 @@ export class RosterFormPageComponent {
   protected readonly isEditMode = signal(this.rosterId > 0);
   protected readonly pageLoading = signal(true);
   protected readonly saving = signal(false);
+  private readonly selectedTournamentTeamId = signal(0);
+  private readonly selectedRosterStatus = signal<RosterStatus>('ACTIVE');
   protected readonly players = signal<Player[]>([]);
   protected readonly teams = signal<Team[]>([]);
   protected readonly tournaments = signal<Tournament[]>([]);
   protected readonly tournamentTeams = signal<TournamentTeam[]>([]);
   protected readonly statuses: RosterStatus[] = ['ACTIVE', 'INACTIVE', 'SUSPENDED'];
   protected readonly selectedTournamentTeam = computed(() =>
-    this.tournamentTeams().find((item) => item.id === Number(this.form.controls.tournamentTeamId.getRawValue())) ?? null
+    this.tournamentTeams().find((item) => item.id === this.selectedTournamentTeamId()) ?? null
   );
   protected readonly operationalWarning = computed(() => {
     const registration = this.selectedTournamentTeam();
@@ -208,7 +210,7 @@ export class RosterFormPageComponent {
       return '';
     }
 
-    if (registration.registrationStatus !== 'APPROVED' && this.form.controls.rosterStatus.getRawValue() === 'ACTIVE') {
+    if (registration.registrationStatus !== 'APPROVED' && this.selectedRosterStatus() === 'ACTIVE') {
       return 'La inscripcion seleccionada aun no esta aprobada. No conviene habilitar un roster activo hasta cerrar ese paso.';
     }
 
@@ -251,13 +253,18 @@ export class RosterFormPageComponent {
         this.tournamentTeams.set(items);
         if (!this.isEditMode() && items.length > 0) {
           this.form.patchValue({ tournamentTeamId: items[0].id });
+          this.selectedTournamentTeamId.set(items[0].id);
         }
         this.syncRegistrationStatus();
       }
     });
 
     this.form.controls.tournamentTeamId.valueChanges.subscribe(() => {
+      this.selectedTournamentTeamId.set(Number(this.form.controls.tournamentTeamId.getRawValue()));
       this.syncRegistrationStatus();
+    });
+    this.form.controls.rosterStatus.valueChanges.subscribe((value) => {
+      this.selectedRosterStatus.set(value);
     });
 
     if (!this.isEditMode()) {
@@ -270,7 +277,7 @@ export class RosterFormPageComponent {
       .getById(this.rosterId)
       .pipe(finalize(() => this.pageLoading.set(false)))
       .subscribe({
-        next: (entry) =>
+        next: (entry) => {
           this.form.patchValue({
             tournamentTeamId: entry.tournamentTeamId,
             playerId: entry.playerId,
@@ -282,7 +289,10 @@ export class RosterFormPageComponent {
             rosterStatus: entry.rosterStatus,
             startDate: entry.startDate,
             endDate: entry.endDate ?? ''
-          }),
+          });
+          this.selectedTournamentTeamId.set(entry.tournamentTeamId);
+          this.selectedRosterStatus.set(entry.rosterStatus);
+        },
         error: (error: unknown) => this.notifications.error(this.errorMapper.map(error).message)
       });
   }

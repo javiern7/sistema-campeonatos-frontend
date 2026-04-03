@@ -64,7 +64,7 @@ import { TournamentsService } from './tournaments.service';
             <mat-select formControlName="status">
               <mat-option value="">Todos</mat-option>
               @for (status of statuses; track status) {
-                <mat-option [value]="status">{{ status }}</mat-option>
+                <mat-option [value]="status">{{ statusLabel(status) }}</mat-option>
               }
             </mat-select>
           </mat-form-field>
@@ -99,7 +99,9 @@ import { TournamentsService } from './tournaments.service';
 
               <ng-container matColumnDef="status">
                 <th mat-header-cell *matHeaderCellDef>Estado</th>
-                <td mat-cell *matCellDef="let row">{{ row.status }}</td>
+                <td mat-cell *matCellDef="let row">
+                  <span [class]="statusClass(row.status)">{{ statusLabel(row.status) }}</span>
+                </td>
               </ng-container>
 
               <ng-container matColumnDef="actions">
@@ -107,6 +109,16 @@ import { TournamentsService } from './tournaments.service';
                 <td mat-cell *matCellDef="let row">
                   @if (canManage()) {
                     <a mat-button [routerLink]="['/tournaments', row.id, 'edit']">Editar</a>
+                    @for (transition of availableTransitions(row.status); track transition.targetStatus) {
+                      <button
+                        mat-button
+                        type="button"
+                        [disabled]="transitioningTournamentId() === row.id"
+                        (click)="transitionStatus(row, transition.targetStatus, transition.label)"
+                      >
+                        {{ transition.label }}
+                      </button>
+                    }
                   }
                   @if (canDelete()) {
                     <button mat-button type="button" color="warn" (click)="remove(row)">Eliminar</button>
@@ -144,6 +156,7 @@ export class TournamentListPageComponent {
   protected readonly page = signal<TournamentPage | null>(null);
   protected readonly rows = signal<Tournament[]>([]);
   protected readonly sports = signal<Sport[]>([]);
+  protected readonly transitioningTournamentId = signal<number | null>(null);
   protected readonly pageIndex = signal(0);
   protected readonly pageSize = signal(20);
   protected readonly pageSizeOptions = [10, 20, 50];
@@ -205,6 +218,67 @@ export class TournamentListPageComponent {
 
   protected sportName(sportId: number): string {
     return this.sports().find((sport) => sport.id === sportId)?.name ?? `#${sportId}`;
+  }
+
+  protected statusLabel(status: TournamentStatus): string {
+    const labels: Record<TournamentStatus, string> = {
+      DRAFT: 'Borrador',
+      OPEN: 'Abierto',
+      IN_PROGRESS: 'En curso',
+      FINISHED: 'Finalizado',
+      CANCELLED: 'Cancelado'
+    };
+
+    return labels[status];
+  }
+
+  protected statusClass(status: TournamentStatus): string {
+    const statusMap: Record<TournamentStatus, string> = {
+      DRAFT: 'status-pill scheduled',
+      OPEN: 'status-pill scheduled',
+      IN_PROGRESS: 'status-pill played',
+      FINISHED: 'status-pill played',
+      CANCELLED: 'status-pill cancelled'
+    };
+
+    return statusMap[status];
+  }
+
+  protected availableTransitions(status: TournamentStatus): Array<{ targetStatus: TournamentStatus; label: string }> {
+    switch (status) {
+      case 'DRAFT':
+        return [
+          { targetStatus: 'OPEN', label: 'Abrir' },
+          { targetStatus: 'CANCELLED', label: 'Cancelar' }
+        ];
+      case 'OPEN':
+        return [
+          { targetStatus: 'IN_PROGRESS', label: 'Iniciar' },
+          { targetStatus: 'CANCELLED', label: 'Cancelar' }
+        ];
+      case 'IN_PROGRESS':
+        return [{ targetStatus: 'FINISHED', label: 'Finalizar' }];
+      default:
+        return [];
+    }
+  }
+
+  protected transitionStatus(tournament: Tournament, targetStatus: TournamentStatus, actionLabel: string): void {
+    if (!window.confirm(`Se intentara ${actionLabel.toLowerCase()} el torneo "${tournament.name}".`)) {
+      return;
+    }
+
+    this.transitioningTournamentId.set(tournament.id);
+    this.tournamentsService
+      .transitionStatus(tournament.id, targetStatus)
+      .pipe(finalize(() => this.transitioningTournamentId.set(null)))
+      .subscribe({
+        next: () => {
+          this.notifications.success(`Torneo ${actionLabel.toLowerCase()} correctamente`);
+          this.load();
+        },
+        error: (error: unknown) => this.notifications.error(this.errorMapper.map(error).message)
+      });
   }
 
   protected remove(tournament: Tournament): void {
