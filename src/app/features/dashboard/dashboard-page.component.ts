@@ -1,4 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
+import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { finalize } from 'rxjs';
 
@@ -26,7 +28,7 @@ type DashboardCard = {
 @Component({
   selector: 'app-dashboard-page',
   standalone: true,
-  imports: [MatCardModule, PageHeaderComponent, LoadingStateComponent],
+  imports: [RouterLink, MatButtonModule, MatCardModule, PageHeaderComponent, LoadingStateComponent],
   template: `
     <section class="app-page">
       <app-page-header
@@ -121,6 +123,10 @@ type DashboardCard = {
                   }
 
                   <p class="muted">{{ tournament.nextAction }}</p>
+
+                  <div class="card-actions">
+                    <a mat-button [routerLink]="['/tournaments', tournament.tournamentId]">Abrir detalle</a>
+                  </div>
                 </article>
               }
             </div>
@@ -225,6 +231,10 @@ type DashboardCard = {
                   </div>
 
                   <p class="muted">{{ tournament.nextAction }}</p>
+
+                  <div class="card-actions">
+                    <a mat-button [routerLink]="['/tournaments', tournament.tournamentId]">Abrir detalle</a>
+                  </div>
                 </article>
               }
             </div>
@@ -306,6 +316,11 @@ type DashboardCard = {
         display: grid;
         gap: 0.85rem;
         padding: 1rem 1.1rem;
+      }
+
+      .card-actions {
+        display: flex;
+        justify-content: flex-end;
       }
 
       .alert-card p,

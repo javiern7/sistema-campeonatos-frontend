@@ -101,6 +101,14 @@ export const appRoutes: Routes = [
           )
       },
       {
+        path: 'tournaments/:id',
+        title: 'Tournament Detail',
+        loadComponent: () =>
+          import('./features/tournaments/tournament-detail-page.component').then(
+            (m) => m.TournamentDetailPageComponent
+          )
+      },
+      {
         path: 'tournament-teams',
         title: 'Tournament Teams',
         loadComponent: () =>

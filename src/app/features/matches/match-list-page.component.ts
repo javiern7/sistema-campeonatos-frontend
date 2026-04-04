@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -207,6 +207,7 @@ type SummaryCard = {
 })
 export class MatchListPageComponent {
   private readonly fb = inject(FormBuilder);
+  private readonly route = inject(ActivatedRoute);
   private readonly matchesService = inject(MatchesService);
   private readonly tournamentsService = inject(TournamentsService);
   private readonly stagesService = inject(TournamentStagesService);
@@ -298,6 +299,17 @@ export class MatchListPageComponent {
   });
 
   constructor() {
+    const queryParams = this.route.snapshot.queryParamMap;
+    this.filtersForm.patchValue({
+      tournamentId: queryParams.get('tournamentId') ?? '',
+      stageId: queryParams.get('stageId') ?? '',
+      groupId: queryParams.get('groupId') ?? '',
+      status: (queryParams.get('status') as MatchStatus | null) ?? ''
+    });
+    this.selectedTournamentId.set(Number(queryParams.get('tournamentId') ?? 0));
+    this.selectedStageId.set(Number(queryParams.get('stageId') ?? 0));
+    this.selectedStatus.set((queryParams.get('status') as MatchStatus | null) ?? '');
+
     this.catalogLoader
       .loadAll((page, size) => this.tournamentsService.list({ page, size }))
       .subscribe({ next: (items) => this.tournaments.set(items) });

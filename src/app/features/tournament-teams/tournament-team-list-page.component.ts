@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -178,6 +178,7 @@ type SummaryCard = {
 })
 export class TournamentTeamListPageComponent {
   private readonly fb = inject(FormBuilder);
+  private readonly route = inject(ActivatedRoute);
   private readonly tournamentsService = inject(TournamentsService);
   private readonly teamsService = inject(TeamsService);
   private readonly tournamentTeamsService = inject(TournamentTeamsService);
@@ -245,6 +246,13 @@ export class TournamentTeamListPageComponent {
   });
 
   constructor() {
+    const queryParams = this.route.snapshot.queryParamMap;
+    this.filtersForm.patchValue({
+      tournamentId: queryParams.get('tournamentId') ?? '',
+      teamId: queryParams.get('teamId') ?? '',
+      registrationStatus: (queryParams.get('registrationStatus') as TournamentTeamRegistrationStatus | null) ?? ''
+    });
+
     this.catalogLoader
       .loadAll((page, size) => this.tournamentsService.list({ page, size }))
       .subscribe({ next: (items) => this.tournaments.set(items) });

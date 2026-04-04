@@ -19,6 +19,13 @@ import { SportsService } from '../sports/sports.service';
 import { Tournament, TournamentPage, TournamentStatus } from './tournament.models';
 import { TournamentsService } from './tournaments.service';
 
+type SummaryCard = {
+  label: string;
+  value: number;
+  meta: string;
+  accent?: boolean;
+};
+
 @Component({
   selector: 'app-tournament-list-page',
   standalone: true,
@@ -78,7 +85,20 @@ import { TournamentsService } from './tournaments.service';
         @if (loading()) {
           <app-loading-state />
         } @else {
-          <p class="muted">Total: {{ page()?.totalElements ?? 0 }}</p>
+          <div class="context-banner">
+            <strong>{{ rows().length === 0 ? 'Sin resultados para el filtro actual' : 'Lectura operativa del listado actual' }}</strong>
+            <span class="muted">Total: {{ page()?.totalElements ?? 0 }} torneos. QA / borrador separados del flujo principal.</span>
+          </div>
+
+          <div class="summary-grid">
+            @for (card of summaryCards(); track card.label) {
+              <article class="summary-card card" [class.accent]="card.accent">
+                <span class="summary-label">{{ card.label }}</span>
+                <span class="summary-value">{{ card.value }}</span>
+                <span class="summary-meta">{{ card.meta }}</span>
+              </article>
+            }
+          </div>
 
           <div class="table-wrapper">
             <table mat-table [dataSource]="rows()" class="w-100">
@@ -89,12 +109,24 @@ import { TournamentsService } from './tournaments.service';
 
               <ng-container matColumnDef="name">
                 <th mat-header-cell *matHeaderCellDef>Torneo</th>
-                <td mat-cell *matCellDef="let row">{{ row.name }}</td>
+                <td mat-cell *matCellDef="let row">
+                  <div class="stack-sm">
+                    <strong>{{ row.name }}</strong>
+                    <span class="muted">{{ row.seasonName || 'Temporada sin etiqueta' }}</span>
+                  </div>
+                </td>
               </ng-container>
 
               <ng-container matColumnDef="sport">
                 <th mat-header-cell *matHeaderCellDef>Deporte</th>
                 <td mat-cell *matCellDef="let row">{{ sportName(row.sportId) }}</td>
+              </ng-container>
+
+              <ng-container matColumnDef="segment">
+                <th mat-header-cell *matHeaderCellDef>Segmento</th>
+                <td mat-cell *matCellDef="let row">
+                  <span [class]="segmentClass(row)">{{ segmentLabel(row) }}</span>
+                </td>
               </ng-container>
 
               <ng-container matColumnDef="status">
@@ -107,6 +139,7 @@ import { TournamentsService } from './tournaments.service';
               <ng-container matColumnDef="actions">
                 <th mat-header-cell *matHeaderCellDef>Acciones</th>
                 <td mat-cell *matCellDef="let row">
+                  <a mat-button [routerLink]="['/tournaments', row.id]">Detalle</a>
                   @if (canManage()) {
                     <a mat-button [routerLink]="['/tournaments', row.id, 'edit']">Editar</a>
                     @for (transition of availableTransitions(row.status); track transition.targetStatus) {
@@ -163,11 +196,36 @@ export class TournamentListPageComponent {
   protected readonly canManage = computed(() => this.authorization.canManage('tournaments'));
   protected readonly canDelete = computed(() => this.authorization.canDelete('tournaments'));
   protected readonly displayedColumns = computed(() => {
-    const columns = ['id', 'name', 'sport', 'status'];
+    const columns = ['id', 'name', 'sport', 'segment', 'status'];
     if (this.canManage() || this.canDelete()) {
       columns.push('actions');
     }
     return columns;
+  });
+  protected readonly summaryCards = computed<SummaryCard[]>(() => {
+    const rows = this.rows();
+    const sandboxCount = rows.filter((item) => this.isSandbox(item)).length;
+    const operationalCount = Math.max(rows.length - sandboxCount, 0);
+    const liveCount = rows.filter((item) => item.status === 'IN_PROGRESS').length;
+
+    return [
+      {
+        label: 'Flujo principal',
+        value: operationalCount,
+        meta: 'Torneos visibles para operacion'
+      },
+      {
+        label: 'QA / borrador',
+        value: sandboxCount,
+        meta: 'Separados del radar principal'
+      },
+      {
+        label: 'En curso',
+        value: liveCount,
+        meta: 'Competencia activa en pagina',
+        accent: true
+      }
+    ];
   });
   protected readonly statuses: TournamentStatus[] = ['DRAFT', 'OPEN', 'IN_PROGRESS', 'FINISHED', 'CANCELLED'];
 
@@ -218,6 +276,14 @@ export class TournamentListPageComponent {
 
   protected sportName(sportId: number): string {
     return this.sports().find((sport) => sport.id === sportId)?.name ?? `#${sportId}`;
+  }
+
+  protected segmentLabel(tournament: Tournament): string {
+    return this.isSandbox(tournament) ? 'QA / borrador' : 'Flujo principal';
+  }
+
+  protected segmentClass(tournament: Tournament): string {
+    return this.isSandbox(tournament) ? 'status-pill forfeit' : 'status-pill played';
   }
 
   protected statusLabel(status: TournamentStatus): string {
@@ -297,5 +363,10 @@ export class TournamentListPageComponent {
         },
         error: (error: unknown) => this.notifications.error(this.errorMapper.map(error).message)
       });
+  }
+
+  private isSandbox(tournament: Tournament): boolean {
+    const normalized = `${tournament.name} ${tournament.slug} ${tournament.description ?? ''}`.toLowerCase();
+    return tournament.status === 'DRAFT' || ['qa', 'draft', 'postman', 'test', 'demo', 'sandbox'].some((token) => normalized.includes(token));
   }
 }
