@@ -39,6 +39,23 @@ type DetailMetric = {
   accent?: boolean;
 };
 
+type QuickAction = {
+  label: string;
+  description: string;
+  cta: string;
+  path: string;
+  queryParams: Record<string, string | number>;
+};
+
+type StateAssistant = {
+  title: string;
+  summary: string;
+  readiness: string;
+  caution: string;
+};
+
+const qp = (params: Record<string, string | number>): Record<string, string | number> => params;
+
 @Component({
   selector: 'app-tournament-detail-page',
   standalone: true,
@@ -136,6 +153,54 @@ type DetailMetric = {
           }
         </div>
 
+        <section class="card page-card app-page">
+          <div class="section-heading">
+            <div>
+              <h2>Asistencia por estado</h2>
+              <p class="muted">Lectura guiada de lo que significa el estado actual del torneo y que conviene hacer ahora.</p>
+            </div>
+          </div>
+
+          <div class="state-assistant-grid">
+            <article class="assistant-card">
+              <span class="assistant-label">Momento actual</span>
+              <strong>{{ stateAssistant().title }}</strong>
+              <p class="muted">{{ stateAssistant().summary }}</p>
+            </article>
+
+            <article class="assistant-card">
+              <span class="assistant-label">Para seguir</span>
+              <strong>{{ stateAssistant().readiness }}</strong>
+              <p class="muted">{{ summary()?.nextAction || 'Continuar consolidando el flujo competitivo.' }}</p>
+            </article>
+
+            <article class="assistant-card">
+              <span class="assistant-label">Cuidado</span>
+              <strong>Evitar salto desordenado</strong>
+              <p class="muted">{{ stateAssistant().caution }}</p>
+            </article>
+          </div>
+        </section>
+
+        <section class="card page-card app-page">
+          <div class="section-heading">
+            <div>
+              <h2>Acciones rapidas</h2>
+              <p class="muted">Siguiente bloque recomendado segun el estado y la madurez actual del torneo.</p>
+            </div>
+          </div>
+
+          <div class="quick-actions-grid">
+            @for (action of quickActions(); track action.label) {
+              <article class="quick-action-card">
+                <strong>{{ action.label }}</strong>
+                <p class="muted">{{ action.description }}</p>
+                <a mat-button [routerLink]="action.path" [queryParams]="action.queryParams">{{ action.cta }}</a>
+              </article>
+            }
+          </div>
+        </section>
+
         @if (summary()?.blockers?.length) {
           <section class="card page-card app-page">
             <div class="section-heading">
@@ -182,6 +247,7 @@ type DetailMetric = {
                     <th>Inscripcion</th>
                     <th>Roster activo</th>
                     <th>Estado</th>
+                    <th>Accion</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -194,6 +260,15 @@ type DetailMetric = {
                         <span [class]="registrationStatusClass(row.registration.registrationStatus)">
                           {{ registrationStatusLabel(row.registration.registrationStatus) }}
                         </span>
+                      </td>
+                      <td>
+                        <a
+                          mat-button
+                          [routerLink]="row.activeRosterCount > 0 ? '/rosters' : '/rosters/new'"
+                          [queryParams]="{ tournamentTeamId: row.registration.id, rosterStatus: 'ACTIVE' }"
+                        >
+                          {{ row.activeRosterCount > 0 ? 'Ver roster' : 'Cargar roster' }}
+                        </a>
                       </td>
                     </tr>
                   }
@@ -369,6 +444,50 @@ type DetailMetric = {
         grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
       }
 
+      .quick-actions-grid {
+        display: grid;
+        gap: 1rem;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      }
+
+      .state-assistant-grid {
+        display: grid;
+        gap: 1rem;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      }
+
+      .quick-action-card {
+        display: grid;
+        gap: 0.55rem;
+        padding: 1rem;
+        border-radius: 16px;
+        background: var(--surface-alt);
+      }
+
+      .quick-action-card p {
+        margin: 0;
+      }
+
+      .assistant-card {
+        display: grid;
+        gap: 0.45rem;
+        padding: 1rem;
+        border-radius: 16px;
+        background: var(--surface-alt);
+      }
+
+      .assistant-card p {
+        margin: 0;
+      }
+
+      .assistant-label {
+        font-size: 0.78rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--text-soft);
+      }
+
       .detail-table {
         width: 100%;
         border-collapse: collapse;
@@ -539,6 +658,163 @@ export class TournamentDetailPageComponent {
       .slice(0, 5)
   );
   protected readonly isSandboxTournament = computed(() => this.summary()?.reportingSegment === 'sandbox');
+  protected readonly stateAssistant = computed<StateAssistant>(() => {
+    const tournament = this.tournament();
+    const summary = this.summary();
+
+    if (!tournament) {
+      return {
+        title: 'Sin contexto',
+        summary: 'No hay torneo cargado para interpretar su estado.',
+        readiness: 'Cargar un torneo',
+        caution: 'Evitar operar sin contexto completo.'
+      };
+    }
+
+    switch (tournament.status) {
+      case 'DRAFT':
+        return {
+          title: 'Borrador de preparacion',
+          summary: 'El torneo aun esta en configuracion. Conviene cerrar base competitiva y separar claramente cualquier QA.',
+          readiness:
+            (summary?.approvedRegistrationCount ?? 0) > 0
+              ? 'Ya tiene base para abrir inscripciones al flujo operativo'
+              : 'Todavia falta poblar inscripciones para salir del borrador',
+          caution: 'No conviene mezclar carga de partidos o tabla mientras la base siga incompleta o en modo QA.'
+        };
+      case 'OPEN':
+        return {
+          title: 'Abierto para consolidar base',
+          summary: 'El torneo ya puede recibir y aprobar inscripciones. El foco deberia estar en dejar roster y fixture listos.',
+          readiness:
+            (summary?.rosterGapCount ?? 0) === 0 && (summary?.approvedRegistrationCount ?? 0) > 1
+              ? 'La base parece lista para empujar programacion de partidos'
+              : 'Aun conviene cerrar inscripciones aprobadas y roster activo',
+          caution: 'Iniciar competencia sin roster o sin participantes aprobados vuelve opaca la trazabilidad posterior.'
+        };
+      case 'IN_PROGRESS':
+        return {
+          title: 'Competencia en curso',
+          summary: 'La prioridad es sostener continuidad entre resultados, incidencias y lectura de standings.',
+          readiness:
+            (summary?.playedMatchCount ?? 0) > 0
+              ? 'Ya hay actividad real para auditar en standings y continuidad operativa'
+              : 'El estado indica competencia activa, pero todavia falta evidencia visible de partidos jugados',
+          caution: 'Resultados sin tabla o sin soporte de roster generan la mayor perdida de confianza operativa.'
+        };
+      case 'FINISHED':
+        return {
+          title: 'Cierre competitivo',
+          summary: 'El torneo ya deberia leerse como ciclo cerrado, con standings completos y sin brechas visibles.',
+          readiness:
+            (summary?.standingsCount ?? 0) > 0
+              ? 'La lectura ejecutiva ya puede enfocarse en validacion final y presentacion'
+              : 'Aun falta reflejar una tabla visible para cerrar bien el torneo',
+          caution: 'No conviene dar por finalizado un torneo si todavia quedan resultados o tabla sin consolidar.'
+        };
+      case 'CANCELLED':
+        return {
+          title: 'Operacion detenida',
+          summary: 'Este torneo salio del flujo principal. Conviene tratarlo como referencia historica o limpieza operativa.',
+          readiness: 'Mantenerlo aislado del radar operativo principal',
+          caution: 'Evitar seguir cargando operacion nueva sobre un torneo cancelado.'
+        };
+      default:
+        return {
+          title: 'Seguimiento operativo',
+          summary: 'El torneo requiere lectura operativa manual.',
+          readiness: 'Revisar detalle y continuidad del flujo',
+          caution: 'Evitar decisiones sin validar el estado real.'
+        };
+    }
+  });
+  protected readonly quickActions = computed<QuickAction[]>(() => {
+    const tournament = this.tournament();
+    const summary = this.summary();
+    const firstRegistration = this.registrationRows()[0];
+
+    if (!tournament) {
+      return [];
+    }
+
+    const actions: QuickAction[] = [
+      {
+        label: 'Inscripciones',
+        description: 'Revisar y aprobar equipos vinculados al torneo.',
+        cta: 'Abrir inscripciones',
+        path: '/tournament-teams',
+        queryParams: qp({ tournamentId: tournament.id })
+      },
+      {
+        label: 'Rosters',
+        description: 'Completar o auditar jugadores activos por inscripcion.',
+        cta: 'Abrir rosters',
+        path: '/rosters',
+        queryParams: firstRegistration
+          ? qp({ tournamentTeamId: firstRegistration.registration.id, rosterStatus: 'ACTIVE' })
+          : qp({ rosterStatus: 'ACTIVE' })
+      },
+      {
+        label: 'Partidos',
+        description: 'Programar fixture o revisar resultados cargados.',
+        cta: 'Abrir partidos',
+        path: '/matches',
+        queryParams: qp({ tournamentId: tournament.id })
+      },
+      {
+        label: 'Standings',
+        description: 'Validar la tabla del torneo y su cobertura competitiva.',
+        cta: 'Abrir standings',
+        path: '/standings',
+        queryParams: qp({ tournamentId: tournament.id })
+      }
+    ];
+
+    if ((summary?.approvedRegistrationCount ?? 0) === 0) {
+      actions[0] = {
+        label: 'Nueva inscripcion',
+        description: 'El torneo aun no tiene equipos operativos aprobados.',
+        cta: 'Crear inscripcion',
+        path: '/tournament-teams/new',
+        queryParams: qp({ tournamentId: tournament.id })
+      };
+    }
+
+    const firstApprovedWithoutRoster = this.registrationRows().find(
+      (row) => row.registration.registrationStatus === 'APPROVED' && row.activeRosterCount === 0
+    );
+    if (firstApprovedWithoutRoster) {
+      actions[1] = {
+        label: 'Completar roster',
+        description: 'Existe al menos una inscripcion aprobada sin soporte de roster activo.',
+        cta: 'Cargar roster',
+        path: '/rosters/new',
+        queryParams: qp({ tournamentTeamId: firstApprovedWithoutRoster.registration.id })
+      };
+    }
+
+    if (tournament.status === 'DRAFT' || tournament.status === 'OPEN') {
+      actions[2] = {
+        label: 'Preparar fixture',
+        description: 'Antes de iniciar operacion conviene dejar visible el bloque de partidos.',
+        cta: 'Ir a partidos',
+        path: '/matches',
+        queryParams: qp({ tournamentId: tournament.id, status: 'SCHEDULED' })
+      };
+    }
+
+    if ((summary?.playedMatchCount ?? 0) > 0) {
+      actions[3] = {
+        label: 'Validar standings',
+        description: 'Ya existen resultados; conviene confirmar que la tabla este alineada.',
+        cta: 'Revisar standings',
+        path: '/standings',
+        queryParams: qp({ tournamentId: tournament.id })
+      };
+    }
+
+    return actions;
+  });
 
   constructor() {
     this.route.paramMap.pipe(takeUntilDestroyed()).subscribe((params) => {

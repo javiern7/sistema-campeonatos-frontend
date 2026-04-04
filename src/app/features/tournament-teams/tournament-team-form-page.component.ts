@@ -141,6 +141,7 @@ export class TournamentTeamFormPageComponent {
   protected readonly isEditMode = signal(this.registrationId > 0);
   protected readonly pageLoading = signal(true);
   protected readonly saving = signal(false);
+  private readonly preferredTournamentId = Number(this.route.snapshot.queryParamMap.get('tournamentId') ?? 0);
   private readonly selectedTournamentId = signal(0);
   private readonly selectedTeamId = signal(0);
   private readonly selectedRegistrationStatus = signal<TournamentTeamRegistrationStatus>('PENDING');
@@ -177,8 +178,10 @@ export class TournamentTeamFormPageComponent {
       next: (items) => {
         this.tournaments.set(items);
         if (!this.isEditMode() && items.length > 0) {
-          this.form.patchValue({ tournamentId: items[0].id });
-          this.selectedTournamentId.set(items[0].id);
+          const preferredTournament =
+            items.find((item) => item.id === this.preferredTournamentId) ?? items[0];
+          this.form.patchValue({ tournamentId: preferredTournament.id });
+          this.selectedTournamentId.set(preferredTournament.id);
         }
       }
     });

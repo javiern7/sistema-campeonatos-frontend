@@ -32,6 +32,15 @@ type SummaryCard = {
   accent?: boolean;
 };
 
+const parseQueryNumber = (value: string | null): number | '' => {
+  if (!value) {
+    return '';
+  }
+
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : '';
+};
+
 @Component({
   selector: 'app-tournament-team-list-page',
   standalone: true,
@@ -240,16 +249,16 @@ export class TournamentTeamListPageComponent {
     return columns;
   });
   protected readonly filtersForm = this.fb.nonNullable.group({
-    tournamentId: [''],
-    teamId: [''],
+    tournamentId: [0 as number | ''],
+    teamId: [0 as number | ''],
     registrationStatus: ['' as TournamentTeamRegistrationStatus | '']
   });
 
   constructor() {
     const queryParams = this.route.snapshot.queryParamMap;
     this.filtersForm.patchValue({
-      tournamentId: queryParams.get('tournamentId') ?? '',
-      teamId: queryParams.get('teamId') ?? '',
+      tournamentId: parseQueryNumber(queryParams.get('tournamentId')),
+      teamId: parseQueryNumber(queryParams.get('teamId')),
       registrationStatus: (queryParams.get('registrationStatus') as TournamentTeamRegistrationStatus | null) ?? ''
     });
 

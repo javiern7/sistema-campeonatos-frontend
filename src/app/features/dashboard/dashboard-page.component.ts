@@ -64,6 +64,16 @@ type DashboardCard = {
           }
         </div>
 
+        <div class="summary-grid">
+          @for (card of alertTypeCards(); track card.label) {
+            <mat-card class="summary-card card" [class.accent]="card.accent">
+              <span class="summary-label">{{ card.label }}</span>
+              <span class="summary-value">{{ card.value }}</span>
+              <span class="summary-meta">{{ card.meta }}</span>
+            </mat-card>
+          }
+        </div>
+
         <section class="card page-card app-page">
           <div class="section-heading">
             <div>
@@ -156,7 +166,12 @@ type DashboardCard = {
                     <span class="muted">{{ alert.sportName }}</span>
                   </div>
                   <strong>{{ alert.title }}</strong>
+                  <span class="alert-type">{{ alertTypeLabel(alert.type) }}</span>
                   <p class="muted">{{ alert.detail }}</p>
+                  <div class="card-actions">
+                    <a mat-button [routerLink]="alert.actionPath" [queryParams]="alert.actionQueryParams">{{ alert.actionLabel }}</a>
+                    <a mat-button [routerLink]="['/tournaments', alert.tournamentId]">Detalle</a>
+                  </div>
                 </article>
               }
             </div>
@@ -265,6 +280,9 @@ type DashboardCard = {
                   </div>
                   <p class="muted">{{ tournament.auditMessage }}</p>
                   <p class="muted">{{ tournament.nextAction }}</p>
+                  <div class="card-actions">
+                    <a mat-button [routerLink]="['/tournaments', tournament.tournamentId]">Abrir detalle</a>
+                  </div>
                 </article>
               }
             </div>
@@ -320,7 +338,20 @@ type DashboardCard = {
 
       .card-actions {
         display: flex;
+        gap: 0.5rem;
         justify-content: flex-end;
+      }
+
+      .alert-type {
+        display: inline-flex;
+        align-items: center;
+        width: fit-content;
+        padding: 0.3rem 0.65rem;
+        border-radius: 999px;
+        background: var(--surface-alt);
+        color: var(--text-soft);
+        font-size: 0.78rem;
+        font-weight: 700;
       }
 
       .alert-card p,
@@ -472,6 +503,34 @@ export class DashboardPageComponent {
     ];
   });
   protected readonly alerts = computed<DashboardAlert[]>(() => this.summary()?.alerts ?? []);
+  protected readonly alertTypeCards = computed<DashboardCard[]>(() => {
+    const alerts = this.alerts();
+    const countByType = (type: DashboardAlert['type']) => alerts.filter((item) => item.type === type).length;
+
+    return [
+      {
+        label: 'Inscripciones',
+        value: countByType('registrations'),
+        meta: 'Brechas de alta de equipos'
+      },
+      {
+        label: 'Rosters',
+        value: countByType('rosters'),
+        meta: 'Aprobadas sin soporte activo'
+      },
+      {
+        label: 'Fixture / tabla',
+        value: countByType('matches') + countByType('standings'),
+        meta: 'Partidos o standings pendientes',
+        accent: countByType('matches') + countByType('standings') > 0
+      },
+      {
+        label: 'Estado / QA',
+        value: countByType('state') + countByType('sandbox'),
+        meta: 'Seguimiento de estado y aislamiento'
+      }
+    ];
+  });
   protected readonly sportSummaries = computed<DashboardSportSummary[]>(() => this.summary()?.sportSummaries ?? []);
   protected readonly tournamentSummaries = computed<DashboardTournamentSummary[]>(
     () => this.summary()?.tournamentSummaries ?? []
@@ -569,5 +628,18 @@ export class DashboardPageComponent {
     }
 
     return `${tournament.leaderName} (${tournament.leaderPoints ?? 0} pts)`;
+  }
+
+  protected alertTypeLabel(type: DashboardAlert['type']): string {
+    const labels: Record<DashboardAlert['type'], string> = {
+      registrations: 'Inscripciones',
+      rosters: 'Rosters',
+      matches: 'Partidos',
+      standings: 'Standings',
+      state: 'Estado',
+      sandbox: 'QA / borrador'
+    };
+
+    return labels[type];
   }
 }

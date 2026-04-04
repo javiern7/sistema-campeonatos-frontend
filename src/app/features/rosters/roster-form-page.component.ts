@@ -194,6 +194,7 @@ export class RosterFormPageComponent {
   protected readonly isEditMode = signal(this.rosterId > 0);
   protected readonly pageLoading = signal(true);
   protected readonly saving = signal(false);
+  private readonly preferredTournamentTeamId = Number(this.route.snapshot.queryParamMap.get('tournamentTeamId') ?? 0);
   private readonly selectedTournamentTeamId = signal(0);
   private readonly selectedRosterStatus = signal<RosterStatus>('ACTIVE');
   protected readonly players = signal<Player[]>([]);
@@ -252,8 +253,10 @@ export class RosterFormPageComponent {
       next: (items) => {
         this.tournamentTeams.set(items);
         if (!this.isEditMode() && items.length > 0) {
-          this.form.patchValue({ tournamentTeamId: items[0].id });
-          this.selectedTournamentTeamId.set(items[0].id);
+          const preferredRegistration =
+            items.find((item) => item.id === this.preferredTournamentTeamId) ?? items[0];
+          this.form.patchValue({ tournamentTeamId: preferredRegistration.id });
+          this.selectedTournamentTeamId.set(preferredRegistration.id);
         }
         this.syncRegistrationStatus();
       }

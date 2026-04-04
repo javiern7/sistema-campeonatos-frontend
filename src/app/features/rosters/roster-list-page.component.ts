@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -30,6 +30,15 @@ type SummaryCard = {
   value: number;
   meta: string;
   accent?: boolean;
+};
+
+const parseQueryNumber = (value: string | null): number | '' => {
+  if (!value) {
+    return '';
+  }
+
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : '';
 };
 
 @Component({
@@ -182,6 +191,7 @@ type SummaryCard = {
 })
 export class RosterListPageComponent {
   private readonly fb = inject(FormBuilder);
+  private readonly route = inject(ActivatedRoute);
   private readonly rostersService = inject(RostersService);
   private readonly playersService = inject(PlayersService);
   private readonly tournamentTeamsService = inject(TournamentTeamsService);
@@ -247,12 +257,19 @@ export class RosterListPageComponent {
     return columns;
   });
   protected readonly filtersForm = this.fb.nonNullable.group({
-    tournamentTeamId: [''],
-    playerId: [''],
+    tournamentTeamId: [0 as number | ''],
+    playerId: [0 as number | ''],
     rosterStatus: ['' as RosterStatus | '']
   });
 
   constructor() {
+    const queryParams = this.route.snapshot.queryParamMap;
+    this.filtersForm.patchValue({
+      tournamentTeamId: parseQueryNumber(queryParams.get('tournamentTeamId')),
+      playerId: parseQueryNumber(queryParams.get('playerId')),
+      rosterStatus: (queryParams.get('rosterStatus') as RosterStatus | null) ?? ''
+    });
+
     this.catalogLoader
       .loadAll((page, size) => this.playersService.list({ page, size }))
       .subscribe({ next: (items) => this.players.set(items) });

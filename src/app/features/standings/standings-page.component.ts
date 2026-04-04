@@ -40,6 +40,15 @@ type SummaryCard = {
   accent?: boolean;
 };
 
+const parseQueryNumber = (value: string | null): number | '' => {
+  if (!value) {
+    return '';
+  }
+
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : '';
+};
+
 @Component({
   selector: 'app-standings-page',
   standalone: true,
@@ -366,19 +375,19 @@ export class StandingsPageComponent {
   });
 
   protected readonly filtersForm = this.fb.nonNullable.group({
-    tournamentId: [''],
-    stageId: [''],
-    groupId: [''],
-    tournamentTeamId: ['']
+    tournamentId: [0 as number | ''],
+    stageId: [0 as number | ''],
+    groupId: [0 as number | ''],
+    tournamentTeamId: [0 as number | '']
   });
 
   constructor() {
     const queryParams = this.route.snapshot.queryParamMap;
     this.filtersForm.patchValue({
-      tournamentId: queryParams.get('tournamentId') ?? '',
-      stageId: queryParams.get('stageId') ?? '',
-      groupId: queryParams.get('groupId') ?? '',
-      tournamentTeamId: queryParams.get('tournamentTeamId') ?? ''
+      tournamentId: parseQueryNumber(queryParams.get('tournamentId')),
+      stageId: parseQueryNumber(queryParams.get('stageId')),
+      groupId: parseQueryNumber(queryParams.get('groupId')),
+      tournamentTeamId: parseQueryNumber(queryParams.get('tournamentTeamId'))
     });
     this.selectedTournamentId.set(Number(queryParams.get('tournamentId') ?? 0));
     this.selectedStageId.set(Number(queryParams.get('stageId') ?? 0));
@@ -417,9 +426,9 @@ export class StandingsPageComponent {
 
       this.filtersForm.patchValue(
         {
-          stageId: currentStageId && validStageIds.has(currentStageId) ? String(currentStageId) : '',
+          stageId: currentStageId && validStageIds.has(currentStageId) ? currentStageId : '',
           groupId: '',
-          tournamentTeamId: currentTeamId && validTeamIds.has(currentTeamId) ? String(currentTeamId) : ''
+          tournamentTeamId: currentTeamId && validTeamIds.has(currentTeamId) ? currentTeamId : ''
         },
         { emitEvent: false }
       );

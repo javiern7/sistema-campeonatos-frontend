@@ -36,6 +36,15 @@ type SummaryCard = {
   accent?: boolean;
 };
 
+const parseQueryNumber = (value: string | null): number | '' => {
+  if (!value) {
+    return '';
+  }
+
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : '';
+};
+
 @Component({
   selector: 'app-match-list-page',
   standalone: true,
@@ -292,18 +301,18 @@ export class MatchListPageComponent {
     return columns;
   });
   protected readonly filtersForm = this.fb.nonNullable.group({
-    tournamentId: [''],
-    stageId: [''],
-    groupId: [''],
+    tournamentId: [0 as number | ''],
+    stageId: [0 as number | ''],
+    groupId: [0 as number | ''],
     status: ['' as MatchStatus | '']
   });
 
   constructor() {
     const queryParams = this.route.snapshot.queryParamMap;
     this.filtersForm.patchValue({
-      tournamentId: queryParams.get('tournamentId') ?? '',
-      stageId: queryParams.get('stageId') ?? '',
-      groupId: queryParams.get('groupId') ?? '',
+      tournamentId: parseQueryNumber(queryParams.get('tournamentId')),
+      stageId: parseQueryNumber(queryParams.get('stageId')),
+      groupId: parseQueryNumber(queryParams.get('groupId')),
       status: (queryParams.get('status') as MatchStatus | null) ?? ''
     });
     this.selectedTournamentId.set(Number(queryParams.get('tournamentId') ?? 0));
@@ -334,7 +343,7 @@ export class MatchListPageComponent {
 
       this.filtersForm.patchValue(
         {
-          stageId: currentStageId && validStageIds.has(currentStageId) ? String(currentStageId) : '',
+          stageId: currentStageId && validStageIds.has(currentStageId) ? currentStageId : '',
           groupId: ''
         },
         { emitEvent: false }

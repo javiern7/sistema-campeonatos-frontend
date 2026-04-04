@@ -24,6 +24,7 @@ import { TournamentsService } from '../tournaments/tournaments.service';
 import {
   DashboardAlert,
   DashboardAuditStatus,
+  DashboardAlertType,
   DashboardHealth,
   DashboardReportingSegment,
   DashboardSportSummary,
@@ -461,14 +462,89 @@ export class DashboardService {
   }
 
   private toAlert(summary: DashboardTournamentSummary): DashboardAlert {
+    const alertType = this.resolveAlertType(summary);
+    const action = this.resolveAlertAction(summary, alertType);
+
     return {
       title: summary.tournamentName,
       detail: summary.nextAction,
       health: summary.health,
+      type: alertType,
       tournamentId: summary.tournamentId,
       tournamentName: summary.tournamentName,
-      sportName: summary.sportName
+      sportName: summary.sportName,
+      actionLabel: action.label,
+      actionPath: action.path,
+      actionQueryParams: action.queryParams
     };
+  }
+
+  private resolveAlertType(summary: DashboardTournamentSummary): DashboardAlertType {
+    if (summary.reportingSegment === 'sandbox') {
+      return 'sandbox';
+    }
+
+    if (summary.registrationCount === 0) {
+      return 'registrations';
+    }
+
+    if (summary.approvedRegistrationCount > 0 && summary.rosterGapCount > 0) {
+      return 'rosters';
+    }
+
+    if (summary.approvedRegistrationCount > 1 && summary.matchCount === 0) {
+      return 'matches';
+    }
+
+    if (summary.playedMatchCount > 0 && summary.standingsCount === 0) {
+      return 'standings';
+    }
+
+    return 'state';
+  }
+
+  private resolveAlertAction(
+    summary: DashboardTournamentSummary,
+    alertType: DashboardAlertType
+  ): { label: string; path: string; queryParams: Record<string, string | number> } {
+    switch (alertType) {
+      case 'registrations':
+        return {
+          label: 'Abrir inscripciones',
+          path: '/tournament-teams',
+          queryParams: { tournamentId: summary.tournamentId }
+        };
+      case 'rosters':
+        return {
+          label: 'Abrir rosters',
+          path: '/rosters',
+          queryParams: { rosterStatus: 'ACTIVE' }
+        };
+      case 'matches':
+        return {
+          label: 'Abrir partidos',
+          path: '/matches',
+          queryParams: { tournamentId: summary.tournamentId }
+        };
+      case 'standings':
+        return {
+          label: 'Abrir standings',
+          path: '/standings',
+          queryParams: { tournamentId: summary.tournamentId }
+        };
+      case 'sandbox':
+        return {
+          label: 'Abrir detalle',
+          path: `/tournaments/${summary.tournamentId}`,
+          queryParams: {}
+        };
+      default:
+        return {
+          label: 'Abrir detalle',
+          path: `/tournaments/${summary.tournamentId}`,
+          queryParams: {}
+        };
+    }
   }
 
   private healthPriority(health: DashboardHealth): number {

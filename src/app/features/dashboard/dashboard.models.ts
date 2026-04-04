@@ -3,14 +3,25 @@ import { TournamentStatus } from '../tournaments/tournament.models';
 export type DashboardHealth = 'healthy' | 'warning' | 'attention';
 export type DashboardReportingSegment = 'operational' | 'setup' | 'sandbox';
 export type DashboardAuditStatus = 'blocked' | 'partial' | 'ready';
+export type DashboardAlertType =
+  | 'registrations'
+  | 'rosters'
+  | 'matches'
+  | 'standings'
+  | 'state'
+  | 'sandbox';
 
 export interface DashboardAlert {
   title: string;
   detail: string;
   health: DashboardHealth;
+  type: DashboardAlertType;
   tournamentId: number;
   tournamentName: string;
   sportName: string;
+  actionLabel: string;
+  actionPath: string;
+  actionQueryParams: Record<string, string | number>;
 }
 
 export interface DashboardSportSummary {
