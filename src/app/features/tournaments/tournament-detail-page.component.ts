@@ -54,6 +54,20 @@ type StateAssistant = {
   caution: string;
 };
 
+type TournamentPulseCard = {
+  label: string;
+  headline: string;
+  detail: string;
+  accent?: boolean;
+};
+
+type RegistrationOverviewCard = {
+  label: string;
+  value: string;
+  detail: string;
+  accent?: boolean;
+};
+
 const qp = (params: Record<string, string | number>): Record<string, string | number> => params;
 
 @Component({
@@ -156,6 +170,25 @@ const qp = (params: Record<string, string | number>): Record<string, string | nu
         <section class="card page-card app-page">
           <div class="section-heading">
             <div>
+              <h2>Pulso ejecutivo</h2>
+              <p class="muted">Resumen corto para entender si el torneo esta listo, que tan clara es su lectura competitiva y donde mirar primero.</p>
+            </div>
+          </div>
+
+          <div class="pulse-grid">
+            @for (card of pulseCards(); track card.label) {
+              <article class="pulse-card" [class.accent]="card.accent">
+                <span class="assistant-label">{{ card.label }}</span>
+                <strong>{{ card.headline }}</strong>
+                <p class="muted">{{ card.detail }}</p>
+              </article>
+            }
+          </div>
+        </section>
+
+        <section class="card page-card app-page">
+          <div class="section-heading">
+            <div>
               <h2>Asistencia por estado</h2>
               <p class="muted">Lectura guiada de lo que significa el estado actual del torneo y que conviene hacer ahora.</p>
             </div>
@@ -231,6 +264,16 @@ const qp = (params: Record<string, string | number>): Record<string, string | nu
             >
               Abrir inscripciones aprobadas
             </a>
+          </div>
+
+          <div class="registration-overview-grid">
+            @for (card of registrationOverviewCards(); track card.label) {
+              <article class="registration-overview-card" [class.accent]="card.accent">
+                <span class="assistant-label">{{ card.label }}</span>
+                <strong>{{ card.value }}</strong>
+                <p class="muted">{{ card.detail }}</p>
+              </article>
+            }
           </div>
 
           @if (registrationRows().length === 0) {
@@ -444,6 +487,7 @@ const qp = (params: Record<string, string | number>): Record<string, string | nu
         grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
       }
 
+      .pulse-grid,
       .quick-actions-grid {
         display: grid;
         gap: 1rem;
@@ -456,12 +500,47 @@ const qp = (params: Record<string, string | number>): Record<string, string | nu
         grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
       }
 
+      .registration-overview-grid,
       .quick-action-card {
         display: grid;
+      }
+
+      .registration-overview-grid {
+        gap: 1rem;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      }
+
+      .quick-action-card {
         gap: 0.55rem;
         padding: 1rem;
         border-radius: 16px;
         background: var(--surface-alt);
+      }
+
+      .pulse-card {
+        display: grid;
+        gap: 0.45rem;
+        padding: 1rem;
+        border-radius: 16px;
+        background: var(--surface-alt);
+      }
+
+      .pulse-card.accent {
+        background: linear-gradient(135deg, rgba(10, 110, 90, 0.12), rgba(10, 110, 90, 0.04));
+        border: 1px solid rgba(10, 110, 90, 0.16);
+      }
+
+      .registration-overview-card {
+        display: grid;
+        gap: 0.45rem;
+        padding: 1rem;
+        border-radius: 16px;
+        background: var(--surface-alt);
+      }
+
+      .registration-overview-card.accent {
+        background: linear-gradient(135deg, rgba(10, 110, 90, 0.12), rgba(10, 110, 90, 0.04));
+        border: 1px solid rgba(10, 110, 90, 0.16);
       }
 
       .quick-action-card p {
@@ -477,6 +556,10 @@ const qp = (params: Record<string, string | number>): Record<string, string | nu
       }
 
       .assistant-card p {
+        margin: 0;
+      }
+
+      .pulse-card p {
         margin: 0;
       }
 
@@ -658,6 +741,90 @@ export class TournamentDetailPageComponent {
       .slice(0, 5)
   );
   protected readonly isSandboxTournament = computed(() => this.summary()?.reportingSegment === 'sandbox');
+  protected readonly pulseCards = computed<TournamentPulseCard[]>(() => {
+    const summary = this.summary();
+
+    return [
+      {
+        label: 'Estado de auditoria',
+        headline:
+          summary?.auditStatus === 'ready'
+            ? 'Listo para lectura ejecutiva'
+            : summary?.auditStatus === 'blocked'
+              ? 'Continuidad interrumpida'
+              : 'Aun en consolidacion',
+        detail: summary?.auditMessage ?? 'Sin evaluacion visible.',
+        accent: summary?.auditStatus === 'ready'
+      },
+      {
+        label: 'Cobertura de roster',
+        headline: `${summary?.registrationsWithActiveRosterCount ?? 0}/${summary?.approvedRegistrationCount ?? 0} aprobadas cubiertas`,
+        detail:
+          (summary?.approvedRegistrationCount ?? 0) > 0
+            ? `${summary?.rosterGapCount ?? 0} brechas pendientes en la base operativa`
+            : 'Todavia no hay base aprobada para exigir roster activo'
+      },
+      {
+        label: 'Ritmo competitivo',
+        headline: `${summary?.playedMatchCount ?? 0}/${summary?.matchCount ?? 0} partidos jugados`,
+        detail:
+          (summary?.matchCount ?? 0) > 0
+            ? `${summary?.scheduledMatchCount ?? 0} siguen programados y ${summary?.incidentMatchCount ?? 0} presentan incidencia`
+            : 'Aun no hay fixture visible para este torneo'
+      },
+      {
+        label: 'Claridad de standings',
+        headline:
+          (summary?.standingsCount ?? 0) > 0
+            ? `${summary?.standingsCoverageCount ?? 0} equipos con tabla`
+            : 'Sin tabla visible',
+        detail: summary?.leaderName
+          ? `Lider actual: ${summary.leaderName} con ${summary.leaderPoints ?? 0} pts`
+          : 'Todavia no hay liderazgo competitivo consolidado'
+      }
+    ];
+  });
+  protected readonly registrationOverviewCards = computed<RegistrationOverviewCard[]>(() => {
+    const summary = this.summary();
+    const registrations = this.registrations();
+    const approvedCount = summary?.approvedRegistrationCount ?? 0;
+    const pendingCount = registrations.filter((item) => item.registrationStatus === 'PENDING').length;
+    const coveredCount = summary?.registrationsWithActiveRosterCount ?? 0;
+    const standingsCovered = summary?.standingsCoverageCount ?? 0;
+
+    return [
+      {
+        label: 'Base aprobada',
+        value: `${approvedCount}`,
+        detail:
+          approvedCount > 0
+            ? `${pendingCount} pendientes y ${registrations.length - approvedCount - pendingCount} fuera del flujo principal`
+            : 'Aun no hay inscripciones aprobadas para competir'
+      },
+      {
+        label: 'Cobertura roster',
+        value: `${coveredCount}/${approvedCount}`,
+        detail:
+          approvedCount > 0
+            ? `${summary?.rosterGapCount ?? 0} brechas activas antes de confiar en el fixture`
+            : 'Sin base aprobada aun'
+      },
+      {
+        label: 'Cobertura standings',
+        value: `${standingsCovered}/${approvedCount}`,
+        detail:
+          (summary?.playedMatchCount ?? 0) > 0
+            ? `${summary?.standingsCount ?? 0} filas de tabla visibles tras resultados`
+            : 'Todavia no hay actividad competitiva cerrada'
+      },
+      {
+        label: 'Siguiente foco',
+        value: summary?.auditStatus === 'ready' ? 'Consolidado' : 'Seguimiento',
+        detail: summary?.nextAction ?? 'Completar la base operativa del torneo.',
+        accent: summary?.auditStatus === 'ready'
+      }
+    ];
+  });
   protected readonly stateAssistant = computed<StateAssistant>(() => {
     const tournament = this.tournament();
     const summary = this.summary();

@@ -44,6 +44,48 @@ type DashboardCard = {
           <span class="muted">{{ healthMessage() }}</span>
         </div>
 
+        <div class="executive-grid">
+          @for (card of executiveCards(); track card.label) {
+            <article class="executive-card card" [class.accent]="card.accent">
+              <span class="summary-label">{{ card.label }}</span>
+              <strong class="executive-value">{{ card.value }}</strong>
+              <span class="summary-meta">{{ card.meta }}</span>
+            </article>
+          }
+        </div>
+
+        @if (priorityAlerts().length > 0) {
+          <section class="card page-card app-page">
+            <div class="section-heading">
+              <div>
+                <h2>Prioridad inmediata</h2>
+                <p class="muted">Lectura corta de los frentes que mas impactan continuidad y confianza operativa.</p>
+              </div>
+              <span class="section-badge">{{ priorityAlerts().length }} en foco</span>
+            </div>
+
+            <div class="priority-list">
+              @for (alert of priorityAlerts(); track alert.tournamentId) {
+                <article class="priority-item">
+                  <div class="priority-rank">{{ $index + 1 }}</div>
+                  <div class="stack-sm">
+                    <div class="alert-header">
+                      <strong>{{ alert.title }}</strong>
+                      <span class="health-pill" [class]="healthClass(alert.health)">{{ alertTypeLabel(alert.type) }}</span>
+                    </div>
+                    <span class="muted">{{ alert.sportName }}</span>
+                    <p class="muted">{{ alert.detail }}</p>
+                  </div>
+                  <div class="card-actions">
+                    <a mat-button [routerLink]="alert.actionPath" [queryParams]="alert.actionQueryParams">{{ alert.actionLabel }}</a>
+                    <a mat-button [routerLink]="['/tournaments', alert.tournamentId]">Detalle</a>
+                  </div>
+                </article>
+              }
+            </div>
+          </section>
+        }
+
         <div class="summary-grid">
           @for (card of overviewCards(); track card.label) {
             <mat-card class="summary-card card" [class.accent]="card.accent">
@@ -321,6 +363,7 @@ type DashboardCard = {
       }
 
       .alert-grid,
+      .executive-grid,
       .sport-grid,
       .tournament-grid {
         display: grid;
@@ -328,12 +371,38 @@ type DashboardCard = {
         grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
       }
 
+      .executive-grid {
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      }
+
       .alert-card,
+      .executive-card,
       .sport-card,
       .tournament-card {
         display: grid;
         gap: 0.85rem;
         padding: 1rem 1.1rem;
+      }
+
+      .executive-card {
+        align-content: start;
+      }
+
+      .executive-card.accent {
+        background: linear-gradient(135deg, #0a6e5a 0%, #11806a 100%);
+        border-color: rgba(10, 110, 90, 0.28);
+        color: #f8fffd;
+      }
+
+      .executive-card.accent .summary-label,
+      .executive-card.accent .summary-meta,
+      .executive-card.accent .executive-value {
+        color: inherit;
+      }
+
+      .executive-value {
+        font-size: 2.15rem;
+        line-height: 1;
       }
 
       .card-actions {
@@ -423,6 +492,32 @@ type DashboardCard = {
         gap: 0.5rem;
       }
 
+      .priority-list {
+        display: grid;
+        gap: 0.85rem;
+      }
+
+      .priority-item {
+        display: grid;
+        gap: 1rem;
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        align-items: center;
+        padding: 1rem;
+        border-radius: 1rem;
+        background: var(--surface-alt);
+      }
+
+      .priority-rank {
+        display: grid;
+        place-items: center;
+        width: 2rem;
+        height: 2rem;
+        border-radius: 999px;
+        background: rgba(10, 110, 90, 0.12);
+        color: var(--primary);
+        font-weight: 800;
+      }
+
       .blocker-chip {
         display: inline-flex;
         align-items: center;
@@ -432,6 +527,17 @@ type DashboardCard = {
         color: #9a3412;
         font-size: 0.78rem;
         font-weight: 600;
+      }
+
+      @media (max-width: 720px) {
+        .priority-item {
+          grid-template-columns: 1fr;
+          align-items: start;
+        }
+
+        .card-actions {
+          justify-content: flex-start;
+        }
       }
     `
   ],
@@ -502,7 +608,35 @@ export class DashboardPageComponent {
       }
     ];
   });
+  protected readonly executiveCards = computed<DashboardCard[]>(() => {
+    const summary = this.summary();
+
+    return [
+      {
+        label: 'Prioridades abiertas',
+        value: summary?.attentionTournamentCount ?? 0,
+        meta: 'Torneos que requieren seguimiento visible',
+        accent: (summary?.attentionTournamentCount ?? 0) > 0
+      },
+      {
+        label: 'Flujo listo',
+        value: summary?.readyTournamentCount ?? 0,
+        meta: 'Torneos con continuidad punta a punta'
+      },
+      {
+        label: 'En preparacion',
+        value: summary?.setupTournamentCount ?? 0,
+        meta: 'Base competitiva aun en armado'
+      },
+      {
+        label: 'QA aislado',
+        value: summary?.sandboxTournamentCount ?? 0,
+        meta: 'Fuera del radar ejecutivo principal'
+      }
+    ];
+  });
   protected readonly alerts = computed<DashboardAlert[]>(() => this.summary()?.alerts ?? []);
+  protected readonly priorityAlerts = computed<DashboardAlert[]>(() => this.alerts().slice(0, 3));
   protected readonly alertTypeCards = computed<DashboardCard[]>(() => {
     const alerts = this.alerts();
     const countByType = (type: DashboardAlert['type']) => alerts.filter((item) => item.type === type).length;

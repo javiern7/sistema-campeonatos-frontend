@@ -40,6 +40,14 @@ type SummaryCard = {
   accent?: boolean;
 };
 
+type LeaderboardCard = {
+  rank: number;
+  label: string;
+  points: number;
+  record: string;
+  detail: string;
+};
+
 const parseQueryNumber = (value: string | null): number | '' => {
   if (!value) {
     return '';
@@ -161,8 +169,32 @@ const parseQueryNumber = (value: string | null): number | '' => {
               <p class="muted">Aplica filtros, recalcula la tabla o valida que ya existan partidos jugados en ese alcance.</p>
             </div>
           } @else {
+            <div class="context-banner neutral-banner">
+              <strong>Lectura competitiva</strong>
+              <span class="muted">{{ competitiveReading() }}</span>
+            </div>
+
+            <section class="leaderboard-strip">
+              <div class="section-headline">
+                <strong>Lectura rapida del podio</strong>
+                <span class="muted">Ayuda a identificar liderazgo, presion competitiva y contexto del bloque filtrado.</span>
+              </div>
+
+              <div class="leaderboard-grid">
+                @for (leader of leaderboardCards(); track leader.rank) {
+                  <article class="leader-card" [class.top]="leader.rank === 1">
+                    <span class="rank-badge" [class]="rankBadgeClass(leader.rank)">{{ leader.rank }}</span>
+                    <strong>{{ leader.label }}</strong>
+                    <span class="points-pill">{{ leader.points }} pts</span>
+                    <span class="muted">{{ leader.record }}</span>
+                    <span class="muted">{{ leader.detail }}</span>
+                  </article>
+                }
+              </div>
+            </section>
+
             <div class="table-wrapper">
-              <table mat-table [dataSource]="rows()" class="w-100">
+              <table mat-table [dataSource]="rows()" class="w-100 standings-table">
                 <ng-container matColumnDef="rank">
                   <th mat-header-cell *matHeaderCellDef>Pos.</th>
                   <td mat-cell *matCellDef="let row">{{ row.rankPosition ?? '-' }}</td>
@@ -170,8 +202,13 @@ const parseQueryNumber = (value: string | null): number | '' => {
                 <ng-container matColumnDef="team">
                   <th mat-header-cell *matHeaderCellDef>Equipo</th>
                   <td mat-cell *matCellDef="let row">
-                    <div class="stack-sm">
-                      <strong>{{ tournamentTeamLabel(row.tournamentTeamId) }}</strong>
+                    <div class="stack-sm team-cell">
+                      <div class="team-row">
+                        <span class="rank-badge small" [class]="rankBadgeClass(row.rankPosition ?? 99)">
+                          {{ row.rankPosition ?? '-' }}
+                        </span>
+                        <strong>{{ tournamentTeamLabel(row.tournamentTeamId) }}</strong>
+                      </div>
                       <span class="muted">{{ standingContext(row) }}</span>
                     </div>
                   </td>
@@ -181,7 +218,9 @@ const parseQueryNumber = (value: string | null): number | '' => {
                   <td mat-cell *matCellDef="let row">
                     <div class="stack-sm">
                       <span>PJ {{ row.played }} / G {{ row.wins }} / E {{ row.draws }} / P {{ row.losses }}</span>
-                      <span class="muted">Dif. {{ row.scoreDiff }}</span>
+                      <span class="muted" [class.diff-positive]="row.scoreDiff > 0" [class.diff-negative]="row.scoreDiff < 0">
+                        Dif. {{ row.scoreDiff }}
+                      </span>
                     </div>
                   </td>
                 </ng-container>
@@ -214,6 +253,120 @@ const parseQueryNumber = (value: string | null): number | '' => {
       </section>
     </section>
   `,
+  styles: [
+    `
+      .leaderboard-strip {
+        display: grid;
+        gap: 1rem;
+        margin-bottom: 1rem;
+      }
+
+      .neutral-banner {
+        margin-top: 0.25rem;
+        background: linear-gradient(135deg, rgba(14, 116, 144, 0.08), rgba(14, 116, 144, 0.02));
+        border-color: rgba(14, 116, 144, 0.16);
+      }
+
+      .section-headline {
+        display: grid;
+        gap: 0.25rem;
+      }
+
+      .leaderboard-grid {
+        display: grid;
+        gap: 1rem;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      }
+
+      .leader-card {
+        display: grid;
+        gap: 0.4rem;
+        align-content: start;
+        padding: 1rem;
+        border-radius: 16px;
+        background: var(--surface-alt);
+        border: 1px solid transparent;
+      }
+
+      .leader-card.top {
+        background: linear-gradient(135deg, rgba(10, 110, 90, 0.12), rgba(10, 110, 90, 0.04));
+        border-color: rgba(10, 110, 90, 0.18);
+      }
+
+      .rank-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 2rem;
+        height: 2rem;
+        border-radius: 999px;
+        font-size: 0.82rem;
+        font-weight: 800;
+      }
+
+      .rank-badge.small {
+        width: 1.6rem;
+        height: 1.6rem;
+        font-size: 0.72rem;
+      }
+
+      .rank-badge.gold {
+        background: #fef3c7;
+        color: #92400e;
+      }
+
+      .rank-badge.silver {
+        background: #e5e7eb;
+        color: #374151;
+      }
+
+      .rank-badge.bronze {
+        background: #ffedd5;
+        color: #9a3412;
+      }
+
+      .rank-badge.neutral {
+        background: #e0f2fe;
+        color: #075985;
+      }
+
+      .points-pill {
+        display: inline-flex;
+        width: fit-content;
+        align-items: center;
+        padding: 0.3rem 0.7rem;
+        border-radius: 999px;
+        background: rgba(10, 110, 90, 0.12);
+        color: var(--primary);
+        font-size: 0.8rem;
+        font-weight: 700;
+      }
+
+      .standings-table .mat-mdc-header-row {
+        background: rgba(10, 110, 90, 0.04);
+      }
+
+      .team-cell {
+        min-width: 220px;
+      }
+
+      .team-row {
+        display: flex;
+        gap: 0.6rem;
+        align-items: center;
+      }
+
+      .diff-positive {
+        color: #166534;
+        font-weight: 700;
+      }
+
+      .diff-negative {
+        color: #b91c1c;
+        font-weight: 700;
+      }
+    `
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class StandingsPageComponent {
@@ -294,6 +447,45 @@ export class StandingsPageComponent {
         meta: 'Suma de puntos en pagina'
       }
     ];
+  });
+  protected readonly leaderboardCards = computed<LeaderboardCard[]>(() =>
+    this.rows()
+      .slice(0, 3)
+      .map((row, index) => ({
+        rank: row.rankPosition ?? index + 1,
+        label: this.tournamentTeamLabel(row.tournamentTeamId),
+        points: row.points,
+        record: `PJ ${row.played} / G ${row.wins} / E ${row.draws} / P ${row.losses}`,
+        detail: `${row.pointsFor} a favor, ${row.pointsAgainst} en contra, dif. ${row.scoreDiff}`
+      }))
+  );
+  protected readonly competitiveReading = computed(() => {
+    const [leader, second, third] = this.rows();
+
+    if (!leader) {
+      return 'No hay suficiente informacion para interpretar el bloque competitivo.';
+    }
+
+    if (!second) {
+      return `${this.tournamentTeamLabel(leader.tournamentTeamId)} aparece como unica referencia visible en el filtro actual.`;
+    }
+
+    const leaderGap = leader.points - second.points;
+    const thirdGap = third ? second.points - third.points : 0;
+
+    if (leaderGap >= 6) {
+      return `${this.tournamentTeamLabel(leader.tournamentTeamId)} lidera con margen claro de ${leaderGap} puntos sobre el segundo lugar.`;
+    }
+
+    if (leaderGap <= 1) {
+      return `La punta esta muy apretada: solo ${leaderGap} punto(s) separan al lider del segundo lugar.`;
+    }
+
+    if (third && thirdGap <= 1) {
+      return 'El podio esta comprimido y cualquier resultado puede alterar rapido las posiciones principales.';
+    }
+
+    return `Hay competencia activa en la parte alta: el lider mantiene ${leaderGap} puntos de ventaja sobre el segundo lugar.`;
   });
   protected readonly filteredStages = computed(() => {
     const tournamentId = this.selectedTournamentId();
@@ -569,5 +761,21 @@ export class StandingsPageComponent {
       dateStyle: 'medium',
       timeStyle: 'short'
     }).format(parsed);
+  }
+
+  protected rankBadgeClass(rank: number): string {
+    if (rank === 1) {
+      return 'gold';
+    }
+
+    if (rank === 2) {
+      return 'silver';
+    }
+
+    if (rank === 3) {
+      return 'bronze';
+    }
+
+    return 'neutral';
   }
 }
