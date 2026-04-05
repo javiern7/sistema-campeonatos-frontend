@@ -7,8 +7,8 @@ export interface AppNavItem {
 }
 
 export const APP_NAV_ITEMS: AppNavItem[] = [
-  { label: 'Dashboard', path: '/dashboard' },
-  { label: 'Deportes', path: '/sports' },
+  { label: 'Dashboard', path: '/dashboard', resource: 'dashboard' },
+  { label: 'Deportes', path: '/sports', resource: 'sports' },
   { label: 'Torneos', path: '/tournaments', resource: 'tournaments' },
   { label: 'Inscripciones', path: '/tournament-teams', resource: 'tournamentTeams' },
   { label: 'Etapas', path: '/tournament-stages', resource: 'tournamentStages' },

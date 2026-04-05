@@ -142,6 +142,8 @@ type SummaryCard = {
                   <a mat-button [routerLink]="['/tournaments', row.id]">Detalle</a>
                   @if (canManage()) {
                     <a mat-button [routerLink]="['/tournaments', row.id, 'edit']">Editar</a>
+                  }
+                  @if (canTransitionStatus()) {
                     @for (transition of availableTransitions(row.status); track transition.targetStatus) {
                       <button
                         mat-button
@@ -195,6 +197,7 @@ export class TournamentListPageComponent {
   protected readonly pageSizeOptions = [10, 20, 50];
   protected readonly canManage = computed(() => this.authorization.canManage('tournaments'));
   protected readonly canDelete = computed(() => this.authorization.canDelete('tournaments'));
+  protected readonly canTransitionStatus = computed(() => this.authorization.canTransitionTournamentStatus());
   protected readonly displayedColumns = computed(() => {
     const columns = ['id', 'name', 'sport', 'segment', 'status'];
     if (this.canManage() || this.canDelete()) {

@@ -16,21 +16,21 @@ export class ErrorMapper {
       return new AppError(error.status, message, payload.code, payload.errors);
     }
 
-    return new AppError(0, 'Ocurrió un error inesperado');
+    return new AppError(0, 'Ocurrio un error inesperado');
   }
 
   private defaultMessage(status: number): string {
     switch (status) {
       case 401:
-        return 'Sesión inválida o credenciales incorrectas';
+        return 'Sesion invalida o credenciales incorrectas';
       case 403:
-        return 'No tienes permisos para realizar esta acción';
+        return 'No tienes permisos para realizar esta accion';
       case 404:
-        return 'No se encontró el recurso solicitado';
+        return 'No se encontro el recurso solicitado';
       case 409:
-        return 'La operación entra en conflicto con el estado actual';
+        return 'La operacion entra en conflicto con el estado actual';
       case 500:
-        return 'Ocurrió un error interno en el servidor';
+        return 'Ocurrio un error interno en el servidor';
       default:
         return 'No se pudo completar la solicitud';
     }

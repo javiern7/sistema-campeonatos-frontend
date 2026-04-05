@@ -5,16 +5,16 @@ import { AuthStore } from './auth.store';
 
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const authStore = inject(AuthStore);
-  const basicToken = authStore.basicToken();
+  const accessToken = authStore.accessToken();
 
-  if (!basicToken || req.headers.has('Authorization')) {
+  if (!accessToken || req.headers.has('Authorization') || req.url.includes('/auth/login') || req.url.includes('/auth/refresh')) {
     return next(req);
   }
 
   return next(
     req.clone({
       setHeaders: {
-        Authorization: `Basic ${basicToken}`
+        Authorization: `Bearer ${accessToken}`
       }
     })
   );

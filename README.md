@@ -25,7 +25,10 @@ La intencion es que nuevos hilos de trabajo puedan partir desde aqui con una bas
 
 Actualmente el frontend incluye:
 
-- Login temporal con Basic Auth
+- Login formal contra `POST /api/auth/login`
+- Bootstrap de sesion desde `GET /api/auth/session`
+- Renovacion de access token con `POST /api/auth/refresh`
+- Logout formal con `POST /api/auth/logout`
 - Shell autenticado con sidebar y topbar
 - Dashboard inicial
 - Modulo de sports conectado al backend
@@ -38,7 +41,8 @@ Actualmente el frontend incluye:
 Contrato esperado del backend:
 
 - Base URL local de desarrollo: `http://localhost:8080/api`
-- Autenticacion temporal: `Basic Auth`
+- Autenticacion protegida: `Authorization: Bearer <token>`
+- Endpoints de auth: `/auth/login`, `/auth/refresh`, `/auth/logout`, `/auth/session`
 - Respuesta estandar: `ApiResponse<T>`
 
 Entornos configurados:
@@ -83,7 +87,8 @@ npm run build
 ## Estado tecnico observado
 
 - La arquitectura base del frontend esta ordenada por `core`, `layout`, `shared` y `features`.
-- El login actual todavia depende de validar credenciales contra `/sports`, por lo que debera refinarse cuando exista un flujo de autenticacion mas formal en backend.
+- La sesion ya se alinea con backend `Bearer-only`, usando tokens persistidos, bootstrap de identidad y permisos efectivos entregados por backend.
+- La visibilidad de navegacion, rutas y acciones sensibles responde a permisos efectivos del backend.
 - Este repositorio debe mantenerse sincronizado con el proyecto maestro para evitar divergencias entre frontend, backend y base de datos.
 
 ## Repositorio remoto

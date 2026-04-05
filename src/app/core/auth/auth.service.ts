@@ -1,41 +1,118 @@
-import { HttpClient, HttpErrorResponse, HttpHeaders } from '@angular/common/http';
+import { HttpBackend, HttpClient, HttpErrorResponse, HttpHeaders } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { Observable, catchError, map, of, tap, throwError } from 'rxjs';
+import { Observable, catchError, finalize, map, of, shareReplay, switchMap, tap, throwError } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
 import { ApiResponse } from '../api/api.models';
-import { AppPermission, AppRole, AuthSession, AuthorizationProfile, BackendAuthSession } from './auth.models';
+import {
+  AuthLoginRequest,
+  AuthRefreshRequest,
+  AuthSession,
+  AuthTokenResponse,
+  BackendAuthSession
+} from './auth.models';
 import { AuthStore } from './auth.store';
+
+const EXPIRY_SKEW_MS = 30_000;
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-  private readonly http = inject(HttpClient);
   private readonly authStore = inject(AuthStore);
+  private readonly rawHttp = new HttpClient(inject(HttpBackend));
+  private refreshRequest$: Observable<void> | null = null;
 
   login(username: string, password: string): Observable<void> {
-    const basicToken = btoa(`${username}:${password}`);
-    return this.resolveSession(basicToken, username);
+    const payload: AuthLoginRequest = { username, password };
+
+    return this.rawHttp
+      .post<ApiResponse<AuthTokenResponse>>(this.authUrl('/login'), payload)
+      .pipe(
+        map((response) => response.data),
+        switchMap((tokens) => this.bootstrapFromTokens(tokens))
+      );
   }
 
   restoreSession(): Observable<void> {
-    const session = this.authStore.session();
+    this.authStore.markRestoring(true);
 
-    if (!session?.basicToken) {
+    const refreshToken = this.authStore.refreshToken();
+    if (!refreshToken || this.isExpired(this.authStore.refreshTokenExpiresAt())) {
+      this.authStore.clear();
+      this.authStore.markRestoring(false);
       return of(void 0);
     }
 
-    return this.resolveSession(session.basicToken, session.username).pipe(
+    const restore$ = this.shouldRefreshAccessToken()
+      ? this.refreshAccessToken()
+      : this.fetchSession(this.authStore.accessToken(), this.currentTokens()).pipe(
+          catchError((error: unknown) => {
+            if (this.isUnauthorizedError(error)) {
+              return this.refreshAccessToken();
+            }
+
+            return throwError(() => error);
+          })
+        );
+
+    return restore$.pipe(
       catchError((error: unknown) => {
-        if (this.isUnauthorizedError(error)) {
+        if (this.isUnauthorizedError(error) || error instanceof HttpErrorResponse) {
           this.authStore.clear();
+          return of(void 0);
         }
 
-        return of(void 0);
-      })
+        return throwError(() => error);
+      }),
+      finalize(() => this.authStore.markRestoring(false))
     );
   }
 
-  logout(): void {
+  refreshAccessToken(): Observable<void> {
+    const refreshToken = this.authStore.refreshToken();
+
+    if (!refreshToken) {
+      return throwError(() => new Error('No refresh token available'));
+    }
+
+    if (this.refreshRequest$) {
+      return this.refreshRequest$;
+    }
+
+    const payload: AuthRefreshRequest = { refreshToken };
+    this.refreshRequest$ = this.rawHttp
+      .post<ApiResponse<AuthTokenResponse>>(this.authUrl('/refresh'), payload)
+      .pipe(
+        map((response) => response.data),
+        switchMap((tokens) => this.bootstrapFromTokens(tokens)),
+        finalize(() => {
+          this.refreshRequest$ = null;
+        }),
+        shareReplay(1)
+      );
+
+    return this.refreshRequest$;
+  }
+
+  logout(): Observable<void> {
+    const accessToken = this.authStore.accessToken();
+
+    if (!accessToken) {
+      this.authStore.clear();
+      return of(void 0);
+    }
+
+    return this.rawHttp
+      .post<ApiResponse<void>>(this.authUrl('/logout'), null, {
+        headers: this.buildBearerHeaders(accessToken)
+      })
+      .pipe(
+        map(() => void 0),
+        catchError(() => of(void 0)),
+        tap(() => this.authStore.clear())
+      );
+  }
+
+  forceClearSession(): void {
     this.authStore.clear();
   }
 
@@ -43,121 +120,72 @@ export class AuthService {
     return this.authStore.session();
   }
 
-  private resolveSession(basicToken: string, username: string): Observable<void> {
-    const headers = new HttpHeaders({ Authorization: `Basic ${basicToken}` });
-    const authContract = environment.authContract;
+  private bootstrapFromTokens(tokens: AuthTokenResponse): Observable<void> {
+    return this.fetchSession(tokens.accessToken, tokens);
+  }
 
-    return this.http
-      .get<ApiResponse<BackendAuthSession>>(`${environment.apiBaseUrl}/${authContract.sessionPath.replace(/^\/+/, '')}`, {
-        headers
+  private fetchSession(accessToken: string, tokens: AuthTokenResponse): Observable<void> {
+    return this.rawHttp
+      .get<ApiResponse<BackendAuthSession>>(this.authUrl('/session'), {
+        headers: this.buildBearerHeaders(accessToken)
       })
       .pipe(
         map((response) => response.data),
-        tap((session) => this.authStore.setSession(this.mapBackendSession(session, basicToken))),
-        map(() => void 0),
-        catchError((error: unknown) => this.tryTemporaryFallback(error, headers, username, basicToken))
-      );
-  }
-
-  private tryTemporaryFallback(
-    error: unknown,
-    headers: HttpHeaders,
-    username: string,
-    basicToken: string
-  ): Observable<void> {
-    const authContract = environment.authContract;
-
-    if (!authContract.allowTemporaryProfileFallback || !this.isMissingSessionContractError(error)) {
-      return throwError(() => error);
-    }
-
-    return this.http
-      .get<ApiResponse<unknown>>(
-        `${environment.apiBaseUrl}/${authContract.fallbackValidationPath.replace(/^\/+/, '')}`,
-        {
-          headers,
-          params: authContract.fallbackValidationQuery as Record<string, string | number | boolean>
-        }
-      )
-      .pipe(
-        tap(() =>
-          this.authStore.setSession({
-            username,
-            basicToken,
-            roles: this.resolveRoles(username),
-            permissions: this.resolvePermissions(username),
-            authorizationSource: 'temporary-profile',
-            validatedAt: new Date().toISOString()
-          })
-        ),
+        tap((session) => this.authStore.setSession(this.mapSession(session, tokens))),
         map(() => void 0)
       );
   }
 
-  private resolveRoles(username: string): AppRole[] {
-    const normalizedUsername = username.trim().toLowerCase();
-    const matchedProfile = environment.authContract.roleProfiles.find((profile: AuthorizationProfile) =>
-      profile.usernames.some((candidate: string) => candidate.trim().toLowerCase() === normalizedUsername)
-    );
-
-    return Array.from(new Set([...(environment.authContract.defaultRoles ?? []), ...(matchedProfile?.roles ?? [])]));
-  }
-
-  private resolvePermissions(username: string): AppPermission[] {
-    const roles = this.resolveRoles(username);
-    const permissions = new Set<AppPermission>();
-    const readableResources = [
-      'dashboard',
-      'sports',
-      'teams',
-      'players',
-      'tournaments',
-      'tournamentTeams',
-      'tournamentStages',
-      'stageGroups',
-      'rosters',
-      'matches',
-      'standings'
-    ] as const;
-    const writableResources = [
-      'teams',
-      'players',
-      'tournaments',
-      'tournamentTeams',
-      'tournamentStages',
-      'stageGroups',
-      'rosters',
-      'matches',
-      'standings'
-    ] as const;
-
-    readableResources.forEach((resource) => permissions.add(`${resource}:read`));
-
-    if (roles.includes('SUPER_ADMIN') || roles.includes('TOURNAMENT_ADMIN')) {
-      writableResources.forEach((resource) => permissions.add(`${resource}:manage`));
-    }
-
-    if (roles.includes('SUPER_ADMIN')) {
-      writableResources.forEach((resource) => permissions.add(`${resource}:delete`));
-    }
-
-    return Array.from(permissions).sort();
-  }
-
-  private mapBackendSession(session: BackendAuthSession, basicToken: string): AuthSession {
+  private mapSession(session: BackendAuthSession, tokens: AuthTokenResponse): AuthSession {
     return {
       ...session,
-      basicToken,
-      authorizationSource: 'backend-session',
+      tokenType: tokens.tokenType || 'Bearer',
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+      refreshTokenExpiresAt: tokens.refreshTokenExpiresAt,
       validatedAt: new Date().toISOString()
     };
   }
 
-  private isMissingSessionContractError(error: unknown): boolean {
-    return error instanceof HttpErrorResponse && error.status === 404;
+  private currentTokens(): AuthTokenResponse {
+    return {
+      tokenType: this.authStore.tokenType(),
+      authenticationScheme: this.authStore.authenticationScheme(),
+      sessionId: this.authStore.sessionId(),
+      accessToken: this.authStore.accessToken(),
+      accessTokenExpiresAt: this.authStore.accessTokenExpiresAt(),
+      refreshToken: this.authStore.refreshToken(),
+      refreshTokenExpiresAt: this.authStore.refreshTokenExpiresAt()
+    };
+  }
+
+  private buildBearerHeaders(accessToken: string): HttpHeaders {
+    return new HttpHeaders({ Authorization: `Bearer ${accessToken}` });
+  }
+
+  private shouldRefreshAccessToken(): boolean {
+    const accessToken = this.authStore.accessToken();
+    return !accessToken || this.isExpired(this.authStore.accessTokenExpiresAt(), EXPIRY_SKEW_MS);
+  }
+
+  private isExpired(value: string | null, skewMs = 0): boolean {
+    if (!value) {
+      return true;
+    }
+
+    const expiresAt = new Date(value).getTime();
+    if (Number.isNaN(expiresAt)) {
+      return true;
+    }
+
+    return expiresAt - skewMs <= Date.now();
   }
 
   private isUnauthorizedError(error: unknown): boolean {
     return error instanceof HttpErrorResponse && (error.status === 401 || error.status === 403);
+  }
+
+  private authUrl(path: string): string {
+    return `${environment.apiBaseUrl}/auth/${path.replace(/^\/+/, '')}`;
   }
 }

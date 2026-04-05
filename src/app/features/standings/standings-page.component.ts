@@ -73,7 +73,7 @@ const parseQueryNumber = (value: string | null): number | '' => {
   template: `
     <section class="app-page">
       <app-page-header title="Tabla de posiciones" subtitle="Seguimiento competitivo y recalculo por contexto.">
-        @if (canManage()) {
+        @if (canRecalculate()) {
           <button
             mat-flat-button
             color="primary"
@@ -403,6 +403,7 @@ export class StandingsPageComponent {
   protected readonly pageSize = signal(20);
   protected readonly pageSizeOptions = [10, 20, 50];
   protected readonly canManage = computed(() => this.authorization.canManage('standings'));
+  protected readonly canRecalculate = computed(() => this.authorization.canRecalculateStandings());
   private readonly selectedTournamentId = signal(0);
   private readonly selectedStageId = signal(0);
   protected readonly selectedContextLabel = computed(() => {

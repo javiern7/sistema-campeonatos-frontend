@@ -8,6 +8,20 @@ interface AuthorizationGuardData {
   action: AuthorizationAction;
 }
 
+const ACCESS_FALLBACKS: Array<{ path: string; resource: AuthorizationResource }> = [
+  { path: '/dashboard', resource: 'dashboard' },
+  { path: '/sports', resource: 'sports' },
+  { path: '/tournaments', resource: 'tournaments' },
+  { path: '/tournament-teams', resource: 'tournamentTeams' },
+  { path: '/tournament-stages', resource: 'tournamentStages' },
+  { path: '/stage-groups', resource: 'stageGroups' },
+  { path: '/teams', resource: 'teams' },
+  { path: '/players', resource: 'players' },
+  { path: '/rosters', resource: 'rosters' },
+  { path: '/matches', resource: 'matches' },
+  { path: '/standings', resource: 'standings' }
+];
+
 export const authorizationGuard: CanActivateFn = (route: ActivatedRouteSnapshot) => {
   const authorization = inject(AuthorizationService);
   const router = inject(Router);
@@ -17,5 +31,6 @@ export const authorizationGuard: CanActivateFn = (route: ActivatedRouteSnapshot)
     return true;
   }
 
-  return router.createUrlTree(['/dashboard']);
+  const fallbackPath = ACCESS_FALLBACKS.find((item) => authorization.canRead(item.resource))?.path ?? '/login';
+  return router.createUrlTree([fallbackPath]);
 };

@@ -1,11 +1,13 @@
-import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
+import { finalize } from 'rxjs';
 import { MatButtonModule } from '@angular/material/button';
 import { MatToolbarModule } from '@angular/material/toolbar';
 
 import { AuthorizationService } from '../../core/auth/authorization.service';
 import { AuthService } from '../../core/auth/auth.service';
 import { AuthStore } from '../../core/auth/auth.store';
+import { NotificationService } from '../../core/error/notification.service';
 
 @Component({
   selector: 'app-topbar',
@@ -15,7 +17,7 @@ import { AuthStore } from '../../core/auth/auth.store';
     <mat-toolbar class="topbar">
       <div>
         <div class="topbar-title">Sistema Multideporte</div>
-        <div class="topbar-subtitle">{{ authorizationSubtitle() }}</div>
+        <div class="topbar-subtitle">{{ sessionSummary() }}</div>
       </div>
 
       <span class="topbar-spacer"></span>
@@ -23,8 +25,11 @@ import { AuthStore } from '../../core/auth/auth.store';
       <div class="topbar-user">
         <div>{{ fullName() }}</div>
         <div class="topbar-roles">{{ roles().join(' | ') || 'AUTHENTICATED' }}</div>
+        <div class="topbar-expiry">{{ accessExpiryLabel() }}</div>
       </div>
-      <button mat-stroked-button type="button" (click)="logout()">Salir</button>
+      <button mat-stroked-button type="button" (click)="logout()" [disabled]="loggingOut()">
+        {{ loggingOut() ? 'Cerrando...' : 'Salir' }}
+      </button>
     </mat-toolbar>
   `,
   styles: [
@@ -39,7 +44,8 @@ import { AuthStore } from '../../core/auth/auth.store';
         font-weight: 700;
       }
 
-      .topbar-subtitle {
+      .topbar-subtitle,
+      .topbar-expiry {
         color: var(--text-soft);
         font-size: 0.85rem;
       }
@@ -69,18 +75,48 @@ export class TopbarComponent {
   private readonly authService = inject(AuthService);
   private readonly authStore = inject(AuthStore);
   private readonly authorization = inject(AuthorizationService);
+  private readonly notifications = inject(NotificationService);
   private readonly router = inject(Router);
 
+  protected readonly loggingOut = signal(false);
   protected readonly fullName = computed(() => this.authStore.fullName());
   protected readonly roles = computed(() => this.authorization.roleLabels());
-  protected readonly authorizationSubtitle = computed(() =>
-    this.authStore.authorizationSource() === 'backend-session'
-      ? 'Autorizacion derivada del backend'
-      : 'Autorizacion temporal de transicion'
-  );
+  protected readonly sessionSummary = computed(() => {
+    const sessionId = this.authStore.sessionId();
+    const scheme = this.authStore.authenticationScheme();
+    return `Sesion backend ${sessionId ?? '-'} / ${scheme} / permisos efectivos cargados`;
+  });
+  protected readonly accessExpiryLabel = computed(() => {
+    const value = this.authStore.accessTokenExpiresAt();
+    if (!value) {
+      return 'Vencimiento no informado';
+    }
+
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) {
+      return 'Vencimiento no disponible';
+    }
+
+    return `Access token vigente hasta ${new Intl.DateTimeFormat('es-PE', {
+      dateStyle: 'short',
+      timeStyle: 'short'
+    }).format(parsed)}`;
+  });
 
   protected logout(): void {
-    this.authService.logout();
-    void this.router.navigateByUrl('/login');
+    if (this.loggingOut()) {
+      return;
+    }
+
+    this.loggingOut.set(true);
+    this.authService
+      .logout()
+      .pipe(finalize(() => this.loggingOut.set(false)))
+      .subscribe({
+        next: () => {
+          this.notifications.success('Sesion cerrada correctamente');
+          void this.router.navigateByUrl('/login');
+        }
+      });
   }
 }

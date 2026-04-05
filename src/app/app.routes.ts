@@ -19,18 +19,24 @@ export const appRoutes: Routes = [
       {
         path: 'dashboard',
         title: 'Dashboard',
+        canActivate: [authorizationGuard],
+        data: { resource: 'dashboard', action: 'read' },
         loadComponent: () =>
           import('./features/dashboard/dashboard-page.component').then((m) => m.DashboardPageComponent)
       },
       {
         path: 'sports',
         title: 'Sports',
+        canActivate: [authorizationGuard],
+        data: { resource: 'sports', action: 'read' },
         loadComponent: () =>
           import('./features/sports/sports-page.component').then((m) => m.SportsPageComponent)
       },
       {
         path: 'teams',
         title: 'Teams',
+        canActivate: [authorizationGuard],
+        data: { resource: 'teams', action: 'read' },
         loadComponent: () =>
           import('./features/teams/team-list-page.component').then((m) => m.TeamListPageComponent)
       },
@@ -53,6 +59,8 @@ export const appRoutes: Routes = [
       {
         path: 'players',
         title: 'Players',
+        canActivate: [authorizationGuard],
+        data: { resource: 'players', action: 'read' },
         loadComponent: () =>
           import('./features/players/player-list-page.component').then((m) => m.PlayerListPageComponent)
       },
@@ -75,6 +83,8 @@ export const appRoutes: Routes = [
       {
         path: 'tournaments',
         title: 'Tournaments',
+        canActivate: [authorizationGuard],
+        data: { resource: 'tournaments', action: 'read' },
         loadComponent: () =>
           import('./features/tournaments/tournament-list-page.component').then(
             (m) => m.TournamentListPageComponent
@@ -103,6 +113,8 @@ export const appRoutes: Routes = [
       {
         path: 'tournaments/:id',
         title: 'Tournament Detail',
+        canActivate: [authorizationGuard],
+        data: { resource: 'tournaments', action: 'read' },
         loadComponent: () =>
           import('./features/tournaments/tournament-detail-page.component').then(
             (m) => m.TournamentDetailPageComponent
@@ -111,6 +123,8 @@ export const appRoutes: Routes = [
       {
         path: 'tournament-teams',
         title: 'Tournament Teams',
+        canActivate: [authorizationGuard],
+        data: { resource: 'tournamentTeams', action: 'read' },
         loadComponent: () =>
           import('./features/tournament-teams/tournament-team-list-page.component').then(
             (m) => m.TournamentTeamListPageComponent
@@ -139,6 +153,8 @@ export const appRoutes: Routes = [
       {
         path: 'rosters',
         title: 'Rosters',
+        canActivate: [authorizationGuard],
+        data: { resource: 'rosters', action: 'read' },
         loadComponent: () =>
           import('./features/rosters/roster-list-page.component').then(
             (m) => m.RosterListPageComponent
@@ -167,6 +183,8 @@ export const appRoutes: Routes = [
       {
         path: 'tournament-stages',
         title: 'Tournament Stages',
+        canActivate: [authorizationGuard],
+        data: { resource: 'tournamentStages', action: 'read' },
         loadComponent: () =>
           import('./features/tournament-stages/tournament-stage-list-page.component').then(
             (m) => m.TournamentStageListPageComponent
@@ -195,6 +213,8 @@ export const appRoutes: Routes = [
       {
         path: 'stage-groups',
         title: 'Stage Groups',
+        canActivate: [authorizationGuard],
+        data: { resource: 'stageGroups', action: 'read' },
         loadComponent: () =>
           import('./features/stage-groups/stage-group-list-page.component').then(
             (m) => m.StageGroupListPageComponent
@@ -223,6 +243,8 @@ export const appRoutes: Routes = [
       {
         path: 'matches',
         title: 'Matches',
+        canActivate: [authorizationGuard],
+        data: { resource: 'matches', action: 'read' },
         loadComponent: () =>
           import('./features/matches/match-list-page.component').then((m) => m.MatchListPageComponent)
       },
@@ -245,6 +267,8 @@ export const appRoutes: Routes = [
       {
         path: 'standings',
         title: 'Standings',
+        canActivate: [authorizationGuard],
+        data: { resource: 'standings', action: 'read' },
         loadComponent: () =>
           import('./features/standings/standings-page.component').then((m) => m.StandingsPageComponent)
       }

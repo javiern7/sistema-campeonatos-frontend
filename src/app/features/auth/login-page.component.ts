@@ -8,6 +8,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 
 import { AuthService } from '../../core/auth/auth.service';
+import { AuthStore } from '../../core/auth/auth.store';
 import { ErrorMapper } from '../../core/error/error.mapper';
 import { NotificationService } from '../../core/error/notification.service';
 
@@ -18,9 +19,9 @@ import { NotificationService } from '../../core/error/notification.service';
   template: `
     <div class="login-shell">
       <mat-card class="login-card card">
-        <h1>Ingreso al MVP</h1>
+        <h1>Ingreso a Producto Version 2</h1>
         <p class="muted">
-          Usa credenciales validas del backend Spring Boot. La autorizacion se resuelve desde backend y solo usa perfil temporal si el contrato real aun no esta disponible.
+          Usa tus credenciales reales. El acceso opera solo con tokens Bearer y la identidad, roles y permisos se cargan desde el backend.
         </p>
 
         <form [formGroup]="form" (ngSubmit)="submit()" class="app-page">
@@ -36,7 +37,7 @@ import { NotificationService } from '../../core/error/notification.service';
 
           <div class="form-actions">
             <button mat-flat-button color="primary" type="submit" [disabled]="form.invalid || loading()">
-              {{ loading() ? 'Validando...' : 'Ingresar' }}
+              {{ loading() ? 'Iniciando sesion...' : 'Ingresar' }}
             </button>
           </div>
         </form>
@@ -48,6 +49,7 @@ import { NotificationService } from '../../core/error/notification.service';
 export class LoginPageComponent {
   private readonly fb = inject(FormBuilder);
   private readonly authService = inject(AuthService);
+  private readonly authStore = inject(AuthStore);
   private readonly errorMapper = inject(ErrorMapper);
   private readonly notifications = inject(NotificationService);
   private readonly router = inject(Router);
@@ -57,6 +59,12 @@ export class LoginPageComponent {
     username: ['', Validators.required],
     password: ['', Validators.required]
   });
+
+  constructor() {
+    if (this.authStore.isAuthenticated()) {
+      void this.router.navigateByUrl('/dashboard');
+    }
+  }
 
   protected submit(): void {
     if (this.form.invalid || this.loading()) {
