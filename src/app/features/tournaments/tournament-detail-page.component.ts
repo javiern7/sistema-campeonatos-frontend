@@ -680,9 +680,9 @@ export class TournamentDetailPageComponent {
         meta: `${summary?.approvedRegistrationCount ?? 0} aprobadas`
       },
       {
-        label: 'Rosters activos',
-        value: summary?.activeRosterCount ?? 0,
-        meta: `${summary?.registrationsWithActiveRosterCount ?? 0} inscripciones con soporte`
+        label: 'Soporte roster',
+        value: summary?.registrationsWithActiveRosterCount ?? 0,
+        meta: `${summary?.rosterGapCount ?? 0} brechas activas`
       },
       {
         label: 'Partidos',
@@ -1012,12 +1012,18 @@ export class TournamentDetailPageComponent {
       standings: this.catalogLoader.loadAll((page, size) => this.standingsService.list({ tournamentId, page, size })),
       stages: this.catalogLoader.loadAll((page, size) => this.stagesService.list({ page, size })),
       groups: this.catalogLoader.loadAll((page, size) => this.groupsService.list({ page, size })),
-      dashboard: this.dashboardService.getSummary()
+      operationalSummary: this.tournamentsService.getOperationalSummaryById(tournamentId)
     })
       .pipe(finalize(() => this.loading.set(false)))
       .subscribe({
         next: (result) => {
           const registrationIds = new Set(result.registrations.map((item) => item.id));
+          const tournamentStages = result.stages.filter((item) => item.tournamentId === tournamentId);
+          const stageIds = new Set(tournamentStages.map((item) => item.id));
+          const tournamentGroups = result.groups.filter((item) => stageIds.has(item.stageId));
+          const sportById = new Map(result.sports.map((item) => [item.id, item] as const));
+          const teamById = new Map(result.teams.map((item) => [item.id, item] as const));
+          const registrationById = new Map(result.registrations.map((item) => [item.id, item] as const));
 
           this.tournament.set(result.tournament);
           this.sports.set(result.sports);
@@ -1026,11 +1032,21 @@ export class TournamentDetailPageComponent {
           this.rosters.set(result.rosters.filter((item) => registrationIds.has(item.tournamentTeamId)));
           this.matches.set(result.matches);
           this.standings.set(result.standings);
-          this.stages.set(result.stages.filter((item) => item.tournamentId === tournamentId));
-          const stageIds = new Set(result.stages.filter((item) => item.tournamentId === tournamentId).map((item) => item.id));
-          this.groups.set(result.groups.filter((item) => stageIds.has(item.stageId)));
+          this.stages.set(tournamentStages);
+          this.groups.set(tournamentGroups);
           this.summary.set(
-            result.dashboard.tournamentSummaries.find((item) => item.tournamentId === tournamentId) ?? null
+            this.dashboardService.buildTournamentSummary({
+              tournament: result.tournament,
+              sportById,
+              teamById,
+              registrationById,
+              operationalSummary: result.operationalSummary,
+              stages: tournamentStages,
+              groups: tournamentGroups,
+              registrations: result.registrations,
+              matches: result.matches,
+              standings: result.standings
+            })
           );
         },
         error: (error: unknown) => {

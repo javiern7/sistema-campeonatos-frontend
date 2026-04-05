@@ -686,7 +686,7 @@ export class DashboardPageComponent {
     }
 
     if (summary.attentionTournamentCount > 0) {
-      return `Hay ${summary.attentionTournamentCount} torneos con alertas operativas. Sprint 7 debe enfocarse en cerrar esas brechas antes de dar por consolidado el frontend.`;
+      return `Hay ${summary.attentionTournamentCount} torneos con alertas operativas reportadas por backend. Esta fase debe enfocarse en adoptar ese resumen sin reabrir el baseline estable.`;
     }
 
     if (summary.registrationCount === 0) {
@@ -697,7 +697,7 @@ export class DashboardPageComponent {
       return 'La base competitiva ya existe, pero falta programar partidos para comenzar a generar resultados y standings.';
     }
 
-    return 'La base operativa ya permite seguir el flujo torneo -> inscripciones -> rosters -> partidos -> standings con una vista ejecutiva transversal.';
+    return 'El frontend ya puede apoyarse en una vista ejecutiva transversal con salud operativa respaldada progresivamente por backend.';
   });
 
   constructor() {

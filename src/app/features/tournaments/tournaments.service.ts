@@ -6,6 +6,9 @@ import {
   Tournament,
   TournamentFilters,
   TournamentFormValue,
+  TournamentOperationalSummary,
+  TournamentOperationalSummaryFilters,
+  TournamentOperationalSummaryPage,
   TournamentPage,
   TournamentStatus,
   TournamentStatusTransitionPayload
@@ -21,6 +24,14 @@ export class TournamentsService {
 
   getById(id: number): Observable<Tournament> {
     return this.api.get<Tournament>(`/tournaments/${id}`);
+  }
+
+  getOperationalSummaryById(id: number): Observable<TournamentOperationalSummary> {
+    return this.api.get<TournamentOperationalSummary>(`/tournaments/${id}/operational-summary`);
+  }
+
+  listOperationalSummaries(filters: TournamentOperationalSummaryFilters): Observable<TournamentOperationalSummaryPage> {
+    return this.api.get<TournamentOperationalSummaryPage>('/tournaments/operational-summary', filters);
   }
 
   create(payload: TournamentFormValue): Observable<Tournament> {

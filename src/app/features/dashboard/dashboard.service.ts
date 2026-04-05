@@ -5,8 +5,6 @@ import { CatalogLoaderService } from '../../core/pagination/catalog-loader.servi
 import { MatchGame } from '../matches/match.models';
 import { MatchesService } from '../matches/matches.service';
 import { PlayersService } from '../players/players.service';
-import { RosterEntry } from '../rosters/roster.models';
-import { RostersService } from '../rosters/rosters.service';
 import { Sport } from '../sports/sport.models';
 import { SportsService } from '../sports/sports.service';
 import { Standing } from '../standings/standings.models';
@@ -19,12 +17,17 @@ import { TournamentStage } from '../tournament-stages/tournament-stage.models';
 import { TournamentStagesService } from '../tournament-stages/tournament-stages.service';
 import { TournamentTeam } from '../tournament-teams/tournament-team.models';
 import { TournamentTeamsService } from '../tournament-teams/tournament-teams.service';
-import { Tournament } from '../tournaments/tournament.models';
+import {
+  Tournament,
+  TournamentIntegrityAlertCode,
+  TournamentOperationalCategory,
+  TournamentOperationalSummary
+} from '../tournaments/tournament.models';
 import { TournamentsService } from '../tournaments/tournaments.service';
 import {
   DashboardAlert,
-  DashboardAuditStatus,
   DashboardAlertType,
+  DashboardAuditStatus,
   DashboardHealth,
   DashboardReportingSegment,
   DashboardSportSummary,
@@ -42,7 +45,6 @@ export class DashboardService {
   private readonly tournamentStagesService = inject(TournamentStagesService);
   private readonly stageGroupsService = inject(StageGroupsService);
   private readonly tournamentTeamsService = inject(TournamentTeamsService);
-  private readonly rostersService = inject(RostersService);
   private readonly matchesService = inject(MatchesService);
   private readonly standingsService = inject(StandingsService);
 
@@ -52,13 +54,119 @@ export class DashboardService {
       teams: this.catalogLoader.loadAll((page, size) => this.teamsService.list({ page, size })),
       players: this.playersService.list({ page: 0, size: 1 }),
       tournaments: this.catalogLoader.loadAll((page, size) => this.tournamentsService.list({ page, size })),
+      operationalSummaries: this.catalogLoader.loadAll((page, size) =>
+        this.tournamentsService.listOperationalSummaries({ page, size })
+      ),
       stages: this.catalogLoader.loadAll((page, size) => this.tournamentStagesService.list({ page, size })),
       groups: this.catalogLoader.loadAll((page, size) => this.stageGroupsService.list({ page, size })),
       registrations: this.catalogLoader.loadAll((page, size) => this.tournamentTeamsService.list({ page, size })),
-      rosters: this.catalogLoader.loadAll((page, size) => this.rostersService.list({ page, size })),
       matches: this.catalogLoader.loadAll((page, size) => this.matchesService.list({ page, size })),
       standings: this.catalogLoader.loadAll((page, size) => this.standingsService.list({ page, size }))
     }).pipe(map((data) => this.buildSummary(data)));
+  }
+
+  buildTournamentSummary(input: {
+    tournament: Tournament;
+    sportById: Map<number, Sport>;
+    teamById: Map<number, Team>;
+    registrationById: Map<number, TournamentTeam>;
+    operationalSummary?: TournamentOperationalSummary | null;
+    stages: TournamentStage[];
+    groups: StageGroup[];
+    registrations: TournamentTeam[];
+    matches: MatchGame[];
+    standings: Standing[];
+  }): DashboardTournamentSummary {
+    const { tournament, sportById, teamById, registrationById, operationalSummary, stages, groups, registrations, matches, standings } =
+      input;
+    const tournamentStages = stages.filter((item) => item.tournamentId === tournament.id);
+    const stageIds = new Set(tournamentStages.map((item) => item.id));
+    const tournamentGroups = groups.filter((item) => stageIds.has(item.stageId));
+    const tournamentRegistrations = registrations.filter((item) => item.tournamentId === tournament.id);
+    const approvedTournamentRegistrations = tournamentRegistrations.filter((item) => item.registrationStatus === 'APPROVED');
+    const tournamentMatches = matches.filter((item) => item.tournamentId === tournament.id);
+    const tournamentStandings = standings.filter((item) => item.tournamentId === tournament.id);
+    const standingTournamentTeamIds = new Set(tournamentStandings.map((item) => item.tournamentTeamId));
+    const leaderStanding = [...tournamentStandings].sort((left, right) => {
+      const leftRank = left.rankPosition ?? Number.MAX_SAFE_INTEGER;
+      const rightRank = right.rankPosition ?? Number.MAX_SAFE_INTEGER;
+      if (leftRank !== rightRank) {
+        return leftRank - rightRank;
+      }
+
+      return right.points - left.points;
+    })[0];
+    const leaderRegistration = leaderStanding ? registrationById.get(leaderStanding.tournamentTeamId) : null;
+    const leaderTeam = leaderRegistration ? teamById.get(leaderRegistration.teamId) : null;
+
+    const approvedRegistrationCount = operationalSummary?.approvedTeams ?? approvedTournamentRegistrations.length;
+    const registrationsWithActiveRosterCount =
+      operationalSummary?.approvedTeamsWithActiveRosterSupport ?? 0;
+    const rosterGapCount =
+      operationalSummary?.approvedTeamsMissingActiveRosterSupport ??
+      Math.max(approvedRegistrationCount - registrationsWithActiveRosterCount, 0);
+    const standingsCount = operationalSummary?.generatedStandings ?? tournamentStandings.length;
+    const playedMatchCount =
+      operationalSummary?.closedMatches ?? tournamentMatches.filter((item) => item.status === 'PLAYED').length;
+    const standingsCoverageCount = Math.min(
+      standingsCount > 0 ? standingsCount : standingTournamentTeamIds.size,
+      Math.max(approvedRegistrationCount, 0)
+    );
+    const operationalCategory = operationalSummary?.operationalCategory ?? tournament.operationalCategory ?? 'PRODUCTION';
+    const executiveReportingEligible =
+      operationalSummary?.executiveReportingEligible ?? tournament.executiveReportingEligible ?? operationalCategory === 'PRODUCTION';
+    const integrityHealthy = operationalSummary?.integrityHealthy ?? rosterGapCount === 0;
+    const integrityAlertCodes = operationalSummary?.integrityAlerts ?? [];
+    const reportingSegment = this.resolveReportingSegment({
+      tournament,
+      operationalCategory,
+      executiveReportingEligible,
+      approvedRegistrationCount,
+      playedMatchCount,
+      standingsCount
+    });
+
+    const summaryBase: Omit<
+      DashboardTournamentSummary,
+      'health' | 'readinessScore' | 'auditStatus' | 'auditMessage' | 'blockers' | 'nextAction'
+    > = {
+      tournamentId: tournament.id,
+      tournamentName: tournament.name,
+      sportName: sportById.get(tournament.sportId)?.name ?? `Deporte ${tournament.sportId}`,
+      status: tournament.status,
+      operationalCategory,
+      executiveReportingEligible,
+      integrityHealthy,
+      integrityAlertCodes,
+      reportingSegment,
+      qaSignal: operationalCategory !== 'PRODUCTION' || this.hasQaSignal(tournament),
+      stageCount: tournamentStages.length,
+      groupCount: tournamentGroups.length,
+      registrationCount: tournamentRegistrations.length,
+      approvedRegistrationCount,
+      registrationsWithActiveRosterCount,
+      rosterGapCount,
+      activeRosterCount: registrationsWithActiveRosterCount,
+      matchCount: tournamentMatches.length,
+      playedMatchCount,
+      scheduledMatchCount: tournamentMatches.filter((item) => item.status === 'SCHEDULED').length,
+      incidentMatchCount: tournamentMatches.filter((item) => item.status === 'FORFEIT' || item.status === 'CANCELLED').length,
+      standingsCount,
+      standingsCoverageCount,
+      leaderName: leaderTeam?.name ?? null,
+      leaderPoints: leaderStanding?.points ?? null
+    };
+    const evaluation = this.evaluateTournament(summaryBase);
+
+    return {
+      ...summaryBase,
+      health: evaluation.health,
+      readinessScore: evaluation.readinessScore,
+      auditStatus: evaluation.auditStatus,
+      auditMessage: evaluation.auditMessage,
+      blockers: evaluation.blockers,
+      nextAction: evaluation.nextAction
+    };
   }
 
   private buildSummary(data: {
@@ -66,17 +174,20 @@ export class DashboardService {
     teams: Team[];
     players: { totalElements: number };
     tournaments: Tournament[];
+    operationalSummaries: TournamentOperationalSummary[];
     stages: TournamentStage[];
     groups: StageGroup[];
     registrations: TournamentTeam[];
-    rosters: RosterEntry[];
     matches: MatchGame[];
     standings: Standing[];
   }): DashboardSummary {
-    const { sports, teams, players, tournaments, stages, groups, registrations, rosters, matches, standings } = data;
-    const sportById = new Map(sports.map((sport) => [sport.id, sport]));
-    const teamById = new Map(teams.map((team) => [team.id, team]));
-    const registrationById = new Map(registrations.map((registration) => [registration.id, registration]));
+    const { sports, teams, players, tournaments, operationalSummaries, stages, groups, registrations, matches, standings } = data;
+    const sportById = new Map(sports.map((sport) => [sport.id, sport] as const));
+    const teamById = new Map(teams.map((team) => [team.id, team] as const));
+    const registrationById = new Map(registrations.map((registration) => [registration.id, registration] as const));
+    const operationalSummaryByTournamentId = new Map(
+      operationalSummaries.map((summary) => [summary.tournamentId, summary] as const)
+    );
 
     const tournamentSummaries = tournaments
       .map((tournament) =>
@@ -85,10 +196,10 @@ export class DashboardService {
           sportById,
           teamById,
           registrationById,
+          operationalSummary: operationalSummaryByTournamentId.get(tournament.id) ?? null,
           stages,
           groups,
           registrations,
-          rosters,
           matches,
           standings
         })
@@ -128,12 +239,12 @@ export class DashboardService {
       setupTournamentCount: tournamentSummaries.filter((item) => item.reportingSegment === 'setup').length,
       sandboxTournamentCount: tournamentSummaries.filter((item) => item.reportingSegment === 'sandbox').length,
       registrationCount: registrations.length,
-      approvedRegistrationCount: registrations.filter((item) => item.registrationStatus === 'APPROVED').length,
+      approvedRegistrationCount: tournamentSummaries.reduce((total, item) => total + item.approvedRegistrationCount, 0),
       matchCount: matches.length,
-      playedMatchCount: matches.filter((item) => item.status === 'PLAYED').length,
+      playedMatchCount: tournamentSummaries.reduce((total, item) => total + item.playedMatchCount, 0),
       scheduledMatchCount: matches.filter((item) => item.status === 'SCHEDULED').length,
-      activeRosterCount: rosters.filter((item) => item.rosterStatus === 'ACTIVE').length,
-      standingsCount: standings.length,
+      activeRosterCount: tournamentSummaries.reduce((total, item) => total + item.registrationsWithActiveRosterCount, 0),
+      standingsCount: tournamentSummaries.reduce((total, item) => total + item.standingsCount, 0),
       attentionTournamentCount: tournamentSummaries.filter((item) => item.health !== 'healthy').length,
       rosterGapTournamentCount: tournamentSummaries.filter((item) => item.rosterGapCount > 0).length,
       standingsGapTournamentCount: tournamentSummaries.filter(
@@ -143,95 +254,6 @@ export class DashboardService {
       sportSummaries,
       tournamentSummaries,
       alerts
-    };
-  }
-
-  private buildTournamentSummary(input: {
-    tournament: Tournament;
-    sportById: Map<number, Sport>;
-    teamById: Map<number, Team>;
-    registrationById: Map<number, TournamentTeam>;
-    stages: TournamentStage[];
-    groups: StageGroup[];
-    registrations: TournamentTeam[];
-    rosters: RosterEntry[];
-    matches: MatchGame[];
-    standings: Standing[];
-  }): DashboardTournamentSummary {
-    const { tournament, sportById, teamById, registrationById, stages, groups, registrations, rosters, matches, standings } =
-      input;
-    const tournamentStages = stages.filter((item) => item.tournamentId === tournament.id);
-    const stageIds = new Set(tournamentStages.map((item) => item.id));
-    const tournamentGroups = groups.filter((item) => stageIds.has(item.stageId));
-    const tournamentRegistrations = registrations.filter((item) => item.tournamentId === tournament.id);
-    const approvedTournamentRegistrations = tournamentRegistrations.filter((item) => item.registrationStatus === 'APPROVED');
-    const registrationIds = new Set(tournamentRegistrations.map((item) => item.id));
-    const tournamentRosters = rosters.filter((item) => registrationIds.has(item.tournamentTeamId));
-    const activeRosterRegistrationIds = new Set(
-      tournamentRosters.filter((item) => item.rosterStatus === 'ACTIVE').map((item) => item.tournamentTeamId)
-    );
-    const tournamentMatches = matches.filter((item) => item.tournamentId === tournament.id);
-    const tournamentStandings = standings.filter((item) => item.tournamentId === tournament.id);
-    const standingTournamentTeamIds = new Set(tournamentStandings.map((item) => item.tournamentTeamId));
-    const leaderStanding = [...tournamentStandings].sort((left, right) => {
-      const leftRank = left.rankPosition ?? Number.MAX_SAFE_INTEGER;
-      const rightRank = right.rankPosition ?? Number.MAX_SAFE_INTEGER;
-      if (leftRank !== rightRank) {
-        return leftRank - rightRank;
-      }
-
-      return right.points - left.points;
-    })[0];
-    const leaderRegistration = leaderStanding ? registrationById.get(leaderStanding.tournamentTeamId) : null;
-    const leaderTeam = leaderRegistration ? teamById.get(leaderRegistration.teamId) : null;
-    const registrationsWithActiveRosterCount = approvedTournamentRegistrations.filter((item) =>
-      activeRosterRegistrationIds.has(item.id)
-    ).length;
-    const standingsCoverageCount = approvedTournamentRegistrations.filter((item) =>
-      standingTournamentTeamIds.has(item.id)
-    ).length;
-    const rosterGapCount = Math.max(approvedTournamentRegistrations.length - registrationsWithActiveRosterCount, 0);
-    const reportingSegment = this.resolveReportingSegment({
-      tournament,
-      approvedRegistrationCount: approvedTournamentRegistrations.length,
-      activeRosterCount: tournamentRosters.filter((item) => item.rosterStatus === 'ACTIVE').length,
-      matchCount: tournamentMatches.length,
-      standingsCount: tournamentStandings.length
-    });
-    const qaSignal = this.hasQaSignal(tournament);
-    const summaryBase = {
-      tournamentId: tournament.id,
-      tournamentName: tournament.name,
-      sportName: sportById.get(tournament.sportId)?.name ?? `Deporte ${tournament.sportId}`,
-      status: tournament.status,
-      reportingSegment,
-      qaSignal,
-      stageCount: tournamentStages.length,
-      groupCount: tournamentGroups.length,
-      registrationCount: tournamentRegistrations.length,
-      approvedRegistrationCount: approvedTournamentRegistrations.length,
-      registrationsWithActiveRosterCount,
-      rosterGapCount,
-      activeRosterCount: tournamentRosters.filter((item) => item.rosterStatus === 'ACTIVE').length,
-      matchCount: tournamentMatches.length,
-      playedMatchCount: tournamentMatches.filter((item) => item.status === 'PLAYED').length,
-      scheduledMatchCount: tournamentMatches.filter((item) => item.status === 'SCHEDULED').length,
-      incidentMatchCount: tournamentMatches.filter((item) => item.status === 'FORFEIT' || item.status === 'CANCELLED').length,
-      standingsCount: tournamentStandings.length,
-      standingsCoverageCount,
-      leaderName: leaderTeam?.name ?? null,
-      leaderPoints: leaderStanding?.points ?? null
-    };
-    const evaluation = this.evaluateTournament(summaryBase);
-
-    return {
-      ...summaryBase,
-      health: evaluation.health,
-      readinessScore: evaluation.readinessScore,
-      auditStatus: evaluation.auditStatus,
-      auditMessage: evaluation.auditMessage,
-      blockers: evaluation.blockers,
-      nextAction: evaluation.nextAction
     };
   }
 
@@ -250,7 +272,7 @@ export class DashboardService {
       liveTournamentCount: summaries.filter((item) => item.status === 'IN_PROGRESS').length,
       registrationCount: summaries.reduce((total, item) => total + item.registrationCount, 0),
       approvedRegistrationCount: summaries.reduce((total, item) => total + item.approvedRegistrationCount, 0),
-      activeRosterCount: summaries.reduce((total, item) => total + item.activeRosterCount, 0),
+      activeRosterCount: summaries.reduce((total, item) => total + item.registrationsWithActiveRosterCount, 0),
       matchCount: summaries.reduce((total, item) => total + item.matchCount, 0),
       playedMatchCount: summaries.reduce((total, item) => total + item.playedMatchCount, 0),
       standingsCount: summaries.reduce((total, item) => total + item.standingsCount, 0),
@@ -260,14 +282,19 @@ export class DashboardService {
         summaries.length === 0
           ? 'Aun no tiene torneos operativos en frontend.'
           : attentionCount > 0
-            ? 'Tiene torneos que requieren accion inmediata para sostener la trazabilidad.'
+            ? 'Tiene torneos con alertas de integridad o continuidad que requieren accion inmediata.'
             : warningCount > 0
-              ? 'Ya tiene base competitiva, pero aun faltan pasos para cerrar el flujo operativo.'
-              : 'Muestra continuidad entre torneo, inscripciones, rosters, partidos y standings.'
+              ? 'Ya tiene base competitiva, pero aun faltan cierres para una lectura ejecutiva estable.'
+              : 'Muestra continuidad visible respaldada por el resumen operativo del backend.'
     };
   }
 
-  private evaluateTournament(summary: Omit<DashboardTournamentSummary, 'health' | 'nextAction' | 'readinessScore' | 'auditStatus' | 'auditMessage' | 'blockers'>): {
+  private evaluateTournament(
+    summary: Omit<
+      DashboardTournamentSummary,
+      'health' | 'readinessScore' | 'auditStatus' | 'auditMessage' | 'blockers' | 'nextAction'
+    >
+  ): {
     health: DashboardHealth;
     readinessScore: number;
     auditStatus: DashboardAuditStatus;
@@ -275,8 +302,10 @@ export class DashboardService {
     blockers: string[];
     nextAction: string;
   } {
-    const blockers: string[] = [];
+    const blockers = summary.integrityAlertCodes.map((code) => this.integrityAlertLabel(code, summary));
     let readinessScore = 0;
+    const hasOperationalActivity =
+      summary.approvedRegistrationCount > 0 || summary.playedMatchCount > 0 || summary.standingsCount > 0;
 
     if (summary.approvedRegistrationCount > 0) {
       readinessScore += 25;
@@ -286,7 +315,7 @@ export class DashboardService {
     } else if (summary.registrationsWithActiveRosterCount > 0) {
       readinessScore += 10;
     }
-    if (summary.matchCount > 0) {
+    if (summary.playedMatchCount > 0) {
       readinessScore += 25;
     }
     if (summary.standingsCount > 0) {
@@ -296,44 +325,30 @@ export class DashboardService {
     if (summary.registrationCount === 0) {
       blockers.push('Sin inscripciones');
     }
-    if (summary.approvedRegistrationCount > 0 && summary.rosterGapCount > 0) {
-      blockers.push(`${summary.rosterGapCount} inscripciones aprobadas sin roster activo`);
-    }
     if (summary.approvedRegistrationCount > 1 && summary.matchCount === 0) {
       blockers.push('Sin fixture cargado');
     }
-    if (summary.playedMatchCount > 0 && summary.standingsCount === 0) {
-      blockers.push('Resultados sin standings');
-    }
-    if (summary.playedMatchCount > 0 && summary.registrationsWithActiveRosterCount === 0) {
-      blockers.push('Partidos jugados sin soporte de roster');
-    }
     if (summary.reportingSegment === 'sandbox') {
-      blockers.push('Torneo QA o borrador fuera del foco ejecutivo principal');
+      blockers.push('Torneo fuera del reporting ejecutivo principal');
     }
 
     const auditStatus: DashboardAuditStatus =
       summary.reportingSegment === 'sandbox'
         ? 'partial'
-        : blockers.some((item) =>
-              item === 'Sin inscripciones' ||
-              item.includes('sin roster activo') ||
-              item === 'Resultados sin standings' ||
-              item === 'Partidos jugados sin soporte de roster'
-            )
+        : !summary.integrityHealthy
           ? 'blocked'
-          : blockers.length > 0
+          : !hasOperationalActivity || blockers.length > 0
             ? 'partial'
             : 'ready';
 
     const auditMessage =
       auditStatus === 'ready'
-        ? 'El torneo ya sostiene continuidad visible entre inscripciones, roster, partidos y standings.'
+        ? 'El backend confirma una lectura operativa consistente para este torneo.'
         : auditStatus === 'blocked'
-          ? 'La continuidad competitiva esta interrumpida y conviene corregir la base antes de seguir escalando operacion.'
+          ? 'El backend reporta alertas de integridad. Conviene corregir la base antes de escalar la operacion.'
           : summary.reportingSegment === 'sandbox'
-            ? 'Este torneo hoy funciona mas como ruido de QA o borrador que como referencia ejecutiva principal.'
-            : 'El torneo ya avanzo, pero todavia necesita uno o mas cierres para consolidar su trazabilidad.';
+            ? 'Este torneo queda fuera del foco ejecutivo principal por su categoria operativa.'
+            : 'El torneo aun esta en adopcion progresiva y necesita uno o mas cierres para consolidar su lectura operativa.';
 
     if (summary.reportingSegment === 'sandbox') {
       return {
@@ -343,30 +358,18 @@ export class DashboardService {
         auditMessage,
         blockers,
         nextAction:
-          'Conviene separar este torneo del radar ejecutivo principal y decidir si se depura, se mantiene como QA o se transforma en operacion real.'
+          'Conviene mantener este torneo fuera del radar ejecutivo principal o recategorizarlo si ya paso a operacion real.'
       };
     }
 
-    if (summary.playedMatchCount > 0 && summary.activeRosterCount === 0 && summary.standingsCount === 0) {
+    if (!summary.integrityHealthy) {
       return {
         health: 'attention',
         readinessScore,
         auditStatus,
         auditMessage,
         blockers,
-        nextAction: 'Ya hay resultados cargados, pero faltan rosters activos y tabla visible. Conviene auditar la trazabilidad competitiva de punta a punta.'
-      };
-    }
-
-    if (summary.playedMatchCount > 0 && summary.activeRosterCount === 0) {
-      return {
-        health: 'attention',
-        readinessScore,
-        auditStatus,
-        auditMessage,
-        blockers,
-        nextAction:
-          'Ya hay partidos jugados, pero no hay rosters activos asociados. Conviene revisar la consistencia operativa entre inscripciones, rosters y fixture.'
+        nextAction: this.nextActionFromIntegrityAlert(this.highestPriorityIntegrityAlert(summary.integrityAlertCodes), summary)
       };
     }
 
@@ -381,14 +384,14 @@ export class DashboardService {
       };
     }
 
-    if (summary.approvedRegistrationCount > 0 && summary.activeRosterCount === 0) {
+    if (summary.approvedRegistrationCount > 0 && summary.registrationsWithActiveRosterCount === 0) {
       return {
         health: 'attention',
         readinessScore,
         auditStatus,
         auditMessage,
         blockers,
-        nextAction: 'Ya hay equipos aprobados, pero falta poblar rosters activos para habilitar la competencia.'
+        nextAction: 'Ya hay equipos aprobados, pero falta soporte de roster activo para habilitar una lectura operativa confiable.'
       };
     }
 
@@ -403,17 +406,6 @@ export class DashboardService {
       };
     }
 
-    if (summary.playedMatchCount > 0 && summary.standingsCount === 0) {
-      return {
-        health: 'attention',
-        readinessScore,
-        auditStatus,
-        auditMessage,
-        blockers,
-        nextAction: 'Ya hay resultados cargados, pero todavia no se refleja tabla de posiciones para este torneo.'
-      };
-    }
-
     if (summary.status === 'IN_PROGRESS' && summary.playedMatchCount === 0) {
       return {
         health: 'warning',
@@ -421,7 +413,7 @@ export class DashboardService {
         auditStatus,
         auditMessage,
         blockers,
-        nextAction: 'El torneo esta en curso, pero aun no registra partidos jugados.'
+        nextAction: 'El torneo esta en curso, pero aun no registra partidos cerrados.'
       };
     }
 
@@ -437,16 +429,22 @@ export class DashboardService {
 
   private resolveReportingSegment(input: {
     tournament: Tournament;
+    operationalCategory: TournamentOperationalCategory;
+    executiveReportingEligible: boolean;
     approvedRegistrationCount: number;
-    activeRosterCount: number;
-    matchCount: number;
+    playedMatchCount: number;
     standingsCount: number;
   }): DashboardReportingSegment {
-    const { tournament, approvedRegistrationCount, activeRosterCount, matchCount, standingsCount } = input;
-    const hasOperationalActivity = approvedRegistrationCount > 0 || activeRosterCount > 0 || matchCount > 0 || standingsCount > 0;
+    const { tournament, operationalCategory, executiveReportingEligible, approvedRegistrationCount, playedMatchCount, standingsCount } =
+      input;
+    const hasOperationalActivity = approvedRegistrationCount > 0 || playedMatchCount > 0 || standingsCount > 0;
 
-    if (!hasOperationalActivity && (tournament.status === 'DRAFT' || this.hasQaSignal(tournament))) {
+    if (operationalCategory !== 'PRODUCTION' || !executiveReportingEligible) {
       return 'sandbox';
+    }
+
+    if (!hasOperationalActivity && tournament.status === 'DRAFT') {
+      return 'setup';
     }
 
     if (!hasOperationalActivity) {
@@ -459,6 +457,58 @@ export class DashboardService {
   private hasQaSignal(tournament: Tournament): boolean {
     const normalized = `${tournament.name} ${tournament.slug} ${tournament.description ?? ''}`.toLowerCase();
     return ['qa', 'draft', 'postman', 'test', 'demo', 'sandbox'].some((token) => normalized.includes(token));
+  }
+
+  private integrityAlertLabel(
+    code: TournamentIntegrityAlertCode,
+    summary: Pick<DashboardTournamentSummary, 'rosterGapCount'>
+  ): string {
+    const labels: Record<TournamentIntegrityAlertCode, string> = {
+      APPROVED_TEAMS_MISSING_ACTIVE_ROSTER_SUPPORT: `${summary.rosterGapCount} inscripciones aprobadas sin soporte de roster activo`,
+      CLOSED_MATCHES_WITHOUT_FULL_ACTIVE_ROSTER_SUPPORT: 'Partidos cerrados sin soporte completo de roster activo',
+      CLOSED_MATCHES_WITHOUT_STANDINGS: 'Resultados cerrados sin standings visibles',
+      STANDINGS_WITHOUT_CLOSED_MATCHES: 'Standings visibles sin partidos cerrados',
+      CLOSED_MATCHES_WITHOUT_APPROVED_TEAMS: 'Partidos cerrados sin equipos aprobados'
+    };
+
+    return labels[code];
+  }
+
+  private highestPriorityIntegrityAlert(
+    codes: TournamentIntegrityAlertCode[]
+  ): TournamentIntegrityAlertCode | null {
+    const priorities: TournamentIntegrityAlertCode[] = [
+      'CLOSED_MATCHES_WITHOUT_APPROVED_TEAMS',
+      'CLOSED_MATCHES_WITHOUT_FULL_ACTIVE_ROSTER_SUPPORT',
+      'CLOSED_MATCHES_WITHOUT_STANDINGS',
+      'APPROVED_TEAMS_MISSING_ACTIVE_ROSTER_SUPPORT',
+      'STANDINGS_WITHOUT_CLOSED_MATCHES'
+    ];
+
+    return priorities.find((code) => codes.includes(code)) ?? null;
+  }
+
+  private nextActionFromIntegrityAlert(
+    code: TournamentIntegrityAlertCode | null,
+    summary: Pick<
+      DashboardTournamentSummary,
+      'rosterGapCount'
+    >
+  ): string {
+    switch (code) {
+      case 'APPROVED_TEAMS_MISSING_ACTIVE_ROSTER_SUPPORT':
+        return `${summary.rosterGapCount} inscripciones aprobadas aun no tienen soporte de roster activo. Conviene corregir esa base antes de confiar en el fixture.`;
+      case 'CLOSED_MATCHES_WITHOUT_FULL_ACTIVE_ROSTER_SUPPORT':
+        return 'Ya existen partidos cerrados sin soporte completo de roster activo. Conviene auditar la trazabilidad competitiva de punta a punta.';
+      case 'CLOSED_MATCHES_WITHOUT_STANDINGS':
+        return 'Ya existen resultados cerrados, pero la tabla aun no refleja esa operacion. Conviene revisar standings para este torneo.';
+      case 'STANDINGS_WITHOUT_CLOSED_MATCHES':
+        return 'La tabla visible no tiene respaldo suficiente en partidos cerrados. Conviene revisar la consistencia operativa del torneo.';
+      case 'CLOSED_MATCHES_WITHOUT_APPROVED_TEAMS':
+        return 'Se detecto competencia cerrada sin base aprobada suficiente. Conviene revisar inscripciones y resultados antes de continuar.';
+      default:
+        return 'Conviene revisar el detalle del torneo y cerrar las brechas operativas visibles antes de seguir escalando.';
+    }
   }
 
   private toAlert(summary: DashboardTournamentSummary): DashboardAlert {
@@ -488,7 +538,10 @@ export class DashboardService {
       return 'registrations';
     }
 
-    if (summary.approvedRegistrationCount > 0 && summary.rosterGapCount > 0) {
+    if (
+      summary.integrityAlertCodes.includes('APPROVED_TEAMS_MISSING_ACTIVE_ROSTER_SUPPORT') ||
+      (summary.approvedRegistrationCount > 0 && summary.rosterGapCount > 0)
+    ) {
       return 'rosters';
     }
 
@@ -496,7 +549,7 @@ export class DashboardService {
       return 'matches';
     }
 
-    if (summary.playedMatchCount > 0 && summary.standingsCount === 0) {
+    if (summary.integrityAlertCodes.includes('CLOSED_MATCHES_WITHOUT_STANDINGS')) {
       return 'standings';
     }
 
@@ -531,12 +584,6 @@ export class DashboardService {
           label: 'Abrir standings',
           path: '/standings',
           queryParams: { tournamentId: summary.tournamentId }
-        };
-      case 'sandbox':
-        return {
-          label: 'Abrir detalle',
-          path: `/tournaments/${summary.tournamentId}`,
-          queryParams: {}
         };
       default:
         return {

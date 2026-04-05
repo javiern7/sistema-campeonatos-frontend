@@ -28,7 +28,7 @@ import { TournamentStage } from '../tournament-stages/tournament-stage.models';
 import { TournamentStagesService } from '../tournament-stages/tournament-stages.service';
 import { TournamentTeam } from '../tournament-teams/tournament-team.models';
 import { TournamentTeamsService } from '../tournament-teams/tournament-teams.service';
-import { Tournament } from '../tournaments/tournament.models';
+import { Tournament, TournamentOperationalSummary } from '../tournaments/tournament.models';
 import { TournamentsService } from '../tournaments/tournaments.service';
 import { Standing, StandingPage, StandingRecalculationResponse } from './standings.models';
 import { StandingsService } from './standings.service';
@@ -136,7 +136,7 @@ const parseQueryNumber = (value: string | null): number | '' => {
 
         @if (standingsAuditMessage()) {
           <div class="context-banner">
-            <strong>Auditoria Sprint 7</strong>
+            <strong>Lectura operativa backend</strong>
             <span class="muted">{{ standingsAuditMessage() }}</span>
           </div>
         }
@@ -397,6 +397,7 @@ export class StandingsPageComponent {
   protected readonly teams = signal<Team[]>([]);
   protected readonly allRosters = signal<RosterEntry[]>([]);
   protected readonly allMatches = signal<MatchGame[]>([]);
+  protected readonly operationalSummaries = signal<TournamentOperationalSummary[]>([]);
   protected readonly displayedColumns = ['rank', 'team', 'record', 'scoring', 'points', 'updatedAt'];
   protected readonly pageIndex = signal(0);
   protected readonly pageSize = signal(20);
@@ -507,6 +508,28 @@ export class StandingsPageComponent {
       return '';
     }
 
+    const operationalSummary = this.operationalSummaries().find((item) => item.tournamentId === tournamentId);
+    if (operationalSummary) {
+      if (!operationalSummary.executiveReportingEligible) {
+        return 'Este torneo no pertenece al foco ejecutivo principal segun la categoria operativa definida en backend.';
+      }
+
+      if (operationalSummary.integrityAlerts.includes('CLOSED_MATCHES_WITHOUT_STANDINGS')) {
+        return 'Backend reporta resultados cerrados sin standings visibles. Conviene revisar el contexto filtrado o recalcular la tabla.';
+      }
+
+      if (
+        operationalSummary.integrityAlerts.includes('CLOSED_MATCHES_WITHOUT_FULL_ACTIVE_ROSTER_SUPPORT') ||
+        operationalSummary.integrityAlerts.includes('APPROVED_TEAMS_MISSING_ACTIVE_ROSTER_SUPPORT')
+      ) {
+        return 'Backend reporta brechas de soporte roster para este torneo. Conviene corregir la base antes de confiar plenamente en la tabla.';
+      }
+
+      if (operationalSummary.integrityAlerts.includes('CLOSED_MATCHES_WITHOUT_APPROVED_TEAMS')) {
+        return 'Backend detecta partidos cerrados sin base aprobada suficiente. Conviene auditar inscripciones y resultados.';
+      }
+    }
+
     const registrations = this.tournamentTeams().filter((item) => item.tournamentId === tournamentId);
     const approvedRegistrations = registrations.filter((item) => item.registrationStatus === 'APPROVED');
     const activeRosterIds = new Set(
@@ -605,6 +628,9 @@ export class StandingsPageComponent {
     this.catalogLoader
       .loadAll((page, size) => this.matchesService.list({ page, size }))
       .subscribe({ next: (items) => this.allMatches.set(items) });
+    this.catalogLoader
+      .loadAll((page, size) => this.tournamentsService.listOperationalSummaries({ page, size }))
+      .subscribe({ next: (items) => this.operationalSummaries.set(items) });
 
     this.filtersForm.controls.tournamentId.valueChanges.pipe(takeUntilDestroyed()).subscribe((value) => {
       const tournamentId = Number(value);

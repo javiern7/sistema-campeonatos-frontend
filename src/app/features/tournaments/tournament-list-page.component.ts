@@ -16,7 +16,7 @@ import { LoadingStateComponent } from '../../shared/loading-state/loading-state.
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
 import { Sport } from '../sports/sport.models';
 import { SportsService } from '../sports/sports.service';
-import { Tournament, TournamentPage, TournamentStatus } from './tournament.models';
+import { Tournament, TournamentOperationalCategory, TournamentPage, TournamentStatus } from './tournament.models';
 import { TournamentsService } from './tournaments.service';
 
 type SummaryCard = {
@@ -279,7 +279,11 @@ export class TournamentListPageComponent {
   }
 
   protected segmentLabel(tournament: Tournament): string {
-    return this.isSandbox(tournament) ? 'QA / borrador' : 'Flujo principal';
+    if (!tournament.executiveReportingEligible) {
+      return this.operationalCategoryLabel(tournament.operationalCategory);
+    }
+
+    return 'Flujo principal';
   }
 
   protected segmentClass(tournament: Tournament): string {
@@ -366,7 +370,18 @@ export class TournamentListPageComponent {
   }
 
   private isSandbox(tournament: Tournament): boolean {
-    const normalized = `${tournament.name} ${tournament.slug} ${tournament.description ?? ''}`.toLowerCase();
-    return tournament.status === 'DRAFT' || ['qa', 'draft', 'postman', 'test', 'demo', 'sandbox'].some((token) => normalized.includes(token));
+    return !tournament.executiveReportingEligible || tournament.operationalCategory !== 'PRODUCTION';
+  }
+
+  private operationalCategoryLabel(category: TournamentOperationalCategory): string {
+    const labels: Record<TournamentOperationalCategory, string> = {
+      PRODUCTION: 'Flujo principal',
+      QA: 'QA',
+      DEMO: 'Demo',
+      SANDBOX: 'Sandbox',
+      ARCHIVED: 'Archivado'
+    };
+
+    return labels[category];
   }
 }

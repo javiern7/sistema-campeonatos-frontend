@@ -1,4 +1,8 @@
-import { TournamentStatus } from '../tournaments/tournament.models';
+import {
+  TournamentIntegrityAlertCode,
+  TournamentOperationalCategory,
+  TournamentStatus
+} from '../tournaments/tournament.models';
 
 export type DashboardHealth = 'healthy' | 'warning' | 'attention';
 export type DashboardReportingSegment = 'operational' | 'setup' | 'sandbox';
@@ -45,6 +49,10 @@ export interface DashboardTournamentSummary {
   tournamentName: string;
   sportName: string;
   status: TournamentStatus;
+  operationalCategory: TournamentOperationalCategory;
+  executiveReportingEligible: boolean;
+  integrityHealthy: boolean;
+  integrityAlertCodes: TournamentIntegrityAlertCode[];
   reportingSegment: DashboardReportingSegment;
   qaSignal: boolean;
   stageCount: number;
