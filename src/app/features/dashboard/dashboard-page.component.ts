@@ -2,12 +2,15 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
-import { finalize } from 'rxjs';
+import { catchError, finalize, forkJoin, of } from 'rxjs';
 
+import { AuthorizationService } from '../../core/auth/authorization.service';
 import { ErrorMapper } from '../../core/error/error.mapper';
 import { NotificationService } from '../../core/error/notification.service';
 import { LoadingStateComponent } from '../../shared/loading-state/loading-state.component';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
+import { OperationalActivitySummary, OperationalAuditEvent, OperationalAuditResult } from '../operations/operations.models';
+import { OperationsService } from '../operations/operations.service';
 import { TournamentStatus } from '../tournaments/tournament.models';
 import {
   DashboardAlert,
@@ -53,6 +56,118 @@ type DashboardCard = {
             </article>
           }
         </div>
+
+        @if (operationsVisible()) {
+          <section class="card page-card app-page">
+            <div class="section-heading">
+              <div>
+                <h2>Actividad operativa reciente</h2>
+                <p class="muted">Lectura breve de auditoria y observabilidad operativa sobre contrato backend real.</p>
+              </div>
+              <span class="section-badge">Permiso operations:audit:read</span>
+            </div>
+
+            @if (operationsLoading()) {
+              <app-loading-state label="Cargando actividad operativa..." />
+            } @else {
+              <div class="operations-grid">
+                <article class="operations-panel card">
+                  <div class="panel-heading">
+                    <h3>Resumen de actividad</h3>
+                    <span class="muted">Backend / activity-summary</span>
+                  </div>
+
+                  @if (activitySummaryError()) {
+                    <div class="empty-state compact">
+                      <strong>No se pudo cargar el resumen operativo.</strong>
+                      <p class="muted">{{ activitySummaryError() }}</p>
+                    </div>
+                  } @else {
+                    <div class="summary-grid">
+                      @for (card of auditCards(); track card.label) {
+                        <mat-card class="summary-card card" [class.accent]="card.accent">
+                          <span class="summary-label">{{ card.label }}</span>
+                          <span class="summary-value">{{ card.value }}</span>
+                          <span class="summary-meta">{{ card.meta }}</span>
+                        </mat-card>
+                      }
+                    </div>
+                  }
+                </article>
+
+                <article class="operations-panel card">
+                  <div class="panel-heading">
+                    <h3>Ultimos eventos</h3>
+                    <span class="muted">Backend / audit-events/recent</span>
+                  </div>
+
+                  @if (recentAuditEventsError()) {
+                    <div class="empty-state compact">
+                      <strong>No se pudo cargar la actividad operativa reciente.</strong>
+                      <p class="muted">{{ recentAuditEventsError() }}</p>
+                    </div>
+                  } @else if (recentAuditEvents().length === 0) {
+                    <div class="empty-state compact">
+                      <strong>No hay actividad operativa reciente.</strong>
+                      <p class="muted">Backend no reporta eventos recientes dentro de la ventana actual.</p>
+                    </div>
+                  } @else {
+                    <div class="event-list">
+                      @for (event of recentAuditEvents(); track event.id) {
+                        <article class="event-item">
+                          <div class="alert-header">
+                            <div class="stack-sm">
+                              <strong>{{ actionLabel(event.action) }}</strong>
+                              <span class="muted">
+                                {{ event.actorUsername || 'Sistema' }} / {{ entityLabel(event) }} / {{ formatOccurredAt(event.occurredAt) }}
+                              </span>
+                            </div>
+                            <span class="health-pill" [class]="resultClass(event.result)">{{ resultLabel(event.result) }}</span>
+                          </div>
+                          <p class="muted">{{ eventDetail(event) }}</p>
+                          @if (contextLine(event)) {
+                            <span class="event-context">{{ contextLine(event) }}</span>
+                          }
+                        </article>
+                      }
+                    </div>
+                  }
+                </article>
+
+                <article class="operations-panel card">
+                  <div class="panel-heading">
+                    <h3>Acciones mas frecuentes</h3>
+                    <span class="muted">Top actions / activity-summary</span>
+                  </div>
+
+                  @if (activitySummaryError()) {
+                    <div class="empty-state compact">
+                      <strong>No se pudo cargar el ranking de acciones.</strong>
+                      <p class="muted">{{ activitySummaryError() }}</p>
+                    </div>
+                  } @else if (topActions().length === 0) {
+                    <div class="empty-state compact">
+                      <strong>No hay acciones frecuentes para resumir.</strong>
+                      <p class="muted">El summary operativo actual no registra volumen suficiente para ranking.</p>
+                    </div>
+                  } @else {
+                    <div class="top-actions">
+                      @for (item of topActions(); track item.action) {
+                        <article class="top-action-item">
+                          <div class="stack-sm">
+                            <strong>{{ actionLabel(item.action) }}</strong>
+                            <span class="muted">{{ item.action }}</span>
+                          </div>
+                          <span class="top-action-total">{{ item.total }}</span>
+                        </article>
+                      }
+                    </div>
+                  }
+                </article>
+              </div>
+            }
+          </section>
+        }
 
         @if (priorityAlerts().length > 0) {
           <section class="card page-card app-page">
@@ -364,6 +479,7 @@ type DashboardCard = {
 
       .alert-grid,
       .executive-grid,
+      .operations-grid,
       .sport-grid,
       .tournament-grid {
         display: grid;
@@ -375,8 +491,13 @@ type DashboardCard = {
         grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
       }
 
+      .operations-grid {
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      }
+
       .alert-card,
       .executive-card,
+      .operations-panel,
       .sport-card,
       .tournament-card {
         display: grid;
@@ -409,6 +530,18 @@ type DashboardCard = {
         display: flex;
         gap: 0.5rem;
         justify-content: flex-end;
+      }
+
+      .panel-heading {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+      }
+
+      .panel-heading h3 {
+        margin: 0;
+        font-size: 1rem;
       }
 
       .alert-type {
@@ -529,6 +662,48 @@ type DashboardCard = {
         font-weight: 600;
       }
 
+      .event-list,
+      .top-actions {
+        display: grid;
+        gap: 0.75rem;
+      }
+
+      .event-item,
+      .top-action-item {
+        display: grid;
+        gap: 0.45rem;
+        padding: 0.85rem;
+        border-radius: 0.9rem;
+        background: var(--surface-alt);
+      }
+
+      .top-action-item {
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: center;
+      }
+
+      .event-context,
+      .top-action-total {
+        color: var(--text-soft);
+        font-size: 0.8rem;
+        font-weight: 600;
+      }
+
+      .top-action-total {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 2.5rem;
+        padding: 0.35rem 0.65rem;
+        border-radius: 999px;
+        background: rgba(10, 110, 90, 0.12);
+        color: var(--primary);
+      }
+
+      .empty-state.compact {
+        min-height: auto;
+      }
+
       @media (max-width: 720px) {
         .priority-item {
           grid-template-columns: 1fr;
@@ -545,11 +720,19 @@ type DashboardCard = {
 })
 export class DashboardPageComponent {
   private readonly dashboardService = inject(DashboardService);
+  private readonly operationsService = inject(OperationsService);
+  private readonly authorization = inject(AuthorizationService);
   private readonly notifications = inject(NotificationService);
   private readonly errorMapper = inject(ErrorMapper);
 
   protected readonly loading = signal(true);
+  protected readonly operationsLoading = signal(false);
+  protected readonly activitySummaryError = signal<string | null>(null);
+  protected readonly recentAuditEventsError = signal<string | null>(null);
   protected readonly summary = signal<DashboardSummary | null>(null);
+  protected readonly activitySummary = signal<OperationalActivitySummary | null>(null);
+  protected readonly recentAuditEvents = signal<OperationalAuditEvent[]>([]);
+  protected readonly operationsVisible = computed(() => this.authorization.canReadOperationalAudit());
   protected readonly overviewCards = computed<DashboardCard[]>(() => {
     const summary = this.summary();
 
@@ -666,6 +849,40 @@ export class DashboardPageComponent {
     ];
   });
   protected readonly sportSummaries = computed<DashboardSportSummary[]>(() => this.summary()?.sportSummaries ?? []);
+  protected readonly auditCards = computed<DashboardCard[]>(() => {
+    const summary = this.activitySummary();
+
+    return [
+      {
+        label: 'Eventos',
+        value: summary?.totalEvents ?? 0,
+        meta: 'Actividad operativa registrada'
+      },
+      {
+        label: 'Exitosos',
+        value: summary?.successEvents ?? 0,
+        meta: 'Operaciones completadas',
+        accent: (summary?.failedEvents ?? 0) === 0 && (summary?.deniedEvents ?? 0) === 0 && (summary?.totalEvents ?? 0) > 0
+      },
+      {
+        label: 'Denegados',
+        value: summary?.deniedEvents ?? 0,
+        meta: 'Intentos bloqueados por permiso'
+      },
+      {
+        label: 'Fallidos',
+        value: summary?.failedEvents ?? 0,
+        meta: 'Operaciones con error visible',
+        accent: (summary?.failedEvents ?? 0) > 0
+      },
+      {
+        label: 'Actores',
+        value: summary?.uniqueActors ?? 0,
+        meta: 'Usuarios con actividad reciente'
+      }
+    ];
+  });
+  protected readonly topActions = computed(() => this.activitySummary()?.topActions ?? []);
   protected readonly tournamentSummaries = computed<DashboardTournamentSummary[]>(
     () => this.summary()?.tournamentSummaries ?? []
   );
@@ -707,6 +924,36 @@ export class DashboardPageComponent {
       .subscribe({
         next: (summary) => this.summary.set(summary),
         error: (error: unknown) => this.notifications.error(this.errorMapper.map(error).message)
+      });
+
+    if (this.operationsVisible()) {
+      this.loadOperationalReadout();
+    }
+  }
+
+  private loadOperationalReadout(): void {
+    this.operationsLoading.set(true);
+    this.activitySummaryError.set(null);
+    this.recentAuditEventsError.set(null);
+
+    forkJoin({
+      activitySummary: this.operationsService.getActivitySummary().pipe(
+        catchError((error: unknown) => {
+          this.activitySummaryError.set(this.errorMapper.map(error).message);
+          return of(null);
+        })
+      ),
+      recentAuditEvents: this.operationsService.getRecentAuditEvents(8).pipe(
+        catchError((error: unknown) => {
+          this.recentAuditEventsError.set(this.errorMapper.map(error).message);
+          return of([]);
+        })
+      )
+    })
+      .pipe(finalize(() => this.operationsLoading.set(false)))
+      .subscribe(({ activitySummary, recentAuditEvents }) => {
+        this.activitySummary.set(activitySummary);
+        this.recentAuditEvents.set(recentAuditEvents);
       });
   }
 
@@ -775,5 +1022,91 @@ export class DashboardPageComponent {
     };
 
     return labels[type];
+  }
+
+  protected resultLabel(result: OperationalAuditResult): string {
+    const labels: Record<OperationalAuditResult, string> = {
+      SUCCESS: 'Exitoso',
+      DENIED: 'Denegado',
+      FAILED: 'Fallido'
+    };
+
+    return labels[result];
+  }
+
+  protected resultClass(result: OperationalAuditResult): string {
+    const classes: Record<OperationalAuditResult, string> = {
+      SUCCESS: 'healthy',
+      DENIED: 'warning',
+      FAILED: 'attention'
+    };
+
+    return classes[result];
+  }
+
+  protected actionLabel(action: string): string {
+    const labels: Record<string, string> = {
+      AUTH_LOGIN_SUCCESS: 'Login exitoso',
+      AUTH_LOGIN_FAILED: 'Login fallido',
+      AUTH_REFRESH_SUCCESS: 'Refresh exitoso',
+      AUTH_LOGOUT_SUCCESS: 'Logout exitoso',
+      SECURITY_ACCESS_DENIED: 'Acceso denegado',
+      OPERATIONAL_ACTIVITY_READ: 'Lectura de actividad operativa',
+      TOURNAMENT_OPERATIONAL_SUMMARY_READ: 'Lectura de resumen operativo'
+    };
+
+    return labels[action] ?? action;
+  }
+
+  protected entityLabel(event: OperationalAuditEvent): string {
+    const entityId = event.entityId ? ` #${event.entityId}` : '';
+    return `${event.entityType}${entityId}`;
+  }
+
+  protected eventDetail(event: OperationalAuditEvent): string {
+    if (event.result === 'DENIED') {
+      return 'El backend registro un acceso o accion bloqueada por permisos o politica operativa.';
+    }
+
+    if (event.result === 'FAILED') {
+      return 'El backend registro una operacion que no pudo completarse correctamente.';
+    }
+
+    return 'El backend confirmo una operacion reciente dentro de la trazabilidad operativa visible.';
+  }
+
+  protected contextLine(event: OperationalAuditEvent): string {
+    const requestPath = this.readContextValue(event.context, 'requestPath');
+    const httpMethod = this.readContextValue(event.context, 'httpMethod');
+    const reasonCode = this.readContextValue(event.context, 'reasonCode');
+
+    const parts = [httpMethod, requestPath, reasonCode].filter((item): item is string => !!item);
+    return parts.join(' / ');
+  }
+
+  protected formatOccurredAt(value: string): string {
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) {
+      return 'Fecha no disponible';
+    }
+
+    return new Intl.DateTimeFormat('es-PE', {
+      dateStyle: 'short',
+      timeStyle: 'short'
+    }).format(parsed);
+  }
+
+  private readContextValue(context: Record<string, unknown>, key: string): string | null {
+    const value = context[key];
+
+    if (typeof value === 'string' && value.trim()) {
+      return value;
+    }
+
+    if (typeof value === 'number' || typeof value === 'boolean') {
+      return String(value);
+    }
+
+    return null;
   }
 }

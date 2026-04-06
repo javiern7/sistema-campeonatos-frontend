@@ -46,6 +46,10 @@ export class AuthorizationService {
     return this.hasPermission('standings:recalculate');
   }
 
+  canReadOperationalAudit(): boolean {
+    return this.hasPermission('operations:audit:read');
+  }
+
   hasPermission(permission: AppPermission): boolean {
     return this.authStore.permissions().includes(permission);
   }
