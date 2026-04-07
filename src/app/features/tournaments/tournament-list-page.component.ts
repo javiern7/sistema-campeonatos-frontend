@@ -200,7 +200,7 @@ export class TournamentListPageComponent {
   protected readonly canTransitionStatus = computed(() => this.authorization.canTransitionTournamentStatus());
   protected readonly displayedColumns = computed(() => {
     const columns = ['id', 'name', 'sport', 'segment', 'status'];
-    if (this.canManage() || this.canDelete()) {
+    if (this.canManage() || this.canDelete() || this.canTransitionStatus()) {
       columns.push('actions');
     }
     return columns;
