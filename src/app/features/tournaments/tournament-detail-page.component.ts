@@ -123,6 +123,12 @@ const qp = (params: Record<string, string | number>): Record<string, string | nu
             <div class="hero-actions">
               <a
                 mat-stroked-button
+                [routerLink]="['/tournaments', tournament()!.id, 'competition-advanced']"
+              >
+                Competencia avanzada
+              </a>
+              <a
+                mat-stroked-button
                 routerLink="/tournament-teams"
                 [queryParams]="{ tournamentId: tournament()!.id }"
               >
@@ -905,6 +911,13 @@ export class TournamentDetailPageComponent {
     }
 
     const actions: QuickAction[] = [
+      {
+        label: 'Competencia avanzada',
+        description: 'Leer llaves, calendario, generacion inicial y resultados del bloque competitivo.',
+        cta: 'Abrir bloque',
+        path: `/tournaments/${tournament.id}/competition-advanced`,
+        queryParams: qp({})
+      },
       {
         label: 'Inscripciones',
         description: 'Revisar y aprobar equipos vinculados al torneo.',

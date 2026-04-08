@@ -121,6 +121,16 @@ export const appRoutes: Routes = [
           )
       },
       {
+        path: 'tournaments/:id/competition-advanced',
+        title: 'Competition Advanced',
+        canActivate: [authorizationGuard],
+        data: { resource: 'tournaments', action: 'read' },
+        loadComponent: () =>
+          import('./features/competition-advanced/competition-advanced-page.component').then(
+            (m) => m.CompetitionAdvancedPageComponent
+          )
+      },
+      {
         path: 'tournament-teams',
         title: 'Tournament Teams',
         canActivate: [authorizationGuard],
