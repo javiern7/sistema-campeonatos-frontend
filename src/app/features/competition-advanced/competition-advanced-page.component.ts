@@ -135,7 +135,8 @@ type GenerationAction = 'progress' | 'generate';
           <div class="actions-row">
             <button mat-stroked-button type="button" (click)="resetFilters()">Limpiar</button>
             <button mat-flat-button color="primary" type="button" (click)="load()">Actualizar lectura</button>
-            @if (canGenerateFlow()) {
+            @if (canProgressToKnockout() || canGenerateKnockoutBracket()) {
+              @if (canProgressToKnockout()) {
               <button
                 mat-stroked-button
                 type="button"
@@ -144,6 +145,8 @@ type GenerationAction = 'progress' | 'generate';
               >
                 {{ runningAction() === 'progress' ? 'Progresando...' : 'Progress to knockout' }}
               </button>
+              }
+              @if (canGenerateKnockoutBracket()) {
               <button
                 mat-flat-button
                 color="accent"
@@ -153,6 +156,7 @@ type GenerationAction = 'progress' | 'generate';
               >
                 {{ runningAction() === 'generate' ? 'Generando...' : 'Generar llave inicial' }}
               </button>
+              }
             }
           </div>
 
@@ -445,7 +449,10 @@ export class CompetitionAdvancedPageComponent {
       }
     ];
   });
-  protected readonly canGenerateFlow = computed(() => this.authorization.canManage('matches'));
+  protected readonly canProgressToKnockout = computed(() => this.authorization.canProgressTournamentToKnockout());
+  protected readonly canGenerateKnockoutBracket = computed(() =>
+    this.authorization.canGenerateTournamentKnockoutBracket()
+  );
   protected readonly filtersForm = this.fb.nonNullable.group({
     stageId: [0 as number | ''],
     groupId: [0 as number | ''],

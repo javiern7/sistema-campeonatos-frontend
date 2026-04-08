@@ -54,6 +54,14 @@ export class AuthorizationService {
     return this.hasPermission('permissions:govern:manage');
   }
 
+  canProgressTournamentToKnockout(): boolean {
+    return this.hasPermission('tournaments:progress-to-knockout');
+  }
+
+  canGenerateTournamentKnockoutBracket(): boolean {
+    return this.hasPermission('tournaments:generate-knockout-bracket');
+  }
+
   hasPermission(permission: AppPermission): boolean {
     return this.authStore.permissions().includes(permission);
   }
