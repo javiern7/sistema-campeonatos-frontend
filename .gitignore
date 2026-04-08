@@ -68,3 +68,22 @@ test-results/
 # Angular Universal (si luego usas SSR)
 ##################################
 server/
+
+##################################
+# Codex, Playwright
+##################################
+# Codex / Browser artifacts
+.codex-artifacts/
+*.journal
+*Database*
+*wal
+*.db
+*.sqlite
+
+# Playwright / testing
+playwright-report/
+test-results/
+
+# Node
+node_modules/
+dist/
