@@ -60,6 +60,9 @@ temp/
 # Tests / Coverage
 ##################################
 coverage/
+playwright-report/
+test-results/
+.playwright/
 
 ##################################
 # Angular Universal (si luego usas SSR)
