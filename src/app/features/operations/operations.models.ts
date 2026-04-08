@@ -27,3 +27,29 @@ export interface OperationalActivitySummary {
   uniqueActors: number;
   topActions: OperationalActionCount[];
 }
+
+export interface ManagedPermission {
+  code: string;
+  name: string;
+  description: string;
+}
+
+export interface ManagedRolePermission {
+  roleCode: string;
+  roleName: string;
+  mutable: boolean;
+  permissionCodes: string[];
+}
+
+export interface PermissionGovernanceSummary {
+  generatedAt: string;
+  writeEnabled: boolean;
+  mutableRoles: string[];
+  availablePermissions: ManagedPermission[];
+  roles: ManagedRolePermission[];
+}
+
+export interface RolePermissionUpdateRequest {
+  permissionCodes: string[];
+  reason: string;
+}

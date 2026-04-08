@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -9,7 +10,14 @@ import { ErrorMapper } from '../../core/error/error.mapper';
 import { NotificationService } from '../../core/error/notification.service';
 import { LoadingStateComponent } from '../../shared/loading-state/loading-state.component';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
-import { OperationalActivitySummary, OperationalAuditEvent, OperationalAuditResult } from '../operations/operations.models';
+import {
+  ManagedPermission,
+  ManagedRolePermission,
+  OperationalActivitySummary,
+  OperationalAuditEvent,
+  OperationalAuditResult,
+  PermissionGovernanceSummary
+} from '../operations/operations.models';
 import { OperationsService } from '../operations/operations.service';
 import { TournamentStatus } from '../tournaments/tournament.models';
 import {
@@ -31,7 +39,7 @@ type DashboardCard = {
 @Component({
   selector: 'app-dashboard-page',
   standalone: true,
-  imports: [RouterLink, MatButtonModule, MatCardModule, PageHeaderComponent, LoadingStateComponent],
+  imports: [FormsModule, RouterLink, MatButtonModule, MatCardModule, PageHeaderComponent, LoadingStateComponent],
   template: `
     <section class="app-page">
       <app-page-header
@@ -164,6 +172,167 @@ type DashboardCard = {
                     </div>
                   }
                 </article>
+              </div>
+
+              <div class="governance-shell">
+                <div class="section-heading">
+                  <div>
+                    <h2>Gobierno operativo de permisos</h2>
+                    <p class="muted">
+                      Adopcion minima del contrato backend real para lectura auditada y actualizacion controlada por rol.
+                    </p>
+                  </div>
+                  <span class="section-badge">
+                    {{ canManageGovernance() ? 'permissions:govern:manage' : 'Lectura auditada' }}
+                  </span>
+                </div>
+
+                @if (governanceError()) {
+                  <div class="empty-state compact">
+                    <strong>No se pudo cargar el resumen de gobierno operativo.</strong>
+                    <p class="muted">{{ governanceError() }}</p>
+                  </div>
+                } @else if (!governanceSummary()) {
+                  <div class="empty-state compact">
+                    <strong>No hay resumen de gobierno operativo disponible.</strong>
+                    <p class="muted">Backend no devolvio datos para el contrato de roles y permisos.</p>
+                  </div>
+                } @else {
+                  <div class="summary-grid">
+                    @for (card of governanceCards(); track card.label) {
+                      <mat-card class="summary-card card" [class.accent]="card.accent">
+                        <span class="summary-label">{{ card.label }}</span>
+                        <span class="summary-value">{{ card.value }}</span>
+                        <span class="summary-meta">{{ card.meta }}</span>
+                      </mat-card>
+                    }
+                  </div>
+
+                  <div class="governance-banner" [class.warning]="!governanceWriteEnabled()">
+                    <strong>{{ governanceWriteEnabled() ? 'Escritura habilitada en este ambiente' : 'Escritura deshabilitada en este ambiente' }}</strong>
+                    <span class="muted">
+                      Generado {{ formatOccurredAt(governanceSummary()!.generatedAt) }}.
+                      Roles mutables: {{ mutableRoleCodes().join(', ') || 'ninguno' }}.
+                    </span>
+                  </div>
+
+                  <div class="governance-grid">
+                    <article class="operations-panel card">
+                      <div class="panel-heading">
+                        <h3>Roles gobernables</h3>
+                        <span class="muted">{{ governanceRoles().length }} roles</span>
+                      </div>
+
+                      <div class="role-list">
+                        @for (role of governanceRoles(); track role.roleCode) {
+                          <article class="role-card" [class.editing]="editingRoleCode() === role.roleCode">
+                            <div class="alert-header">
+                              <div class="stack-sm">
+                                <strong>{{ role.roleName }}</strong>
+                                <span class="muted">{{ role.roleCode }}</span>
+                              </div>
+                              <span class="health-pill" [class]="role.mutable ? 'healthy' : 'warning'">
+                                {{ role.mutable ? 'Mutable' : 'Inmutable' }}
+                              </span>
+                            </div>
+
+                            <div class="permission-chip-list">
+                              @for (permissionCode of role.permissionCodes; track permissionCode) {
+                                <span class="permission-chip">{{ permissionCode }}</span>
+                              }
+                            </div>
+
+                            @if (canManageGovernance() && role.mutable) {
+                              <div class="card-actions">
+                                @if (editingRoleCode() === role.roleCode) {
+                                  <button mat-button type="button" (click)="cancelGovernanceEdit()">Cancelar</button>
+                                } @else {
+                                  <button mat-button type="button" (click)="startGovernanceEdit(role)">Editar permisos</button>
+                                }
+                              </div>
+                            }
+                          </article>
+                        }
+                      </div>
+                    </article>
+
+                    <article class="operations-panel card">
+                      <div class="panel-heading">
+                        <h3>Editor controlado</h3>
+                        <span class="muted">PUT /operations/permission-governance/roles/&lt;roleCode&gt;</span>
+                      </div>
+
+                      @if (!canManageGovernance()) {
+                        <div class="empty-state compact">
+                          <strong>La sesion actual no puede editar asignaciones.</strong>
+                          <p class="muted">El backend requiere el permiso permissions:govern:manage para actualizar permisos por rol.</p>
+                        </div>
+                      } @else if (!governanceWriteEnabled()) {
+                        <div class="empty-state compact">
+                          <strong>La escritura esta cerrada en este ambiente.</strong>
+                          <p class="muted">La UI refleja writeEnabled = false y no intenta abrir una consola operativa paralela.</p>
+                        </div>
+                      } @else if (!editingRole()) {
+                        <div class="empty-state compact">
+                          <strong>Seleccionar un rol mutable.</strong>
+                          <p class="muted">El editor queda acotado a los roles que backend habilito para esta etapa.</p>
+                        </div>
+                      } @else {
+                        <div class="editor-shell">
+                          <div class="stack-sm">
+                            <strong>{{ editingRole()!.roleName }}</strong>
+                            <span class="muted">{{ editingRole()!.roleCode }}</span>
+                          </div>
+
+                          <label class="reason-field">
+                            <span>Razon operativa</span>
+                            <textarea
+                              rows="3"
+                              [value]="governanceReason()"
+                              (input)="updateGovernanceReason($event)"
+                              placeholder="Ejemplo: ajustar alcance operativo del rol OPERATOR para ventana controlada"
+                            ></textarea>
+                          </label>
+
+                          <div class="permission-editor-list">
+                            @for (permission of availableGovernancePermissions(); track permission.code) {
+                              <label class="permission-option">
+                                <input
+                                  type="checkbox"
+                                  [checked]="isGovernancePermissionSelected(permission.code)"
+                                  (change)="toggleGovernancePermission(permission.code)"
+                                />
+                                <div class="stack-sm">
+                                  <strong>{{ permission.code }}</strong>
+                                  <span class="muted">{{ permission.name }}</span>
+                                  @if (permission.description) {
+                                    <span class="muted">{{ permission.description }}</span>
+                                  }
+                                </div>
+                              </label>
+                            }
+                          </div>
+
+                          @if (governanceSaveError()) {
+                            <p class="muted governance-error">{{ governanceSaveError() }}</p>
+                          }
+
+                          <div class="card-actions">
+                            <button mat-button type="button" (click)="cancelGovernanceEdit()">Cancelar</button>
+                            <button
+                              mat-button
+                              type="button"
+                              [disabled]="!canSubmitGovernanceEdit() || governanceSaving()"
+                              (click)="saveGovernanceEdit()"
+                            >
+                              {{ governanceSaving() ? 'Guardando...' : 'Guardar permisos' }}
+                            </button>
+                          </div>
+                        </div>
+                      }
+                    </article>
+                  </div>
+                }
               </div>
             }
           </section>
@@ -663,6 +832,10 @@ type DashboardCard = {
       }
 
       .event-list,
+      .governance-shell,
+      .permission-editor-list,
+      .permission-chip-list,
+      .role-list,
       .top-actions {
         display: grid;
         gap: 0.75rem;
@@ -700,6 +873,104 @@ type DashboardCard = {
         color: var(--primary);
       }
 
+      .governance-shell {
+        margin-top: 1.25rem;
+      }
+
+      .governance-grid {
+        display: grid;
+        gap: 1rem;
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      }
+
+      .governance-banner {
+        display: grid;
+        gap: 0.35rem;
+        margin: 1rem 0;
+        padding: 0.9rem 1rem;
+        border-radius: 1rem;
+        background: #ecfdf5;
+        color: #166534;
+      }
+
+      .governance-banner.warning {
+        background: #fef3c7;
+        color: #92400e;
+      }
+
+      .role-card {
+        display: grid;
+        gap: 0.85rem;
+        padding: 0.9rem;
+        border-radius: 0.9rem;
+        background: var(--surface-alt);
+      }
+
+      .role-card.editing {
+        outline: 2px solid rgba(10, 110, 90, 0.18);
+      }
+
+      .permission-chip-list {
+        grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      }
+
+      .permission-chip {
+        display: inline-flex;
+        align-items: center;
+        width: fit-content;
+        padding: 0.35rem 0.6rem;
+        border-radius: 999px;
+        background: rgba(10, 110, 90, 0.1);
+        color: var(--primary);
+        font-size: 0.78rem;
+        font-weight: 600;
+      }
+
+      .editor-shell {
+        display: grid;
+        gap: 1rem;
+      }
+
+      .reason-field {
+        display: grid;
+        gap: 0.45rem;
+      }
+
+      .reason-field span {
+        font-size: 0.85rem;
+        font-weight: 700;
+      }
+
+      .reason-field textarea {
+        width: 100%;
+        min-height: 5rem;
+        padding: 0.75rem 0.85rem;
+        border: 1px solid rgba(15, 23, 42, 0.14);
+        border-radius: 0.85rem;
+        background: #fff;
+        color: var(--text);
+        font: inherit;
+        resize: vertical;
+      }
+
+      .permission-option {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr);
+        gap: 0.75rem;
+        align-items: start;
+        padding: 0.85rem;
+        border-radius: 0.85rem;
+        background: var(--surface-alt);
+      }
+
+      .permission-option input {
+        margin-top: 0.2rem;
+      }
+
+      .governance-error {
+        color: #b91c1c;
+      }
+
       .empty-state.compact {
         min-height: auto;
       }
@@ -727,12 +998,63 @@ export class DashboardPageComponent {
 
   protected readonly loading = signal(true);
   protected readonly operationsLoading = signal(false);
+  protected readonly governanceSaving = signal(false);
   protected readonly activitySummaryError = signal<string | null>(null);
   protected readonly recentAuditEventsError = signal<string | null>(null);
+  protected readonly governanceError = signal<string | null>(null);
+  protected readonly governanceSaveError = signal<string | null>(null);
   protected readonly summary = signal<DashboardSummary | null>(null);
   protected readonly activitySummary = signal<OperationalActivitySummary | null>(null);
   protected readonly recentAuditEvents = signal<OperationalAuditEvent[]>([]);
+  protected readonly governanceSummary = signal<PermissionGovernanceSummary | null>(null);
+  protected readonly editingRoleCode = signal<string | null>(null);
+  protected readonly governanceReason = signal('');
+  protected readonly selectedGovernancePermissions = signal<string[]>([]);
   protected readonly operationsVisible = computed(() => this.authorization.canReadOperationalAudit());
+  protected readonly canManageGovernance = computed(() => this.authorization.canManagePermissionGovernance());
+  protected readonly governanceWriteEnabled = computed(() => this.governanceSummary()?.writeEnabled ?? false);
+  protected readonly mutableRoleCodes = computed(() => this.governanceSummary()?.mutableRoles ?? []);
+  protected readonly governanceRoles = computed<ManagedRolePermission[]>(() => this.governanceSummary()?.roles ?? []);
+  protected readonly availableGovernancePermissions = computed<ManagedPermission[]>(
+    () => this.governanceSummary()?.availablePermissions ?? []
+  );
+  protected readonly editingRole = computed<ManagedRolePermission | null>(() => {
+    const roleCode = this.editingRoleCode();
+    if (!roleCode) {
+      return null;
+    }
+
+    return this.governanceRoles().find((role) => role.roleCode === roleCode) ?? null;
+  });
+  protected readonly governanceCards = computed<DashboardCard[]>(() => {
+    const summary = this.governanceSummary();
+    const roles = summary?.roles ?? [];
+    const mutableRoles = roles.filter((role) => role.mutable);
+
+    return [
+      {
+        label: 'Roles',
+        value: roles.length,
+        meta: 'Incluidos en el resumen operativo'
+      },
+      {
+        label: 'Mutables',
+        value: mutableRoles.length,
+        meta: `${summary?.mutableRoles.length ?? 0} habilitados por configuracion`
+      },
+      {
+        label: 'Permisos',
+        value: summary?.availablePermissions.length ?? 0,
+        meta: 'Catalogo backend disponible'
+      },
+      {
+        label: 'Escritura',
+        value: summary?.writeEnabled ? 1 : 0,
+        meta: summary?.writeEnabled ? 'Ambiente editable' : 'Ambiente protegido',
+        accent: summary?.writeEnabled ?? false
+      }
+    ];
+  });
   protected readonly overviewCards = computed<DashboardCard[]>(() => {
     const summary = this.summary();
 
@@ -935,6 +1257,7 @@ export class DashboardPageComponent {
     this.operationsLoading.set(true);
     this.activitySummaryError.set(null);
     this.recentAuditEventsError.set(null);
+    this.governanceError.set(null);
 
     forkJoin({
       activitySummary: this.operationsService.getActivitySummary().pipe(
@@ -948,12 +1271,19 @@ export class DashboardPageComponent {
           this.recentAuditEventsError.set(this.errorMapper.map(error).message);
           return of([]);
         })
+      ),
+      governanceSummary: this.operationsService.getPermissionGovernanceSummary().pipe(
+        catchError((error: unknown) => {
+          this.governanceError.set(this.errorMapper.map(error).message);
+          return of(null);
+        })
       )
     })
       .pipe(finalize(() => this.operationsLoading.set(false)))
-      .subscribe(({ activitySummary, recentAuditEvents }) => {
+      .subscribe(({ activitySummary, recentAuditEvents, governanceSummary }) => {
         this.activitySummary.set(activitySummary);
         this.recentAuditEvents.set(recentAuditEvents);
+        this.governanceSummary.set(governanceSummary);
       });
   }
 
@@ -1052,10 +1382,87 @@ export class DashboardPageComponent {
       AUTH_LOGOUT_SUCCESS: 'Logout exitoso',
       SECURITY_ACCESS_DENIED: 'Acceso denegado',
       OPERATIONAL_ACTIVITY_READ: 'Lectura de actividad operativa',
-      TOURNAMENT_OPERATIONAL_SUMMARY_READ: 'Lectura de resumen operativo'
+      TOURNAMENT_OPERATIONAL_SUMMARY_READ: 'Lectura de resumen operativo',
+      PERMISSION_GOVERNANCE_SUMMARY: 'Lectura de gobierno de permisos',
+      PERMISSION_ROLE_ASSIGNMENTS_UPDATED: 'Actualizacion de permisos por rol',
+      PERMISSION_ROLE_ASSIGNMENTS_UPDATE_DENIED: 'Actualizacion denegada de permisos por rol',
+      PERMISSION_ROLE_ASSIGNMENTS_UPDATE_FAILED: 'Actualizacion fallida de permisos por rol'
     };
 
     return labels[action] ?? action;
+  }
+
+  protected startGovernanceEdit(role: ManagedRolePermission): void {
+    this.editingRoleCode.set(role.roleCode);
+    this.selectedGovernancePermissions.set([...role.permissionCodes]);
+    this.governanceReason.set('');
+    this.governanceSaveError.set(null);
+  }
+
+  protected cancelGovernanceEdit(): void {
+    this.editingRoleCode.set(null);
+    this.selectedGovernancePermissions.set([]);
+    this.governanceReason.set('');
+    this.governanceSaveError.set(null);
+  }
+
+  protected toggleGovernancePermission(permissionCode: string): void {
+    const selected = this.selectedGovernancePermissions();
+    const next = selected.includes(permissionCode)
+      ? selected.filter((code) => code !== permissionCode)
+      : [...selected, permissionCode].sort((left, right) => left.localeCompare(right));
+
+    this.selectedGovernancePermissions.set(next);
+    this.governanceSaveError.set(null);
+  }
+
+  protected isGovernancePermissionSelected(permissionCode: string): boolean {
+    return this.selectedGovernancePermissions().includes(permissionCode);
+  }
+
+  protected updateGovernanceReason(event: Event): void {
+    const target = event.target as HTMLTextAreaElement | null;
+    this.governanceReason.set(target?.value ?? '');
+    this.governanceSaveError.set(null);
+  }
+
+  protected canSubmitGovernanceEdit(): boolean {
+    return !!this.editingRole() && this.selectedGovernancePermissions().length > 0 && this.governanceReason().trim().length > 0;
+  }
+
+  protected saveGovernanceEdit(): void {
+    const role = this.editingRole();
+    if (!role || !this.canSubmitGovernanceEdit()) {
+      return;
+    }
+
+    this.governanceSaving.set(true);
+    this.governanceSaveError.set(null);
+
+    this.operationsService
+      .updateRolePermissions(role.roleCode, {
+        permissionCodes: [...this.selectedGovernancePermissions()],
+        reason: this.governanceReason().trim()
+      })
+      .pipe(finalize(() => this.governanceSaving.set(false)))
+      .subscribe({
+        next: (updatedRole) => {
+          const currentSummary = this.governanceSummary();
+          if (currentSummary) {
+            this.governanceSummary.set({
+              ...currentSummary,
+              generatedAt: new Date().toISOString(),
+              roles: currentSummary.roles.map((item) => (item.roleCode === updatedRole.roleCode ? updatedRole : item))
+            });
+          }
+
+          this.notifications.success(`Permisos actualizados para ${updatedRole.roleName}.`);
+          this.startGovernanceEdit(updatedRole);
+        },
+        error: (error: unknown) => {
+          this.governanceSaveError.set(this.errorMapper.map(error).message);
+        }
+      });
   }
 
   protected entityLabel(event: OperationalAuditEvent): string {

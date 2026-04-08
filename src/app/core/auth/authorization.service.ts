@@ -50,6 +50,10 @@ export class AuthorizationService {
     return this.hasPermission('operations:audit:read');
   }
 
+  canManagePermissionGovernance(): boolean {
+    return this.hasPermission('permissions:govern:manage');
+  }
+
   hasPermission(permission: AppPermission): boolean {
     return this.authStore.permissions().includes(permission);
   }
