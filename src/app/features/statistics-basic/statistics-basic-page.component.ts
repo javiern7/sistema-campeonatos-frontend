@@ -305,7 +305,7 @@ export class StatisticsBasicPageComponent {
   protected readonly teams = signal<Team[]>([]);
   protected readonly statistics = signal<StatisticsBasicResponse | null>(null);
   protected readonly tournamentId = signal(0);
-  protected readonly selectedStageId = computed(() => Number(this.filtersForm.controls.stageId.getRawValue() || 0));
+  protected readonly selectedStageId = signal(0);
   protected readonly filteredGroups = computed(() => {
     const stageId = this.selectedStageId();
     return stageId ? this.groups().filter((group) => group.stageId === stageId) : [];
@@ -378,7 +378,8 @@ export class StatisticsBasicPageComponent {
       this.loadContext();
     });
 
-    this.filtersForm.controls.stageId.valueChanges.pipe(takeUntilDestroyed()).subscribe(() => {
+    this.filtersForm.controls.stageId.valueChanges.pipe(takeUntilDestroyed()).subscribe((stageId) => {
+      this.selectedStageId.set(Number(stageId || 0));
       const currentGroupId = Number(this.filtersForm.controls.groupId.getRawValue());
       const validGroupIds = new Set(this.filteredGroups().map((group) => group.id));
       if (currentGroupId && !validGroupIds.has(currentGroupId)) {
@@ -408,6 +409,7 @@ export class StatisticsBasicPageComponent {
 
   protected resetFilters(): void {
     this.filtersForm.setValue({ stageId: '', groupId: '' });
+    this.selectedStageId.set(0);
     this.load();
   }
 
@@ -574,6 +576,7 @@ export class StatisticsBasicPageComponent {
           this.tournamentTeams.set(result.registrations);
           this.teams.set(result.teams);
           this.filtersForm.patchValue({ stageId: '', groupId: '' }, { emitEvent: false });
+          this.selectedStageId.set(0);
           this.load();
         },
         error: (error: unknown) => {
