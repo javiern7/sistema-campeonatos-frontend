@@ -129,6 +129,12 @@ const qp = (params: Record<string, string | number>): Record<string, string | nu
               </a>
               <a
                 mat-stroked-button
+                [routerLink]="['/tournaments', tournament()!.id, 'statistics', 'basic']"
+              >
+                Estadisticas basicas
+              </a>
+              <a
+                mat-stroked-button
                 routerLink="/tournament-teams"
                 [queryParams]="{ tournamentId: tournament()!.id }"
               >
@@ -916,6 +922,13 @@ export class TournamentDetailPageComponent {
         description: 'Leer llaves, calendario, generacion inicial y resultados del bloque competitivo.',
         cta: 'Abrir bloque',
         path: `/tournaments/${tournament.id}/competition-advanced`,
+        queryParams: qp({})
+      },
+      {
+        label: 'Estadisticas basicas',
+        description: 'Leer resumen estadistico, lideres simples y metricas derivadas del torneo.',
+        cta: 'Abrir estadisticas',
+        path: `/tournaments/${tournament.id}/statistics/basic`,
         queryParams: qp({})
       },
       {

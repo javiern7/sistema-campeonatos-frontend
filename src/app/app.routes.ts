@@ -131,6 +131,16 @@ export const appRoutes: Routes = [
           )
       },
       {
+        path: 'tournaments/:id/statistics/basic',
+        title: 'Basic Statistics',
+        canActivate: [authorizationGuard],
+        data: { resource: 'tournaments', action: 'read' },
+        loadComponent: () =>
+          import('./features/statistics-basic/statistics-basic-page.component').then(
+            (m) => m.StatisticsBasicPageComponent
+          )
+      },
+      {
         path: 'tournament-teams',
         title: 'Tournament Teams',
         canActivate: [authorizationGuard],
