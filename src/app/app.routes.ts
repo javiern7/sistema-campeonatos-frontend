@@ -151,6 +151,16 @@ export const appRoutes: Routes = [
           )
       },
       {
+        path: 'tournaments/:id/finances/basic',
+        title: 'Finanzas basicas',
+        canActivate: [authorizationGuard],
+        data: { resource: 'tournaments', action: 'read' },
+        loadComponent: () =>
+          import('./features/finances-basic/finances-basic-page.component').then(
+            (m) => m.FinancesBasicPageComponent
+          )
+      },
+      {
         path: 'competition-advanced',
         title: 'Competencia avanzada',
         canActivate: [authorizationGuard],
@@ -175,6 +185,16 @@ export const appRoutes: Routes = [
         title: 'Disciplina',
         canActivate: [authorizationGuard],
         data: { resource: 'tournaments', action: 'read', module: 'discipline' },
+        loadComponent: () =>
+          import('./features/tournament-modules/tournament-module-hub.component').then(
+            (m) => m.TournamentModuleHubComponent
+          )
+      },
+      {
+        path: 'finances-basic',
+        title: 'Finanzas basicas',
+        canActivate: [authorizationGuard],
+        data: { resource: 'tournaments', action: 'read', module: 'financesBasic' },
         loadComponent: () =>
           import('./features/tournament-modules/tournament-module-hub.component').then(
             (m) => m.TournamentModuleHubComponent

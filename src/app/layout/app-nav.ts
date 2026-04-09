@@ -13,6 +13,7 @@ export const APP_NAV_ITEMS: AppNavItem[] = [
   { label: 'Competencia avanzada', path: '/competition-advanced', resource: 'tournaments' },
   { label: 'Estadisticas basicas', path: '/statistics-basic', resource: 'tournaments' },
   { label: 'Disciplina', path: '/discipline', resource: 'tournaments' },
+  { label: 'Finanzas basicas', path: '/finances-basic', resource: 'tournaments' },
   { label: 'Inscripciones', path: '/tournament-teams', resource: 'tournamentTeams' },
   { label: 'Etapas', path: '/tournament-stages', resource: 'tournamentStages' },
   { label: 'Grupos', path: '/stage-groups', resource: 'stageGroups' },

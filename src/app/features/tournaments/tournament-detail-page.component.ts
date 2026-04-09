@@ -141,6 +141,12 @@ const qp = (params: Record<string, string | number>): Record<string, string | nu
               </a>
               <a
                 mat-stroked-button
+                [routerLink]="['/tournaments', tournament()!.id, 'finances', 'basic']"
+              >
+                Finanzas basicas
+              </a>
+              <a
+                mat-stroked-button
                 routerLink="/tournament-teams"
                 [queryParams]="{ tournamentId: tournament()!.id }"
               >
@@ -966,6 +972,13 @@ export class TournamentDetailPageComponent {
         cta: 'Abrir tabla',
         path: '/standings',
         queryParams: qp({ tournamentId: tournament.id })
+      },
+      {
+        label: 'Finanzas basicas',
+        description: 'Revisar ingresos, gastos y balance operativo simple del torneo.',
+        cta: 'Abrir finanzas',
+        path: `/tournaments/${tournament.id}/finances/basic`,
+        queryParams: qp({})
       },
       {
         label: 'Disciplina',

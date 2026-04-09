@@ -87,3 +87,6 @@ test-results/
 # Node
 node_modules/
 dist/
+
+# Ignorar resultados de pruebas e2e
+e2e/

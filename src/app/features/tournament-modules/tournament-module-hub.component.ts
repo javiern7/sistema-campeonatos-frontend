@@ -10,12 +10,13 @@ import { MatSelectModule } from '@angular/material/select';
 
 import { ErrorMapper } from '../../core/error/error.mapper';
 import { NotificationService } from '../../core/error/notification.service';
+import { CatalogLoaderService } from '../../core/pagination/catalog-loader.service';
 import { LoadingStateComponent } from '../../shared/loading-state/loading-state.component';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
 import { Tournament, TournamentStatus } from '../tournaments/tournament.models';
 import { TournamentsService } from '../tournaments/tournaments.service';
 
-type TournamentModuleKey = 'competitionAdvanced' | 'statisticsBasic' | 'discipline';
+type TournamentModuleKey = 'competitionAdvanced' | 'statisticsBasic' | 'discipline' | 'financesBasic';
 
 type TournamentModuleConfig = {
   title: string;
@@ -46,6 +47,13 @@ const MODULE_CONFIGS: Record<TournamentModuleKey, TournamentModuleConfig> = {
     banner: 'Selecciona un torneo para revisar su lectura disciplinaria acotada.',
     actionLabel: 'Abrir disciplina',
     path: (tournamentId) => `/tournaments/${tournamentId}/discipline`
+  },
+  financesBasic: {
+    title: 'Finanzas basicas',
+    subtitle: 'Ingresos, gastos y balance operativo simple por torneo.',
+    banner: 'Selecciona un torneo para revisar su lectura financiera acotada.',
+    actionLabel: 'Abrir finanzas',
+    path: (tournamentId) => `/tournaments/${tournamentId}/finances/basic`
   }
 };
 
@@ -75,6 +83,16 @@ const MODULE_CONFIGS: Record<TournamentModuleKey, TournamentModuleConfig> = {
         </div>
 
         <form [formGroup]="filtersForm" class="filter-row">
+          <mat-form-field appearance="outline">
+            <mat-label>Torneo</mat-label>
+            <mat-select formControlName="tournamentId">
+              <mat-option value="">Todos</mat-option>
+              @for (tournament of tournamentOptions(); track tournament.id) {
+                <mat-option [value]="tournament.id">{{ tournament.name }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+
           <mat-form-field appearance="outline">
             <mat-label>Buscar torneo</mat-label>
             <input matInput formControlName="name">
@@ -170,20 +188,27 @@ export class TournamentModuleHubComponent {
   private readonly fb = inject(FormBuilder);
   private readonly route = inject(ActivatedRoute);
   private readonly tournamentsService = inject(TournamentsService);
+  private readonly catalogLoader = inject(CatalogLoaderService);
   private readonly notifications = inject(NotificationService);
   private readonly errorMapper = inject(ErrorMapper);
 
   protected readonly loading = signal(true);
   protected readonly tournaments = signal<Tournament[]>([]);
+  protected readonly tournamentOptions = signal<Tournament[]>([]);
   protected readonly moduleKey = signal<TournamentModuleKey>('competitionAdvanced');
   protected readonly moduleConfig = computed(() => MODULE_CONFIGS[this.moduleKey()]);
   protected readonly statuses: TournamentStatus[] = ['DRAFT', 'OPEN', 'IN_PROGRESS', 'FINISHED', 'CANCELLED'];
   protected readonly filtersForm = this.fb.nonNullable.group({
+    tournamentId: [0 as number | ''],
     name: [''],
     status: ['' as TournamentStatus | '']
   });
 
   constructor() {
+    this.catalogLoader
+      .loadAll((page, size) => this.tournamentsService.list({ page, size }))
+      .subscribe({ next: (items) => this.tournamentOptions.set(items) });
+
     this.route.data.pipe(takeUntilDestroyed()).subscribe((data) => {
       this.moduleKey.set((data['module'] as TournamentModuleKey | undefined) ?? 'competitionAdvanced');
       this.load();
@@ -193,6 +218,17 @@ export class TournamentModuleHubComponent {
   protected load(): void {
     this.loading.set(true);
     const filters = this.filtersForm.getRawValue();
+
+    if (filters.tournamentId) {
+      this.tournamentsService
+        .getById(Number(filters.tournamentId))
+        .pipe(finalize(() => this.loading.set(false)))
+        .subscribe({
+          next: (tournament) => this.tournaments.set([tournament]),
+          error: (error: unknown) => this.notifications.error(this.errorMapper.map(error).message)
+        });
+      return;
+    }
 
     this.tournamentsService
       .list({
@@ -209,7 +245,7 @@ export class TournamentModuleHubComponent {
   }
 
   protected resetFilters(): void {
-    this.filtersForm.setValue({ name: '', status: '' });
+    this.filtersForm.setValue({ tournamentId: '', name: '', status: '' });
     this.load();
   }
 
