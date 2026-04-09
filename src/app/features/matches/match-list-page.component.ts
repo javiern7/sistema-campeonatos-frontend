@@ -187,6 +187,7 @@ const parseQueryNumber = (value: string | null): number | '' => {
                 <ng-container matColumnDef="actions">
                   <th mat-header-cell *matHeaderCellDef>Acciones</th>
                   <td mat-cell *matCellDef="let row">
+                    <a mat-button [routerLink]="['/matches', row.id, 'discipline']">Disciplina</a>
                     @if (canManage()) {
                       <a mat-button [routerLink]="['/matches', row.id, 'edit']">Editar</a>
                     }
@@ -295,7 +296,7 @@ export class MatchListPageComponent {
   });
   protected readonly displayedColumns = computed(() => {
     const columns = ['fixture', 'context', 'schedule', 'score', 'status'];
-    if (this.canManage() || this.canDelete()) {
+    if (this.authorization.canRead('matches') || this.canManage() || this.canDelete()) {
       columns.push('actions');
     }
     return columns;

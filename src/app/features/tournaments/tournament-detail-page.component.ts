@@ -135,6 +135,12 @@ const qp = (params: Record<string, string | number>): Record<string, string | nu
               </a>
               <a
                 mat-stroked-button
+                [routerLink]="['/tournaments', tournament()!.id, 'discipline']"
+              >
+                Disciplina
+              </a>
+              <a
+                mat-stroked-button
                 routerLink="/tournament-teams"
                 [queryParams]="{ tournamentId: tournament()!.id }"
               >
@@ -960,6 +966,13 @@ export class TournamentDetailPageComponent {
         cta: 'Abrir standings',
         path: '/standings',
         queryParams: qp({ tournamentId: tournament.id })
+      },
+      {
+        label: 'Disciplina',
+        description: 'Revisar sanciones simples y trazables del torneo.',
+        cta: 'Abrir disciplina',
+        path: `/tournaments/${tournament.id}/discipline`,
+        queryParams: qp({})
       }
     ];
 

@@ -141,6 +141,16 @@ export const appRoutes: Routes = [
           )
       },
       {
+        path: 'tournaments/:id/discipline',
+        title: 'Discipline Sanctions',
+        canActivate: [authorizationGuard],
+        data: { resource: 'tournaments', action: 'read' },
+        loadComponent: () =>
+          import('./features/discipline/discipline-tournament-page.component').then(
+            (m) => m.DisciplineTournamentPageComponent
+          )
+      },
+      {
         path: 'tournament-teams',
         title: 'Tournament Teams',
         canActivate: [authorizationGuard],
@@ -283,6 +293,16 @@ export const appRoutes: Routes = [
         data: { resource: 'matches', action: 'manage' },
         loadComponent: () =>
           import('./features/matches/match-form-page.component').then((m) => m.MatchFormPageComponent)
+      },
+      {
+        path: 'matches/:id/discipline',
+        title: 'Match Discipline',
+        canActivate: [authorizationGuard],
+        data: { resource: 'matches', action: 'read' },
+        loadComponent: () =>
+          import('./features/discipline/discipline-match-page.component').then(
+            (m) => m.DisciplineMatchPageComponent
+          )
       },
       {
         path: 'standings',
