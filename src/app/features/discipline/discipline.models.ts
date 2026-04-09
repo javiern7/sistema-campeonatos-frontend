@@ -17,21 +17,32 @@ export interface DisciplineTeamContext {
   tournamentTeamId?: number;
   teamId?: number;
   name?: string | null;
+  shortName?: string | null;
+  code?: string | null;
   teamName?: string | null;
   label?: string | null;
+}
+
+export interface DisciplinePlayerContext {
+  playerId?: number;
+  fullName?: string | null;
+  active?: boolean | null;
 }
 
 export interface DisciplinaryIncident {
   incidentId: number;
   matchId: number;
   tournamentId: number;
-  tournamentTeamId: number;
-  playerId: number;
-  playerName: string | null;
+  team?: DisciplineTeamContext | null;
+  player?: DisciplinePlayerContext | null;
+  tournamentTeamId?: number;
+  playerId?: number;
+  playerName?: string | null;
   incidentType: DisciplinaryIncidentType | string;
   incidentMinute: number | null;
   notes: string | null;
   createdAt: string;
+  sanctionRegistered?: boolean;
 }
 
 export interface DisciplinarySanction {
@@ -39,9 +50,11 @@ export interface DisciplinarySanction {
   incidentId: number;
   matchId?: number | null;
   tournamentId?: number | null;
-  playerId: number;
-  playerName: string | null;
-  tournamentTeamId: number;
+  team?: DisciplineTeamContext | null;
+  player?: DisciplinePlayerContext | null;
+  playerId?: number;
+  playerName?: string | null;
+  tournamentTeamId?: number;
   sanctionType: DisciplinarySanctionType | string;
   status: DisciplinarySanctionStatus;
   matchesToServe: number;

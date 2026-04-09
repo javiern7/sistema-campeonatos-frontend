@@ -216,8 +216,8 @@ type RosterOption = {
                       <strong>{{ incidentTypeLabel(incident.incidentType) }}</strong>
                       <span class="muted">{{ minuteLabel(incident.incidentMinute) }}</span>
                     </div>
-                    <span>{{ incident.playerName || playerName(incident.playerId) }}</span>
-                    <span class="muted">{{ tournamentTeamLabel(incident.tournamentTeamId) }} · {{ formatDate(incident.createdAt) }}</span>
+                    <span>{{ incidentPlayerName(incident) }}</span>
+                    <span class="muted">{{ incidentTeamLabel(incident) }} · {{ formatDate(incident.createdAt) }}</span>
                     @if (incident.notes) {
                       <span class="muted">{{ incident.notes }}</span>
                     }
@@ -248,8 +248,8 @@ type RosterOption = {
                       <strong>{{ sanctionTypeLabel(sanction.sanctionType) }}</strong>
                       <span [class]="sanctionStatusClass(sanction.status)">{{ sanctionStatusLabel(sanction.status) }}</span>
                     </div>
-                    <span>{{ sanction.playerName || playerName(sanction.playerId) }}</span>
-                    <span class="muted">{{ tournamentTeamLabel(sanction.tournamentTeamId) }} · {{ sanction.remainingMatches }} pendiente(s)</span>
+                    <span>{{ sanctionPlayerName(sanction) }}</span>
+                    <span class="muted">{{ sanctionTeamLabel(sanction) }} · {{ sanction.remainingMatches }} pendiente(s)</span>
                     <span class="muted">Incidencia #{{ sanction.incidentId }} · {{ formatDate(sanction.createdAt) }}</span>
                   </article>
                 }
@@ -502,7 +502,23 @@ export class DisciplineMatchPageComponent {
   }
 
   protected incidentOptionLabel(incident: DisciplinaryIncident): string {
-    return `#${incident.incidentId} · ${this.incidentTypeLabel(incident.incidentType)} · ${incident.playerName || this.playerName(incident.playerId)}`;
+    return `#${incident.incidentId} · ${this.incidentTypeLabel(incident.incidentType)} · ${this.incidentPlayerName(incident)}`;
+  }
+
+  protected incidentPlayerName(incident: DisciplinaryIncident): string {
+    return incident.player?.fullName ?? incident.playerName ?? this.playerName(this.incidentPlayerId(incident));
+  }
+
+  protected sanctionPlayerName(sanction: DisciplinarySanction): string {
+    return sanction.player?.fullName ?? sanction.playerName ?? this.playerName(this.sanctionPlayerId(sanction));
+  }
+
+  protected incidentTeamLabel(incident: DisciplinaryIncident): string {
+    return this.tournamentTeamLabel(this.incidentTournamentTeamId(incident));
+  }
+
+  protected sanctionTeamLabel(sanction: DisciplinarySanction): string {
+    return this.tournamentTeamLabel(this.sanctionTournamentTeamId(sanction));
   }
 
   protected incidentTypeLabel(type: DisciplinaryIncident['incidentType']): string {
@@ -598,5 +614,21 @@ export class DisciplineMatchPageComponent {
     this.selectedIncidentTournamentTeamId.set(teamId);
     this.incidentForm.patchValue({ tournamentTeamId: teamId, playerId }, { emitEvent: false });
     this.sanctionForm.patchValue({ incidentId }, { emitEvent: false });
+  }
+
+  private incidentPlayerId(incident: DisciplinaryIncident): number {
+    return incident.player?.playerId ?? incident.playerId ?? 0;
+  }
+
+  private sanctionPlayerId(sanction: DisciplinarySanction): number {
+    return sanction.player?.playerId ?? sanction.playerId ?? 0;
+  }
+
+  private incidentTournamentTeamId(incident: DisciplinaryIncident): number {
+    return incident.team?.tournamentTeamId ?? incident.tournamentTeamId ?? 0;
+  }
+
+  private sanctionTournamentTeamId(sanction: DisciplinarySanction): number {
+    return sanction.team?.tournamentTeamId ?? sanction.tournamentTeamId ?? 0;
   }
 }

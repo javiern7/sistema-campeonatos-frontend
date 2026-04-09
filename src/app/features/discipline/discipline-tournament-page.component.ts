@@ -132,8 +132,8 @@ import { DisciplineService } from './discipline.service';
                     <strong>{{ sanctionTypeLabel(sanction.sanctionType) }}</strong>
                     <span [class]="sanctionStatusClass(sanction.status)">{{ sanctionStatusLabel(sanction.status) }}</span>
                   </div>
-                  <span>{{ sanction.playerName || ('Jugador ' + sanction.playerId) }}</span>
-                  <span class="muted">{{ tournamentTeamLabel(sanction.tournamentTeamId) }} · {{ matchLabel(sanction.matchId ?? null) }}</span>
+                  <span>{{ sanctionPlayerName(sanction) }}</span>
+                  <span class="muted">{{ sanctionTeamLabel(sanction) }} · {{ matchLabel(sanction.matchId ?? null) }}</span>
                   <span class="muted">{{ sanction.matchesServed }}/{{ sanction.matchesToServe }} cumplido(s), {{ sanction.remainingMatches }} pendiente(s)</span>
                   @if (sanction.matchId) {
                     <div class="inline-actions">
@@ -304,6 +304,14 @@ export class DisciplineTournamentPageComponent {
     }
 
     return this.teams().find((item) => item.id === registration.teamId)?.name ?? `Equipo ${registration.teamId}`;
+  }
+
+  protected sanctionPlayerName(sanction: DisciplinarySanction): string {
+    return sanction.player?.fullName ?? sanction.playerName ?? `Jugador ${sanction.player?.playerId ?? sanction.playerId ?? 0}`;
+  }
+
+  protected sanctionTeamLabel(sanction: DisciplinarySanction): string {
+    return this.tournamentTeamLabel(sanction.team?.tournamentTeamId ?? sanction.tournamentTeamId ?? 0);
   }
 
   protected matchLabel(matchId: number | null): string {
