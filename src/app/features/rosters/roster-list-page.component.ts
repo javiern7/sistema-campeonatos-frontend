@@ -57,7 +57,7 @@ const parseQueryNumber = (value: string | null): number | '' => {
   ],
   template: `
     <section class="app-page">
-      <app-page-header title="Rosters" subtitle="Jugadores habilitados por inscripcion y torneo.">
+      <app-page-header title="Planteles" subtitle="Jugadores habilitados por inscripcion y torneo.">
         @if (canManage()) {
           <a mat-flat-button color="primary" routerLink="/rosters/new">Nuevo registro</a>
         }
@@ -106,7 +106,7 @@ const parseQueryNumber = (value: string | null): number | '' => {
         } @else {
           <div class="context-banner">
             <strong>{{ selectedContextLabel() }}</strong>
-            <span class="muted">Total filtrado: {{ page()?.totalElements ?? 0 }} registros de roster</span>
+            <span class="muted">Total filtrado: {{ page()?.totalElements ?? 0 }} registros de plantel</span>
           </div>
 
           <div class="summary-grid">
@@ -121,8 +121,8 @@ const parseQueryNumber = (value: string | null): number | '' => {
 
           @if (rows().length === 0) {
             <div class="empty-state">
-              <strong>No hay registros de roster para este filtro.</strong>
-              <p class="muted">Crea un nuevo roster o ajusta el filtro para continuar la operacion del torneo.</p>
+              <strong>No hay registros de plantel para este filtro.</strong>
+              <p class="muted">Crea un nuevo registro o ajusta el filtro para continuar la operacion del torneo.</p>
             </div>
           } @else {
             <div class="table-wrapper">
@@ -223,7 +223,7 @@ export class RosterListPageComponent {
       this.statusLabel(filters.rosterStatus)
     ].filter((label) => Boolean(label));
 
-    return labels.length > 0 ? labels.join(' / ') : 'Todos los registros de roster';
+    return labels.length > 0 ? labels.join(' / ') : 'Todos los registros de plantel';
   });
   protected readonly summaryCards = computed<SummaryCard[]>(() => {
     const rows = this.rows();
@@ -366,7 +366,7 @@ export class RosterListPageComponent {
   }
 
   protected remove(row: RosterEntry): void {
-    if (!window.confirm(`Se eliminara el registro de roster #${row.id}. Esta accion no se puede deshacer.`)) {
+    if (!window.confirm(`Se eliminara el registro de plantel #${row.id}. Esta accion no se puede deshacer.`)) {
       return;
     }
 

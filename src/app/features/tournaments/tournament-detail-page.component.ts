@@ -158,7 +158,7 @@ const qp = (params: Record<string, string | number>): Record<string, string | nu
                 routerLink="/standings"
                 [queryParams]="{ tournamentId: tournament()!.id }"
               >
-                Ver standings
+                Ver tabla
               </a>
             </div>
           </div>
@@ -170,7 +170,7 @@ const qp = (params: Record<string, string | number>): Record<string, string | nu
             </div>
             <div class="hero-note">
               <strong>Siguiente paso recomendado</strong>
-              <p>{{ summary()?.nextAction || 'Completar el flujo torneo -> inscripcion -> roster -> partido -> standings.' }}</p>
+              <p>{{ summary()?.nextAction || 'Completar el flujo torneo -> inscripcion -> plantel -> partido -> tabla.' }}</p>
             </div>
           </div>
         </section>
@@ -375,16 +375,16 @@ const qp = (params: Record<string, string | number>): Record<string, string | nu
           <section class="card page-card app-page">
             <div class="section-heading">
               <div>
-                <h2>Top standings</h2>
+                <h2>Tabla destacada</h2>
                 <p class="muted">Lectura rapida del liderazgo actual del torneo.</p>
               </div>
-              <a mat-button routerLink="/standings" [queryParams]="{ tournamentId: tournament()!.id }">Abrir standings</a>
+              <a mat-button routerLink="/standings" [queryParams]="{ tournamentId: tournament()!.id }">Abrir tabla</a>
             </div>
 
             @if (topStandings().length === 0) {
               <div class="empty-state">
-                <strong>No hay standings cargados.</strong>
-                <p class="muted">La tabla aparecera aqui cuando existan resultados cerrados y standings calculados.</p>
+                <strong>No hay tabla cargada.</strong>
+                <p class="muted">La tabla aparecera aqui cuando existan resultados cerrados y posiciones calculadas.</p>
               </div>
             } @else {
               <div class="list-stack">
@@ -708,7 +708,7 @@ export class TournamentDetailPageComponent {
         meta: `${summary?.playedMatchCount ?? 0} jugados`
       },
       {
-        label: 'Standings',
+        label: 'Tabla',
         value: summary?.standingsCount ?? 0,
         meta: summary?.leaderName ? `Lider: ${summary.leaderName}` : 'Sin lider visible'
       },
@@ -791,7 +791,7 @@ export class TournamentDetailPageComponent {
             : 'Aun no hay fixture visible para este torneo'
       },
       {
-        label: 'Claridad de standings',
+        label: 'Claridad de tabla',
         headline:
           (summary?.standingsCount ?? 0) > 0
             ? `${summary?.standingsCoverageCount ?? 0} equipos con tabla`
@@ -828,7 +828,7 @@ export class TournamentDetailPageComponent {
             : 'Sin base aprobada aun'
       },
       {
-        label: 'Cobertura standings',
+        label: 'Cobertura tabla',
         value: `${standingsCovered}/${approvedCount}`,
         detail:
           (summary?.playedMatchCount ?? 0) > 0
@@ -880,17 +880,17 @@ export class TournamentDetailPageComponent {
       case 'IN_PROGRESS':
         return {
           title: 'Competencia en curso',
-          summary: 'La prioridad es sostener continuidad entre resultados, incidencias y lectura de standings.',
+          summary: 'La prioridad es sostener continuidad entre resultados, incidencias y lectura de tabla.',
           readiness:
             (summary?.playedMatchCount ?? 0) > 0
-              ? 'Ya hay actividad real para auditar en standings y continuidad operativa'
+              ? 'Ya hay actividad real para auditar en tabla y continuidad operativa'
               : 'El estado indica competencia activa, pero todavia falta evidencia visible de partidos jugados',
           caution: 'Resultados sin tabla o sin soporte de roster generan la mayor perdida de confianza operativa.'
         };
       case 'FINISHED':
         return {
           title: 'Cierre competitivo',
-          summary: 'El torneo ya deberia leerse como ciclo cerrado, con standings completos y sin brechas visibles.',
+          summary: 'El torneo ya deberia leerse como ciclo cerrado, con tabla completa y sin brechas visibles.',
           readiness:
             (summary?.standingsCount ?? 0) > 0
               ? 'La lectura ejecutiva ya puede enfocarse en validacion final y presentacion'
@@ -945,9 +945,9 @@ export class TournamentDetailPageComponent {
         queryParams: qp({ tournamentId: tournament.id })
       },
       {
-        label: 'Rosters',
+        label: 'Planteles',
         description: 'Completar o auditar jugadores activos por inscripcion.',
-        cta: 'Abrir rosters',
+        cta: 'Abrir planteles',
         path: '/rosters',
         queryParams: firstRegistration
           ? qp({ tournamentTeamId: firstRegistration.registration.id, rosterStatus: 'ACTIVE' })
@@ -961,9 +961,9 @@ export class TournamentDetailPageComponent {
         queryParams: qp({ tournamentId: tournament.id })
       },
       {
-        label: 'Standings',
+        label: 'Tabla',
         description: 'Validar la tabla del torneo y su cobertura competitiva.',
-        cta: 'Abrir standings',
+        cta: 'Abrir tabla',
         path: '/standings',
         queryParams: qp({ tournamentId: tournament.id })
       },
@@ -1011,9 +1011,9 @@ export class TournamentDetailPageComponent {
 
     if ((summary?.playedMatchCount ?? 0) > 0) {
       actions[3] = {
-        label: 'Validar standings',
+        label: 'Validar tabla',
         description: 'Ya existen resultados; conviene confirmar que la tabla este alineada.',
-        cta: 'Revisar standings',
+        cta: 'Revisar tabla',
         path: '/standings',
         queryParams: qp({ tournamentId: tournament.id })
       };

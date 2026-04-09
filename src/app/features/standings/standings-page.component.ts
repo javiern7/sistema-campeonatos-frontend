@@ -81,7 +81,7 @@ const parseQueryNumber = (value: string | null): number | '' => {
             (click)="recalculate()"
             [disabled]="recalculating() || !filtersForm.controls.tournamentId.getRawValue()"
           >
-            {{ recalculating() ? 'Recalculando...' : 'Recalcular standings' }}
+            {{ recalculating() ? 'Recalculando...' : 'Recalcular tabla' }}
           </button>
         }
       </app-page-header>
@@ -165,7 +165,7 @@ const parseQueryNumber = (value: string | null): number | '' => {
 
           @if (rows().length === 0) {
             <div class="empty-state">
-              <strong>No hay standings para este contexto.</strong>
+              <strong>No hay tabla para este contexto.</strong>
               <p class="muted">Aplica filtros, recalcula la tabla o valida que ya existan partidos jugados en ese alcance.</p>
             </div>
           } @else {

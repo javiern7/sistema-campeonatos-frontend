@@ -62,7 +62,7 @@ type LeaderCard = {
         <div class="header-actions">
           <a mat-stroked-button [routerLink]="['/tournaments', tournamentId()]">Volver al torneo</a>
           <a mat-stroked-button routerLink="/matches" [queryParams]="contextQueryParams()">Ver partidos</a>
-          <a mat-stroked-button routerLink="/standings" [queryParams]="contextQueryParams()">Ver standings</a>
+          <a mat-stroked-button routerLink="/standings" [queryParams]="contextQueryParams()">Ver tabla</a>
         </div>
       </app-page-header>
 
@@ -125,7 +125,7 @@ type LeaderCard = {
             <div class="context-banner neutral-banner">
               <strong>Guardrail operativo</strong>
               <span class="muted">
-                El frontend solo lee el agregado /statistics/basic; no recompone metricas desde matches, results o standings.
+                La pantalla solo lee el agregado de estadisticas basicas; no recompone metricas desde partidos, resultados o tabla.
               </span>
             </div>
           }
@@ -176,9 +176,9 @@ type LeaderCard = {
                 </article>
 
                 <article class="trace-card">
-                  <span class="summary-label">Fuente de standings</span>
+                  <span class="summary-label">Fuente de tabla</span>
                   <strong>{{ statistics()!.traceability.derivedFromStandings ? 'Activa' : 'No aplicable' }}</strong>
-                  <span class="muted">Los lideres solo usan standings cuando el scope es comparable.</span>
+                  <span class="muted">Los lideres solo usan tabla cuando el alcance es comparable.</span>
                 </article>
 
                 <article class="trace-card">

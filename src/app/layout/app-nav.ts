@@ -7,15 +7,18 @@ export interface AppNavItem {
 }
 
 export const APP_NAV_ITEMS: AppNavItem[] = [
-  { label: 'Dashboard', path: '/dashboard', resource: 'dashboard' },
+  { label: 'Inicio', path: '/dashboard', resource: 'dashboard' },
   { label: 'Deportes', path: '/sports', resource: 'sports' },
   { label: 'Torneos', path: '/tournaments', resource: 'tournaments' },
+  { label: 'Competencia avanzada', path: '/competition-advanced', resource: 'tournaments' },
+  { label: 'Estadisticas basicas', path: '/statistics-basic', resource: 'tournaments' },
+  { label: 'Disciplina', path: '/discipline', resource: 'tournaments' },
   { label: 'Inscripciones', path: '/tournament-teams', resource: 'tournamentTeams' },
   { label: 'Etapas', path: '/tournament-stages', resource: 'tournamentStages' },
   { label: 'Grupos', path: '/stage-groups', resource: 'stageGroups' },
   { label: 'Equipos', path: '/teams', resource: 'teams' },
   { label: 'Jugadores', path: '/players', resource: 'players' },
-  { label: 'Rosters', path: '/rosters', resource: 'rosters' },
+  { label: 'Planteles', path: '/rosters', resource: 'rosters' },
   { label: 'Partidos', path: '/matches', resource: 'matches' },
-  { label: 'Standings', path: '/standings', resource: 'standings' }
+  { label: 'Tabla de posiciones', path: '/standings', resource: 'standings' }
 ];

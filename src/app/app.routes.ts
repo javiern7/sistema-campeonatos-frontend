@@ -151,6 +151,36 @@ export const appRoutes: Routes = [
           )
       },
       {
+        path: 'competition-advanced',
+        title: 'Competencia avanzada',
+        canActivate: [authorizationGuard],
+        data: { resource: 'tournaments', action: 'read', module: 'competitionAdvanced' },
+        loadComponent: () =>
+          import('./features/tournament-modules/tournament-module-hub.component').then(
+            (m) => m.TournamentModuleHubComponent
+          )
+      },
+      {
+        path: 'statistics-basic',
+        title: 'Estadisticas basicas',
+        canActivate: [authorizationGuard],
+        data: { resource: 'tournaments', action: 'read', module: 'statisticsBasic' },
+        loadComponent: () =>
+          import('./features/tournament-modules/tournament-module-hub.component').then(
+            (m) => m.TournamentModuleHubComponent
+          )
+      },
+      {
+        path: 'discipline',
+        title: 'Disciplina',
+        canActivate: [authorizationGuard],
+        data: { resource: 'tournaments', action: 'read', module: 'discipline' },
+        loadComponent: () =>
+          import('./features/tournament-modules/tournament-module-hub.component').then(
+            (m) => m.TournamentModuleHubComponent
+          )
+      },
+      {
         path: 'tournament-teams',
         title: 'Tournament Teams',
         canActivate: [authorizationGuard],
@@ -182,7 +212,7 @@ export const appRoutes: Routes = [
       },
       {
         path: 'rosters',
-        title: 'Rosters',
+        title: 'Planteles',
         canActivate: [authorizationGuard],
         data: { resource: 'rosters', action: 'read' },
         loadComponent: () =>
@@ -306,7 +336,7 @@ export const appRoutes: Routes = [
       },
       {
         path: 'standings',
-        title: 'Standings',
+        title: 'Tabla de posiciones',
         canActivate: [authorizationGuard],
         data: { resource: 'standings', action: 'read' },
         loadComponent: () =>

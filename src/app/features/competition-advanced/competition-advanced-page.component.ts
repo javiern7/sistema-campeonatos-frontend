@@ -67,7 +67,7 @@ type GenerationAction = 'progress' | 'generate';
             routerLink="/standings"
             [queryParams]="{ tournamentId: tournamentId(), stageId: selectedKnockoutStageId() || null }"
           >
-            Ver standings
+            Ver tabla
           </a>
         </div>
       </app-page-header>
@@ -173,7 +173,7 @@ type GenerationAction = 'progress' | 'generate';
           <div class="context-banner neutral-banner">
             <strong>Guardrail operativo</strong>
             <span class="muted">
-              Results es lectura de partidos cerrados; standings solo se invoca donde el contrato lo declara aplicable.
+              Resultados es lectura de partidos cerrados; la tabla solo se invoca donde el contrato lo declara aplicable.
             </span>
           </div>
         </section>
@@ -260,7 +260,7 @@ type GenerationAction = 'progress' | 'generate';
             <div class="section-heading">
               <div>
                 <h2>Resultados</h2>
-                <p class="muted">Lectura cerrada de partidos jugados o resueltos, con amarre explicito hacia standings.</p>
+                <p class="muted">Lectura cerrada de partidos jugados o resueltos, con amarre explicito hacia tabla.</p>
               </div>
               <span class="muted">{{ resultsSummaryLabel() }}</span>
             </div>
@@ -285,7 +285,7 @@ type GenerationAction = 'progress' | 'generate';
                     <div class="result-footer">
                       <span class="muted">{{ standingsImpactLabel(match) }}</span>
                       @if (match.affectsStandings) {
-                        <a mat-button routerLink="/standings" [queryParams]="standingsQueryParams(match)">Ver standings</a>
+                        <a mat-button routerLink="/standings" [queryParams]="standingsQueryParams(match)">Ver tabla</a>
                       }
                     </div>
                   </article>
@@ -641,10 +641,10 @@ export class CompetitionAdvancedPageComponent {
 
   protected standingsImpactLabel(match: CompetitionAdvancedMatch): string {
     if (!match.affectsStandings) {
-      return 'No afecta standings; la lectura queda cerrada sobre resultados o knockout.';
+      return 'No afecta tabla; la lectura queda cerrada sobre resultados o eliminacion.';
     }
 
-    const parts = ['Impacta standings', match.standingScope, match.standingStatus].filter((item) => Boolean(item));
+    const parts = ['Impacta tabla', match.standingScope, match.standingStatus].filter((item) => Boolean(item));
     return parts.join(' · ');
   }
 
