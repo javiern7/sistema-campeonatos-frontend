@@ -89,4 +89,5 @@ node_modules/
 dist/
 
 # Ignorar resultados de pruebas e2e
-e2e/
+e2e/*
+!e2e/public-portal-minimum.spec.ts

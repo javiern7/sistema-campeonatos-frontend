@@ -5,6 +5,34 @@ import { authorizationGuard } from './core/auth/authorization.guard';
 
 export const appRoutes: Routes = [
   {
+    path: 'portal',
+    loadComponent: () => import('./layout/public-shell/public-shell.component').then((m) => m.PublicShellComponent),
+    children: [
+      {
+        path: '',
+        title: 'Portal publico',
+        loadComponent: () =>
+          import('./features/public-portal/public-home-page.component').then((m) => m.PublicHomePageComponent)
+      },
+      {
+        path: 'tournaments',
+        title: 'Torneos publicos',
+        loadComponent: () =>
+          import('./features/public-portal/public-tournament-list-page.component').then(
+            (m) => m.PublicTournamentListPageComponent
+          )
+      },
+      {
+        path: 'tournaments/:slug',
+        title: 'Detalle publico de torneo',
+        loadComponent: () =>
+          import('./features/public-portal/public-tournament-detail-page.component').then(
+            (m) => m.PublicTournamentDetailPageComponent
+          )
+      }
+    ]
+  },
+  {
     path: 'login',
     title: 'Login',
     loadComponent: () =>
