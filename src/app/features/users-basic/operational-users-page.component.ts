@@ -14,6 +14,7 @@ import { NotificationService } from '../../core/error/notification.service';
 import { LoadingStateComponent } from '../../shared/loading-state/loading-state.component';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
 import {
+  OPERATIONAL_USERS_DEFAULT_SORT,
   OperationalRoleCode,
   OperationalUser,
   OperationalUserRoleValue,
@@ -234,7 +235,7 @@ export class OperationalUsersPageComponent {
         roleCode: filters.roleCode,
         page: this.pageIndex(),
         size: this.pageSize(),
-        sort: 'fullName,asc'
+        sort: OPERATIONAL_USERS_DEFAULT_SORT
       })
       .pipe(finalize(() => this.loading.set(false)))
       .subscribe({

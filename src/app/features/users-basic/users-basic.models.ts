@@ -2,6 +2,7 @@ import { PageResponse, QueryParams } from '../../core/api/api.models';
 
 export type OperationalUserStatus = 'ACTIVE' | 'INACTIVE' | 'LOCKED';
 export type OperationalRoleCode = 'SUPER_ADMIN' | 'TOURNAMENT_ADMIN' | 'OPERATOR' | string;
+export const OPERATIONAL_USERS_DEFAULT_SORT = 'fullName,asc';
 
 export interface OperationalUserRole {
   roleCode: OperationalRoleCode;
