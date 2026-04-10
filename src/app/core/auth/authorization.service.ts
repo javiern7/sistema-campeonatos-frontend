@@ -9,6 +9,8 @@ export type AuthorizationResource =
   | 'teams'
   | 'players'
   | 'tournaments'
+  | 'users'
+  | 'configuration:basic'
   | 'tournamentTeams'
   | 'tournamentStages'
   | 'stageGroups'

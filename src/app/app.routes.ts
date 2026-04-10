@@ -25,6 +25,26 @@ export const appRoutes: Routes = [
           import('./features/dashboard/dashboard-page.component').then((m) => m.DashboardPageComponent)
       },
       {
+        path: 'operations/users',
+        title: 'Usuarios operativos',
+        canActivate: [authorizationGuard],
+        data: { resource: 'users', action: 'read' },
+        loadComponent: () =>
+          import('./features/users-basic/operational-users-page.component').then(
+            (m) => m.OperationalUsersPageComponent
+          )
+      },
+      {
+        path: 'operations/basic-configuration',
+        title: 'Configuracion basica',
+        canActivate: [authorizationGuard],
+        data: { resource: 'configuration:basic', action: 'read' },
+        loadComponent: () =>
+          import('./features/users-basic/basic-configuration-page.component').then(
+            (m) => m.BasicConfigurationPageComponent
+          )
+      },
+      {
         path: 'sports',
         title: 'Sports',
         canActivate: [authorizationGuard],

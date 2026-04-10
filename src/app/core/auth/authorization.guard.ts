@@ -10,6 +10,8 @@ interface AuthorizationGuardData {
 
 const ACCESS_FALLBACKS: Array<{ path: string; resource: AuthorizationResource }> = [
   { path: '/dashboard', resource: 'dashboard' },
+  { path: '/operations/users', resource: 'users' },
+  { path: '/operations/basic-configuration', resource: 'configuration:basic' },
   { path: '/sports', resource: 'sports' },
   { path: '/tournaments', resource: 'tournaments' },
   { path: '/tournament-teams', resource: 'tournamentTeams' },
