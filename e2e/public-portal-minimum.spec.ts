@@ -210,4 +210,33 @@ test.describe('portal publico minimo visual', () => {
 
     await page.screenshot({ path: '.codex-artifacts/validation/public-portal-minimum.png', fullPage: true });
   });
+
+  test('endurece publicacion visible en desktop y mobile', async ({ page }) => {
+    await page.setViewportSize({ width: 1366, height: 768 });
+    await page.goto('/portal');
+
+    await expect(page).toHaveTitle(/Sistema Campeonatos/);
+    await expect(page.locator('meta[name="description"]')).toHaveAttribute(
+      'content',
+      /Torneos, tablas y resultados visibles/
+    );
+    const publicNavigation = page.getByRole('navigation', { name: 'Navegacion publica' });
+    await expect(publicNavigation).toBeVisible();
+    await expect(publicNavigation.getByRole('link', { name: 'Acceso interno' })).toBeVisible();
+
+    const desktopOverflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth);
+    expect(desktopOverflow).toBe(false);
+    await page.screenshot({ path: '.codex-artifacts/validation/publication-hardening-desktop.png', fullPage: true });
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/portal/tournaments/disciplina-http-f5470f-2026-f5470f');
+
+    await expect(page).toHaveTitle(/Disciplina HTTP F5470F/);
+    await expect(page.getByRole('heading', { name: 'Tabla publica' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Resultados publicados' })).toBeVisible();
+
+    const mobileOverflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth);
+    expect(mobileOverflow).toBe(false);
+    await page.screenshot({ path: '.codex-artifacts/validation/publication-hardening-mobile.png', fullPage: true });
+  });
 });

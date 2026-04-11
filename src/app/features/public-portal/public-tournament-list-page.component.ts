@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
+import { Meta, Title } from '@angular/platform-browser';
 import { RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -37,7 +38,7 @@ type FilterState = {
           <div>
             <span class="hero-kicker">Listado publico</span>
             <h1>Torneos visibles</h1>
-            <p class="muted">Fuente oficial: \`GET /api/public/tournaments\`, sin semantica paralela ni shell autenticado.</p>
+            <p class="muted">Consulta publica de torneos disponibles sin ingresar al shell interno.</p>
           </div>
           <a mat-stroked-button routerLink="/portal">Volver al inicio</a>
         </div>
@@ -81,7 +82,7 @@ type FilterState = {
           <div class="section-heading">
             <div>
               <h2>{{ totalLabel() }}</h2>
-              <p class="muted">Solo se listan torneos \`PRODUCTION\` en estados publicos aprobados.</p>
+              <p class="muted">Solo se muestran torneos habilitados por el contrato publico vigente.</p>
             </div>
           </div>
 
@@ -109,7 +110,7 @@ type FilterState = {
           } @else {
             <div class="empty-state">
               <strong>No hay torneos visibles con esos filtros.</strong>
-              <p class="muted">Ajusta nombre o estado sin inventar reglas nuevas de publicacion.</p>
+              <p class="muted">Ajusta nombre o estado para revisar la cartelera disponible.</p>
             </div>
           }
         </section>
@@ -125,6 +126,7 @@ type FilterState = {
 
       .public-card {
         padding: 1.5rem;
+        border-radius: 8px;
       }
 
       .section-heading,
@@ -164,7 +166,7 @@ type FilterState = {
         display: grid;
         gap: 0.8rem;
         padding: 1.1rem;
-        border-radius: 18px;
+        border-radius: 8px;
         border: 1px solid rgba(23, 33, 43, 0.08);
         background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(238, 242, 246, 0.62));
       }
@@ -175,7 +177,7 @@ type FilterState = {
         align-items: center;
         justify-content: center;
         padding: 0.4rem 0.7rem;
-        border-radius: 999px;
+        border-radius: 8px;
         font-size: 0.82rem;
         font-weight: 700;
       }
@@ -205,6 +207,23 @@ type FilterState = {
         font-weight: 700;
         text-decoration: none;
       }
+
+      @media (max-width: 640px) {
+        .public-card {
+          padding: 1rem;
+        }
+
+        .section-heading,
+        .actions-row {
+          align-items: stretch;
+          flex-direction: column;
+        }
+
+        .actions-row button,
+        a[mat-stroked-button] {
+          width: 100%;
+        }
+      }
     `
   ],
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -212,6 +231,8 @@ type FilterState = {
 export class PublicTournamentListPageComponent {
   private readonly publicPortalService = inject(PublicPortalService);
   private readonly errorMapper = inject(ErrorMapper);
+  private readonly title = inject(Title);
+  private readonly meta = inject(Meta);
 
   protected readonly loading = signal(true);
   protected readonly tournaments = signal<PublicTournamentSummary[]>([]);
@@ -224,6 +245,11 @@ export class PublicTournamentListPageComponent {
   };
 
   constructor() {
+    this.title.setTitle('Torneos visibles | Sistema Campeonatos');
+    this.meta.updateTag({
+      name: 'description',
+      content: 'Listado publico de torneos visibles en Sistema Campeonatos.'
+    });
     this.loadTournaments();
   }
 

@@ -9,14 +9,14 @@ import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
     <div class="public-shell">
       <header class="public-topbar">
         <a class="brand" routerLink="/portal">
-          <span class="brand-kicker">Portal publico</span>
+          <span class="brand-kicker">Web publica</span>
           <strong>Sistema Campeonatos</strong>
         </a>
 
         <nav class="public-nav" aria-label="Navegacion publica">
           <a routerLink="/portal" [routerLinkActive]="'active'" [routerLinkActiveOptions]="{ exact: true }">Inicio</a>
           <a routerLink="/portal/tournaments" routerLinkActive="active">Torneos</a>
-          <a routerLink="/login">Ingresar</a>
+          <a routerLink="/login">Acceso interno</a>
         </nav>
       </header>
 
@@ -33,9 +33,7 @@ import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 
       .public-shell {
         min-height: 100vh;
-        background:
-          radial-gradient(circle at top left, rgba(10, 110, 90, 0.12), transparent 28%),
-          linear-gradient(180deg, #f8fbfc 0%, #eef4f6 100%);
+        background: linear-gradient(180deg, #f8fbfc 0%, #eef4f6 100%);
       }
 
       .public-topbar {
@@ -77,7 +75,7 @@ import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 
       .public-nav a {
         padding: 0.55rem 0.9rem;
-        border-radius: 999px;
+        border-radius: 8px;
         color: var(--text);
         text-decoration: none;
         font-weight: 600;
@@ -99,6 +97,17 @@ import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
         .public-topbar {
           align-items: start;
           flex-direction: column;
+          padding: 0.85rem 1rem;
+        }
+
+        .public-nav {
+          width: 100%;
+          justify-content: start;
+        }
+
+        .public-nav a {
+          flex: 1 1 auto;
+          text-align: center;
         }
 
         .public-content {

@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 import { MatButtonModule } from '@angular/material/button';
 import { MatToolbarModule } from '@angular/material/toolbar';
@@ -12,7 +12,7 @@ import { NotificationService } from '../../core/error/notification.service';
 @Component({
   selector: 'app-topbar',
   standalone: true,
-  imports: [MatToolbarModule, MatButtonModule],
+  imports: [MatToolbarModule, MatButtonModule, RouterLink],
   template: `
     <mat-toolbar class="topbar">
       <div>
@@ -27,6 +27,7 @@ import { NotificationService } from '../../core/error/notification.service';
         <div class="topbar-roles">{{ roles().join(' | ') || 'AUTHENTICATED' }}</div>
         <div class="topbar-expiry">{{ accessExpiryLabel() }}</div>
       </div>
+      <a mat-stroked-button routerLink="/portal">Portal publico</a>
       <button mat-stroked-button type="button" (click)="logout()" [disabled]="loggingOut()">
         {{ loggingOut() ? 'Cerrando...' : 'Salir' }}
       </button>
@@ -60,6 +61,10 @@ import { NotificationService } from '../../core/error/notification.service';
         align-items: flex-end;
         margin-right: 0.75rem;
         color: var(--text-soft);
+      }
+
+      a[mat-stroked-button] {
+        margin-right: 0.5rem;
       }
 
       .topbar-roles {

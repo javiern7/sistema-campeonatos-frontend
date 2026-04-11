@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Meta, Title } from '@angular/platform-browser';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import { MatButtonModule } from '@angular/material/button';
@@ -136,7 +137,7 @@ type DetailMetric = {
           <div class="section-heading">
             <div>
               <h2>Resultados publicados</h2>
-              <p class="muted">Partidos cerrados visibles sin notas internas ni semantica editorial adicional.</p>
+              <p class="muted">Partidos cerrados visibles sin notas internas ni secciones editoriales.</p>
             </div>
           </div>
 
@@ -167,8 +168,7 @@ type DetailMetric = {
             <div class="context-banner">
               <strong>Piezas aprobadas fuera de alcance</strong>
               <p class="muted">
-                Este bloque no abre feed editorial ni seccion de piezas publicas porque el contrato backend declara
-                \`approvedPiecesEnabled = false\`.
+                Este bloque no abre feed editorial ni seccion de piezas publicas.
               </p>
             </div>
           </section>
@@ -185,7 +185,9 @@ type DetailMetric = {
 
       .public-card,
       .hero-panel {
+        min-width: 0;
         padding: 1.5rem;
+        border-radius: 8px;
       }
 
       .hero-panel {
@@ -209,7 +211,7 @@ type DetailMetric = {
 
       .result-card {
         padding: 1rem;
-        border-radius: 18px;
+        border-radius: 8px;
         border: 1px solid rgba(23, 33, 43, 0.08);
         background: rgba(255, 255, 255, 0.78);
       }
@@ -257,7 +259,7 @@ type DetailMetric = {
         align-items: center;
         justify-content: center;
         padding: 0.4rem 0.7rem;
-        border-radius: 999px;
+        border-radius: 8px;
         font-size: 0.82rem;
         font-weight: 700;
       }
@@ -294,7 +296,13 @@ type DetailMetric = {
 
       .public-table {
         width: 100%;
+        min-width: 620px;
         border-collapse: collapse;
+      }
+
+      .table-wrapper {
+        max-width: 100%;
+        overflow-x: auto;
       }
 
       .public-table th,
@@ -310,9 +318,30 @@ type DetailMetric = {
         text-decoration: none;
       }
 
+      .summary-card {
+        border-radius: 8px;
+      }
+
       @media (max-width: 840px) {
         .hero-panel {
           grid-template-columns: 1fr;
+        }
+      }
+
+      @media (max-width: 640px) {
+        .public-card,
+        .hero-panel {
+          padding: 1rem;
+        }
+
+        .hero-actions,
+        .section-heading {
+          align-items: stretch;
+          flex-direction: column;
+        }
+
+        .hero-actions a {
+          width: 100%;
         }
       }
     `
@@ -323,6 +352,8 @@ export class PublicTournamentDetailPageComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly publicPortalService = inject(PublicPortalService);
   private readonly errorMapper = inject(ErrorMapper);
+  private readonly title = inject(Title);
+  private readonly meta = inject(Meta);
 
   protected readonly loading = signal(true);
   protected readonly tournament = signal<PublicTournamentDetail | null>(null);
@@ -446,6 +477,7 @@ export class PublicTournamentDetailPageComponent {
           this.tournament.set(tournament);
           this.standings.set(standings);
           this.results.set(results);
+          this.updateMetadata(tournament);
           this.loading.set(false);
         },
         error: (error) => {
@@ -460,5 +492,15 @@ export class PublicTournamentDetailPageComponent {
     return parsed
       ? new Intl.DateTimeFormat('es-PE', { day: '2-digit', month: 'short', year: 'numeric' }).format(parsed)
       : '';
+  }
+
+  private updateMetadata(tournament: PublicTournamentDetail): void {
+    this.title.setTitle(`${tournament.name} | Sistema Campeonatos`);
+    this.meta.updateTag({
+      name: 'description',
+      content:
+        tournament.description ||
+        `${tournament.name} publica tablas y resultados visibles en Sistema Campeonatos.`
+    });
   }
 }
