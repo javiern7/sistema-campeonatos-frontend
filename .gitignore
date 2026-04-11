@@ -92,3 +92,4 @@ dist/
 e2e/*
 !e2e/public-portal-minimum.spec.ts
 !e2e/master-configuration-multisport-visual.spec.ts
+!e2e/ux-ui-visual-operativo.spec.ts

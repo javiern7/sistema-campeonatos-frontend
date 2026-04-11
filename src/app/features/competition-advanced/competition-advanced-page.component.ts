@@ -16,6 +16,7 @@ import { CatalogLoaderService } from '../../core/pagination/catalog-loader.servi
 import { parseBackendDateTime } from '../../shared/date/date-time.utils';
 import { LoadingStateComponent } from '../../shared/loading-state/loading-state.component';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
+import { VisualIdentityComponent } from '../../shared/visual-identity/visual-identity.component';
 import { StageGroup } from '../stage-groups/stage-group.models';
 import { StageGroupsService } from '../stage-groups/stage-groups.service';
 import { Team } from '../teams/team.models';
@@ -55,7 +56,8 @@ type GenerationAction = 'progress' | 'generate';
     MatInputModule,
     MatSelectModule,
     LoadingStateComponent,
-    PageHeaderComponent
+    PageHeaderComponent,
+    VisualIdentityComponent
   ],
   template: `
     <section class="app-page">
@@ -206,7 +208,11 @@ type GenerationAction = 'progress' | 'generate';
                       @for (match of round.matches; track match.id) {
                         <article class="list-card">
                           <div class="list-row">
-                            <strong>{{ teamLabel(match, 'home') }} vs {{ teamLabel(match, 'away') }}</strong>
+                            <div class="match-teams">
+                              <app-visual-identity [label]="teamLabel(match, 'home')" [compact]="true" />
+                              <span class="versus-chip">{{ scoreLabel(match) }}</span>
+                              <app-visual-identity [label]="teamLabel(match, 'away')" [compact]="true" />
+                            </div>
                             <span [class]="statusClass(match.status)">{{ statusLabel(match.status) }}</span>
                           </div>
                           <div class="list-meta">
@@ -242,7 +248,11 @@ type GenerationAction = 'progress' | 'generate';
                 @for (match of calendar()!.matches; track match.id) {
                   <article class="list-card">
                     <div class="list-row">
-                      <strong>{{ teamLabel(match, 'home') }} vs {{ teamLabel(match, 'away') }}</strong>
+                      <div class="match-teams">
+                        <app-visual-identity [label]="teamLabel(match, 'home')" [compact]="true" />
+                        <span class="versus-chip">vs</span>
+                        <app-visual-identity [label]="teamLabel(match, 'away')" [compact]="true" />
+                      </div>
                       <span [class]="statusClass(match.status)">{{ statusLabel(match.status) }}</span>
                     </div>
                     <div class="list-meta">
@@ -275,7 +285,11 @@ type GenerationAction = 'progress' | 'generate';
                 @for (match of results()!.matches; track match.id) {
                   <article class="list-card">
                     <div class="list-row">
-                      <strong>{{ teamLabel(match, 'home') }} vs {{ teamLabel(match, 'away') }}</strong>
+                      <div class="match-teams">
+                        <app-visual-identity [label]="teamLabel(match, 'home')" [compact]="true" />
+                        <span class="versus-chip">{{ scoreLabel(match) }}</span>
+                        <app-visual-identity [label]="teamLabel(match, 'away')" [compact]="true" />
+                      </div>
                       <span [class]="statusClass(match.status)">{{ statusLabel(match.status) }}</span>
                     </div>
                     <div class="list-meta">
@@ -370,6 +384,25 @@ type GenerationAction = 'progress' | 'generate';
         font-size: 0.92rem;
       }
 
+      .match-teams {
+        display: grid;
+        gap: 0.6rem;
+        grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+        align-items: center;
+        min-width: min(100%, 420px);
+      }
+
+      .versus-chip {
+        display: inline-flex;
+        min-width: 3.2rem;
+        justify-content: center;
+        padding: 0.35rem 0.55rem;
+        border-radius: 8px;
+        background: rgba(10, 110, 90, 0.1);
+        color: var(--primary);
+        font-weight: 800;
+      }
+
       .results-column {
         margin-bottom: 2rem;
       }
@@ -379,6 +412,14 @@ type GenerationAction = 'progress' | 'generate';
         .list-row,
         .result-footer {
           flex-direction: column;
+        }
+
+        .match-teams {
+          grid-template-columns: 1fr;
+        }
+
+        .versus-chip {
+          width: 100%;
         }
       }
     `

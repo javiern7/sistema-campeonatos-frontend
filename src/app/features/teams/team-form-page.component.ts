@@ -11,6 +11,7 @@ import { ErrorMapper } from '../../core/error/error.mapper';
 import { NotificationService } from '../../core/error/notification.service';
 import { LoadingStateComponent } from '../../shared/loading-state/loading-state.component';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
+import { VisualIdentityComponent } from '../../shared/visual-identity/visual-identity.component';
 import { TeamFormValue } from './team.models';
 import { TeamsService } from './teams.service';
 
@@ -25,13 +26,14 @@ import { TeamsService } from './teams.service';
     MatFormFieldModule,
     MatInputModule,
     LoadingStateComponent,
-    PageHeaderComponent
+    PageHeaderComponent,
+    VisualIdentityComponent
   ],
   template: `
     <section class="app-page">
       <app-page-header
-        [title]="isEditMode() ? 'Editar Team' : 'Nuevo Team'"
-        subtitle="Formulario alineado con TeamCreateRequest y TeamUpdateRequest."
+        [title]="isEditMode() ? 'Editar equipo' : 'Nuevo equipo'"
+        subtitle="Datos visibles del equipo sin abrir logos, imagenes ni CMS."
       />
 
       <section class="card page-card">
@@ -39,30 +41,64 @@ import { TeamsService } from './teams.service';
           <app-loading-state />
         } @else {
           <form [formGroup]="form" (ngSubmit)="save()" class="app-page">
+            <div class="form-preview">
+              <app-visual-identity
+                [label]="form.controls.name.value"
+                [shortLabel]="form.controls.shortName.value"
+                [code]="form.controls.code.value"
+                [primary]="form.controls.primaryColor.value"
+                [secondary]="form.controls.secondaryColor.value"
+                meta="Vista previa operativa"
+              />
+              <p class="muted">La identidad usa abreviatura, codigo o iniciales. No requiere assets externos.</p>
+            </div>
+
             <div class="form-grid">
               <mat-form-field appearance="outline">
                 <mat-label>Nombre</mat-label>
                 <input matInput formControlName="name">
+                @if (form.controls.name.hasError('required')) {
+                  <mat-error>El nombre del equipo es obligatorio.</mat-error>
+                }
+                @if (form.controls.name.hasError('maxlength')) {
+                  <mat-error>Usa 150 caracteres como maximo.</mat-error>
+                }
               </mat-form-field>
 
               <mat-form-field appearance="outline">
-                <mat-label>Short name</mat-label>
+                <mat-label>Nombre corto</mat-label>
                 <input matInput formControlName="shortName">
+                <mat-hint>Se usa como abreviatura visual cuando exista.</mat-hint>
+                @if (form.controls.shortName.hasError('maxlength')) {
+                  <mat-error>Usa 50 caracteres como maximo.</mat-error>
+                }
               </mat-form-field>
 
               <mat-form-field appearance="outline">
-                <mat-label>Código</mat-label>
+                <mat-label>Codigo</mat-label>
                 <input matInput formControlName="code">
+                <mat-hint>Codigo corto para tablas y resultados.</mat-hint>
+                @if (form.controls.code.hasError('maxlength')) {
+                  <mat-error>Usa 30 caracteres como maximo.</mat-error>
+                }
               </mat-form-field>
 
               <mat-form-field appearance="outline">
                 <mat-label>Color primario</mat-label>
                 <input matInput formControlName="primaryColor">
+                <mat-hint>Opcional. Ejemplo: #0a6e5a.</mat-hint>
+                @if (form.controls.primaryColor.hasError('maxlength')) {
+                  <mat-error>Usa 20 caracteres como maximo.</mat-error>
+                }
               </mat-form-field>
 
               <mat-form-field appearance="outline">
                 <mat-label>Color secundario</mat-label>
                 <input matInput formControlName="secondaryColor">
+                <mat-hint>Opcional para acento visual.</mat-hint>
+                @if (form.controls.secondaryColor.hasError('maxlength')) {
+                  <mat-error>Usa 20 caracteres como maximo.</mat-error>
+                }
               </mat-form-field>
             </div>
 
@@ -79,6 +115,22 @@ import { TeamsService } from './teams.service';
       </section>
     </section>
   `,
+  styles: [
+    `
+      .form-preview {
+        display: grid;
+        gap: 0.5rem;
+        padding: 1rem;
+        border: 1px solid rgba(10, 110, 90, 0.16);
+        border-radius: 8px;
+        background: linear-gradient(135deg, rgba(10, 110, 90, 0.08), rgba(14, 116, 144, 0.04));
+      }
+
+      .form-preview p {
+        margin: 0;
+      }
+    `
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class TeamFormPageComponent {

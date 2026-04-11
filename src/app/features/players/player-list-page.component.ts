@@ -14,8 +14,16 @@ import { ErrorMapper } from '../../core/error/error.mapper';
 import { NotificationService } from '../../core/error/notification.service';
 import { LoadingStateComponent } from '../../shared/loading-state/loading-state.component';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
+import { VisualIdentityComponent } from '../../shared/visual-identity/visual-identity.component';
 import { Player, PlayerPage } from './player.models';
 import { PlayersService } from './players.service';
+
+type PlayerVisualMetric = {
+  label: string;
+  value: number;
+  meta: string;
+  accent?: boolean;
+};
 
 @Component({
   selector: 'app-player-list-page',
@@ -30,7 +38,8 @@ import { PlayersService } from './players.service';
     MatPaginatorModule,
     MatTableModule,
     LoadingStateComponent,
-    PageHeaderComponent
+    PageHeaderComponent,
+    VisualIdentityComponent
   ],
   template: `
     <section class="app-page">
@@ -66,54 +75,84 @@ import { PlayersService } from './players.service';
         </div>
 
         @if (loading()) {
-          <app-loading-state />
+          <app-loading-state label="Cargando jugadores e identificadores..." />
         } @else {
-          <p class="muted">Total: {{ page()?.totalElements ?? 0 }}</p>
-
-          <div class="table-wrapper">
-            <table mat-table [dataSource]="rows()" class="w-100">
-              <ng-container matColumnDef="id">
-                <th mat-header-cell *matHeaderCellDef>ID</th>
-                <td mat-cell *matCellDef="let player">{{ player.id }}</td>
-              </ng-container>
-
-              <ng-container matColumnDef="name">
-                <th mat-header-cell *matHeaderCellDef>Nombre</th>
-                <td mat-cell *matCellDef="let player">{{ player.firstName }} {{ player.lastName }}</td>
-              </ng-container>
-
-              <ng-container matColumnDef="document">
-                <th mat-header-cell *matHeaderCellDef>Documento</th>
-                <td mat-cell *matCellDef="let player">
-                  {{ player.documentType || '-' }} {{ player.documentNumber || '' }}
-                </td>
-              </ng-container>
-
-              <ng-container matColumnDef="status">
-                <th mat-header-cell *matHeaderCellDef>Estado</th>
-                <td mat-cell *matCellDef="let player">
-                  <span class="chip-status" [class.active]="player.active" [class.inactive]="!player.active">
-                    {{ player.active ? 'Activo' : 'Inactivo' }}
-                  </span>
-                </td>
-              </ng-container>
-
-              <ng-container matColumnDef="actions">
-                <th mat-header-cell *matHeaderCellDef>Acciones</th>
-                <td mat-cell *matCellDef="let player">
-                  @if (canManage()) {
-                    <a mat-button [routerLink]="['/players', player.id, 'edit']">Editar</a>
-                  }
-                  @if (canDelete()) {
-                    <button mat-button type="button" color="warn" (click)="remove(player)">Eliminar</button>
-                  }
-                </td>
-              </ng-container>
-
-              <tr mat-header-row *matHeaderRowDef="displayedColumns()"></tr>
-              <tr mat-row *matRowDef="let row; columns: displayedColumns()"></tr>
-            </table>
+          <div class="summary-grid">
+            @for (metric of visualMetrics(); track metric.label) {
+              <article class="summary-card card" [class.accent]="metric.accent">
+                <span class="summary-label">{{ metric.label }}</span>
+                <span class="summary-value">{{ metric.value }}</span>
+                <span class="summary-meta">{{ metric.meta }}</span>
+              </article>
+            }
           </div>
+
+          @if (rows().length === 0) {
+            <div class="empty-state">
+              <strong>No hay jugadores para estos filtros.</strong>
+              <p class="muted">Ajusta la busqueda, revisa documento o incluye inactivos para encontrar registros historicos.</p>
+            </div>
+          } @else {
+            <div class="table-wrapper">
+              <table mat-table [dataSource]="rows()" class="w-100 visual-table">
+                <ng-container matColumnDef="player">
+                  <th mat-header-cell *matHeaderCellDef>Jugador</th>
+                  <td mat-cell *matCellDef="let player">
+                    <app-visual-identity
+                      kind="player"
+                      [label]="player.firstName + ' ' + player.lastName"
+                      [shortLabel]="playerInitialSource(player)"
+                      [meta]="'ID ' + player.id"
+                    />
+                  </td>
+                </ng-container>
+
+                <ng-container matColumnDef="document">
+                  <th mat-header-cell *matHeaderCellDef>Documento</th>
+                  <td mat-cell *matCellDef="let player">
+                    <div class="stack-sm">
+                      <strong>{{ player.documentType || 'Sin tipo' }}</strong>
+                      <span class="muted">{{ player.documentNumber || 'Numero pendiente' }}</span>
+                    </div>
+                  </td>
+                </ng-container>
+
+                <ng-container matColumnDef="contact">
+                  <th mat-header-cell *matHeaderCellDef>Contacto</th>
+                  <td mat-cell *matCellDef="let player">
+                    <div class="stack-sm">
+                      <span>{{ player.email || 'Email pendiente' }}</span>
+                      <span class="muted">{{ player.phone || 'Telefono pendiente' }}</span>
+                    </div>
+                  </td>
+                </ng-container>
+
+                <ng-container matColumnDef="status">
+                  <th mat-header-cell *matHeaderCellDef>Estado</th>
+                  <td mat-cell *matCellDef="let player">
+                    <span class="chip-status" [class.active]="player.active" [class.inactive]="!player.active">
+                      {{ player.active ? 'Activo' : 'Inactivo' }}
+                    </span>
+                  </td>
+                </ng-container>
+
+                <ng-container matColumnDef="actions">
+                  <th mat-header-cell *matHeaderCellDef>Acciones</th>
+                  <td mat-cell *matCellDef="let player">
+                    @if (canManage()) {
+                      <a mat-button [routerLink]="['/players', player.id, 'edit']">Editar</a>
+                    }
+                    @if (canDelete()) {
+                      <button mat-button type="button" color="warn" (click)="remove(player)">Eliminar</button>
+                    }
+                  </td>
+                </ng-container>
+
+                <tr mat-header-row *matHeaderRowDef="displayedColumns()"></tr>
+                <tr mat-row *matRowDef="let row; columns: displayedColumns()"></tr>
+              </table>
+            </div>
+          }
 
           <mat-paginator
             [length]="page()?.totalElements ?? 0"
@@ -144,11 +183,41 @@ export class PlayerListPageComponent {
   protected readonly canManage = computed(() => this.authorization.canManage('players'));
   protected readonly canDelete = computed(() => this.authorization.canDelete('players'));
   protected readonly displayedColumns = computed(() => {
-    const columns = ['id', 'name', 'document', 'status'];
+    const columns = ['player', 'document', 'contact', 'status'];
     if (this.canManage() || this.canDelete()) {
       columns.push('actions');
     }
     return columns;
+  });
+  protected readonly visualMetrics = computed<PlayerVisualMetric[]>(() => {
+    const rows = this.rows();
+    const activeCount = rows.filter((player) => player.active).length;
+    const documentedCount = rows.filter((player) => player.documentNumber).length;
+    const contactReadyCount = rows.filter((player) => player.email || player.phone).length;
+
+    return [
+      {
+        label: 'Total filtrado',
+        value: this.page()?.totalElements ?? 0,
+        meta: 'Jugadores segun busqueda actual',
+        accent: true
+      },
+      {
+        label: 'Activos visibles',
+        value: activeCount,
+        meta: 'Disponibles para operacion'
+      },
+      {
+        label: 'Con documento',
+        value: documentedCount,
+        meta: 'Identificacion visible'
+      },
+      {
+        label: 'Con contacto',
+        value: contactReadyCount,
+        meta: 'Email o telefono registrado'
+      }
+    ];
   });
 
   protected readonly filtersForm = this.fb.nonNullable.group({
@@ -218,5 +287,9 @@ export class PlayerListPageComponent {
         },
         error: (error: unknown) => this.notifications.error(this.errorMapper.map(error).message)
       });
+  }
+
+  protected playerInitialSource(player: Player): string {
+    return `${player.firstName[0] ?? ''}${player.lastName[0] ?? ''}`;
   }
 }

@@ -39,7 +39,7 @@ textarea {
 .card {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 18px;
+  border-radius: 8px;
   box-shadow: var(--shadow);
 }
 
@@ -118,7 +118,7 @@ textarea {
   display: grid;
   gap: 0.35rem;
   padding: 1rem 1.25rem;
-  border-radius: 16px;
+  border-radius: 8px;
   background: linear-gradient(135deg, rgba(10, 110, 90, 0.08), rgba(10, 110, 90, 0.02));
   border: 1px solid rgba(10, 110, 90, 0.16);
 }
@@ -163,7 +163,7 @@ textarea {
   gap: 0.5rem;
   justify-items: start;
   padding: 1.25rem;
-  border-radius: 16px;
+  border-radius: 8px;
   border: 1px dashed var(--border);
   background: var(--surface-alt);
 }
@@ -181,7 +181,7 @@ textarea {
   padding: 2rem;
   text-align: center;
   border: 1px dashed var(--border);
-  border-radius: 16px;
+  border-radius: 8px;
   background: var(--surface-alt);
 }
 
@@ -224,4 +224,33 @@ textarea {
 
 .mat-mdc-form-field {
   width: 100%;
+}
+
+.visual-table .mat-mdc-header-row,
+.mat-mdc-table .mat-mdc-header-row {
+  background: rgba(10, 110, 90, 0.04);
+}
+
+.visual-table .mat-mdc-cell,
+.visual-table .mat-mdc-header-cell {
+  padding-top: 0.75rem;
+  padding-bottom: 0.75rem;
+}
+
+@media (max-width: 720px) {
+  .page-card {
+    padding: 1rem;
+  }
+
+  .actions-row,
+  .form-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .actions-row button,
+  .form-actions button,
+  .form-actions a {
+    width: 100%;
+  }
 }

@@ -11,6 +11,7 @@ import { ErrorMapper } from '../../core/error/error.mapper';
 import { NotificationService } from '../../core/error/notification.service';
 import { LoadingStateComponent } from '../../shared/loading-state/loading-state.component';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
+import { VisualIdentityComponent } from '../../shared/visual-identity/visual-identity.component';
 import { PlayerFormValue } from './player.models';
 import { PlayersService } from './players.service';
 
@@ -25,13 +26,14 @@ import { PlayersService } from './players.service';
     MatFormFieldModule,
     MatInputModule,
     LoadingStateComponent,
-    PageHeaderComponent
+    PageHeaderComponent,
+    VisualIdentityComponent
   ],
   template: `
     <section class="app-page">
       <app-page-header
-        [title]="isEditMode() ? 'Editar Player' : 'Nuevo Player'"
-        subtitle="Formulario alineado con PlayerCreateRequest y PlayerUpdateRequest."
+        [title]="isEditMode() ? 'Editar jugador' : 'Nuevo jugador'"
+        subtitle="Datos personales visibles con avatar generado por iniciales."
       />
 
       <section class="card page-card">
@@ -39,25 +41,53 @@ import { PlayersService } from './players.service';
           <app-loading-state />
         } @else {
           <form [formGroup]="form" (ngSubmit)="save()" class="app-page">
+            <div class="form-preview">
+              <app-visual-identity
+                kind="player"
+                [label]="form.controls.firstName.value + ' ' + form.controls.lastName.value"
+                [shortLabel]="playerInitialSource()"
+                meta="Vista previa operativa"
+              />
+              <p class="muted">El avatar usa iniciales; no requiere foto ni campo adicional en backend.</p>
+            </div>
+
             <div class="form-grid">
               <mat-form-field appearance="outline">
                 <mat-label>Nombres</mat-label>
                 <input matInput formControlName="firstName">
+                @if (form.controls.firstName.hasError('required')) {
+                  <mat-error>Los nombres son obligatorios.</mat-error>
+                }
+                @if (form.controls.firstName.hasError('maxlength')) {
+                  <mat-error>Usa 100 caracteres como maximo.</mat-error>
+                }
               </mat-form-field>
 
               <mat-form-field appearance="outline">
                 <mat-label>Apellidos</mat-label>
                 <input matInput formControlName="lastName">
+                @if (form.controls.lastName.hasError('required')) {
+                  <mat-error>Los apellidos son obligatorios.</mat-error>
+                }
+                @if (form.controls.lastName.hasError('maxlength')) {
+                  <mat-error>Usa 100 caracteres como maximo.</mat-error>
+                }
               </mat-form-field>
 
               <mat-form-field appearance="outline">
                 <mat-label>Tipo documento</mat-label>
                 <input matInput formControlName="documentType">
+                @if (form.controls.documentType.hasError('maxlength')) {
+                  <mat-error>Usa 20 caracteres como maximo.</mat-error>
+                }
               </mat-form-field>
 
               <mat-form-field appearance="outline">
-                <mat-label>Número documento</mat-label>
+                <mat-label>Numero documento</mat-label>
                 <input matInput formControlName="documentNumber">
+                @if (form.controls.documentNumber.hasError('maxlength')) {
+                  <mat-error>Usa 30 caracteres como maximo.</mat-error>
+                }
               </mat-form-field>
 
               <mat-form-field appearance="outline">
@@ -68,11 +98,20 @@ import { PlayersService } from './players.service';
               <mat-form-field appearance="outline">
                 <mat-label>Email</mat-label>
                 <input matInput type="email" formControlName="email">
+                @if (form.controls.email.hasError('email')) {
+                  <mat-error>Ingresa un email valido.</mat-error>
+                }
+                @if (form.controls.email.hasError('maxlength')) {
+                  <mat-error>Usa 150 caracteres como maximo.</mat-error>
+                }
               </mat-form-field>
 
               <mat-form-field appearance="outline">
-                <mat-label>Teléfono</mat-label>
+                <mat-label>Telefono</mat-label>
                 <input matInput formControlName="phone">
+                @if (form.controls.phone.hasError('maxlength')) {
+                  <mat-error>Usa 30 caracteres como maximo.</mat-error>
+                }
               </mat-form-field>
             </div>
 
@@ -89,6 +128,22 @@ import { PlayersService } from './players.service';
       </section>
     </section>
   `,
+  styles: [
+    `
+      .form-preview {
+        display: grid;
+        gap: 0.5rem;
+        padding: 1rem;
+        border: 1px solid rgba(10, 110, 90, 0.16);
+        border-radius: 8px;
+        background: linear-gradient(135deg, rgba(10, 110, 90, 0.08), rgba(14, 116, 144, 0.04));
+      }
+
+      .form-preview p {
+        margin: 0;
+      }
+    `
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class PlayerFormPageComponent {
@@ -158,5 +213,9 @@ export class PlayerFormPageComponent {
       },
       error: (error: unknown) => this.notifications.error(this.errorMapper.map(error).message)
     });
+  }
+
+  protected playerInitialSource(): string {
+    return `${this.form.controls.firstName.value[0] ?? ''}${this.form.controls.lastName.value[0] ?? ''}`;
   }
 }

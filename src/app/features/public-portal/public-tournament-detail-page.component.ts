@@ -8,6 +8,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { ErrorMapper } from '../../core/error/error.mapper';
 import { parseBackendDateTime } from '../../shared/date/date-time.utils';
 import { LoadingStateComponent } from '../../shared/loading-state/loading-state.component';
+import { VisualIdentityComponent } from '../../shared/visual-identity/visual-identity.component';
 import {
   PublicTournamentDetail,
   PublicTournamentResultEntry,
@@ -25,7 +26,7 @@ type DetailMetric = {
 @Component({
   selector: 'app-public-tournament-detail-page',
   standalone: true,
-  imports: [RouterLink, MatButtonModule, LoadingStateComponent],
+  imports: [RouterLink, MatButtonModule, LoadingStateComponent, VisualIdentityComponent],
   template: `
     <section class="public-page">
       @if (loading()) {
@@ -109,10 +110,17 @@ type DetailMetric = {
                 <tbody>
                   @for (entry of standings()!.standings; track entry.position + '-' + entry.teamName) {
                     <tr>
-                      <td>{{ entry.position }}</td>
                       <td>
-                        <strong>{{ entry.teamShortName || entry.teamName }}</strong>
-                        <div class="muted">{{ entry.teamCode || entry.teamName }}</div>
+                        <span class="position-pill" [class.leader]="entry.position === 1">{{ entry.position }}</span>
+                      </td>
+                      <td>
+                        <app-visual-identity
+                          [label]="entry.teamName"
+                          [shortLabel]="entry.teamShortName"
+                          [code]="entry.teamCode"
+                          [meta]="entry.scoreDiff > 0 ? 'DG +' + entry.scoreDiff : 'DG ' + entry.scoreDiff"
+                          [compact]="true"
+                        />
                       </td>
                       <td>{{ entry.played }}</td>
                       <td>{{ entry.wins }}</td>
@@ -149,8 +157,22 @@ type DetailMetric = {
                     <span class="meta-chip">{{ entry.match.stageName || 'Sin etapa visible' }}</span>
                     <span class="meta-chip">{{ entry.match.status }}</span>
                   </div>
-                  <strong>{{ matchLabel(entry) }}</strong>
-                  <p class="muted">{{ scoreLabel(entry) }} · {{ scopeLabel(entry) }}</p>
+                  <div class="scoreboard">
+                    <app-visual-identity
+                      [label]="entry.match.homeTeam.teamName"
+                      [shortLabel]="entry.match.homeTeam.shortName"
+                      [code]="entry.match.homeTeam.code"
+                      [compact]="true"
+                    />
+                    <strong class="score-value">{{ scoreLabel(entry) }}</strong>
+                    <app-visual-identity
+                      [label]="entry.match.awayTeam.teamName"
+                      [shortLabel]="entry.match.awayTeam.shortName"
+                      [code]="entry.match.awayTeam.code"
+                      [compact]="true"
+                    />
+                  </div>
+                  <p class="muted">{{ scopeLabel(entry) }}</p>
                   <p class="muted">{{ scheduleLabel(entry) }}</p>
                 </article>
               }
@@ -214,6 +236,40 @@ type DetailMetric = {
         border-radius: 8px;
         border: 1px solid rgba(23, 33, 43, 0.08);
         background: rgba(255, 255, 255, 0.78);
+      }
+
+      .scoreboard {
+        display: grid;
+        gap: 0.75rem;
+        grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+        align-items: center;
+      }
+
+      .score-value {
+        display: inline-flex;
+        min-width: 4.5rem;
+        justify-content: center;
+        padding: 0.45rem 0.65rem;
+        border-radius: 8px;
+        background: rgba(10, 110, 90, 0.1);
+        color: var(--primary);
+      }
+
+      .position-pill {
+        display: inline-flex;
+        width: 2rem;
+        height: 2rem;
+        align-items: center;
+        justify-content: center;
+        border-radius: 8px;
+        background: #e0f2fe;
+        color: #075985;
+        font-weight: 800;
+      }
+
+      .position-pill.leader {
+        background: #fef3c7;
+        color: #92400e;
       }
 
       .hero-row,
@@ -341,6 +397,14 @@ type DetailMetric = {
         }
 
         .hero-actions a {
+          width: 100%;
+        }
+
+        .scoreboard {
+          grid-template-columns: 1fr;
+        }
+
+        .score-value {
           width: 100%;
         }
       }
