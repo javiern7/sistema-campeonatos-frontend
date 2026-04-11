@@ -73,8 +73,16 @@ export const appRoutes: Routes = [
           )
       },
       {
+        path: 'operations/master-configuration',
+        title: 'Configuracion multideporte',
+        canActivate: [authorizationGuard],
+        data: { resource: 'sports', action: 'read' },
+        loadComponent: () =>
+          import('./features/sports/sports-page.component').then((m) => m.SportsPageComponent)
+      },
+      {
         path: 'sports',
-        title: 'Sports',
+        title: 'Configuracion multideporte',
         canActivate: [authorizationGuard],
         data: { resource: 'sports', action: 'read' },
         loadComponent: () =>

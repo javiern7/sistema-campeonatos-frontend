@@ -10,7 +10,7 @@ export const APP_NAV_ITEMS: AppNavItem[] = [
   { label: 'Inicio', path: '/dashboard', resource: 'dashboard' },
   { label: 'Usuarios', path: '/operations/users', resource: 'users' },
   { label: 'Configuracion basica', path: '/operations/basic-configuration', resource: 'configuration:basic' },
-  { label: 'Deportes', path: '/sports', resource: 'sports' },
+  { label: 'Configuracion multideporte', path: '/operations/master-configuration', resource: 'sports' },
   { label: 'Torneos', path: '/tournaments', resource: 'tournaments' },
   { label: 'Competencia avanzada', path: '/competition-advanced', resource: 'tournaments' },
   { label: 'Estadisticas basicas', path: '/statistics-basic', resource: 'tournaments' },
