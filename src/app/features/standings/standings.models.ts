@@ -27,6 +27,24 @@ export interface StandingFilters {
   size?: number;
 }
 
+export interface StandingFormValue {
+  tournamentId: number;
+  stageId: number | null;
+  groupId: number | null;
+  tournamentTeamId: number;
+  played: number;
+  wins: number;
+  draws: number;
+  losses: number;
+  pointsFor: number;
+  pointsAgainst: number;
+  scoreDiff: number;
+  points: number;
+  rankPosition: number | null;
+}
+
+export type StandingUpdateValue = Omit<StandingFormValue, 'tournamentId'>;
+
 export interface StandingRecalculationRequest {
   tournamentId: number;
   stageId: number | null;

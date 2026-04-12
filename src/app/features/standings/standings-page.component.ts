@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -62,6 +62,7 @@ const parseQueryNumber = (value: string | null): number | '' => {
   standalone: true,
   imports: [
     ReactiveFormsModule,
+    RouterLink,
     MatButtonModule,
     MatFormFieldModule,
     MatPaginatorModule,
@@ -73,6 +74,9 @@ const parseQueryNumber = (value: string | null): number | '' => {
   template: `
     <section class="app-page">
       <app-page-header title="Tabla de posiciones" subtitle="Seguimiento competitivo y recalculo por contexto.">
+        @if (canManage()) {
+          <a mat-stroked-button routerLink="/standings/new">Nuevo registro</a>
+        }
         @if (canRecalculate()) {
           <button
             mat-flat-button
@@ -236,8 +240,19 @@ const parseQueryNumber = (value: string | null): number | '' => {
                   <th mat-header-cell *matHeaderCellDef>Actualizado</th>
                   <td mat-cell *matCellDef="let row">{{ formatDate(row.updatedAt) }}</td>
                 </ng-container>
-                <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-                <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+                <ng-container matColumnDef="actions">
+                  <th mat-header-cell *matHeaderCellDef>Acciones</th>
+                  <td mat-cell *matCellDef="let row">
+                    @if (canManage()) {
+                      <a mat-button [routerLink]="['/standings', row.id, 'edit']">Editar</a>
+                    }
+                    @if (canDelete()) {
+                      <button mat-button type="button" color="warn" (click)="remove(row)">Eliminar</button>
+                    }
+                  </td>
+                </ng-container>
+                <tr mat-header-row *matHeaderRowDef="displayedColumns()"></tr>
+                <tr mat-row *matRowDef="let row; columns: displayedColumns()"></tr>
               </table>
             </div>
           }
@@ -398,12 +413,19 @@ export class StandingsPageComponent {
   protected readonly allRosters = signal<RosterEntry[]>([]);
   protected readonly allMatches = signal<MatchGame[]>([]);
   protected readonly operationalSummaries = signal<TournamentOperationalSummary[]>([]);
-  protected readonly displayedColumns = ['rank', 'team', 'record', 'scoring', 'points', 'updatedAt'];
   protected readonly pageIndex = signal(0);
   protected readonly pageSize = signal(20);
   protected readonly pageSizeOptions = [10, 20, 50];
   protected readonly canManage = computed(() => this.authorization.canManage('standings'));
+  protected readonly canDelete = computed(() => this.authorization.canDelete('standings'));
   protected readonly canRecalculate = computed(() => this.authorization.canRecalculateStandings());
+  protected readonly displayedColumns = computed(() => {
+    const columns = ['rank', 'team', 'record', 'scoring', 'points', 'updatedAt'];
+    if (this.canManage() || this.canDelete()) {
+      columns.push('actions');
+    }
+    return columns;
+  });
   private readonly selectedTournamentId = signal(0);
   private readonly selectedStageId = signal(0);
   protected readonly selectedContextLabel = computed(() => {
@@ -804,5 +826,23 @@ export class StandingsPageComponent {
     }
 
     return 'neutral';
+  }
+
+  protected remove(row: Standing): void {
+    if (!window.confirm(`Se eliminara el standing #${row.id}. Esta accion no se puede deshacer.`)) {
+      return;
+    }
+
+    this.loading.set(true);
+    this.standingsService
+      .delete(row.id)
+      .pipe(finalize(() => this.loading.set(false)))
+      .subscribe({
+        next: () => {
+          this.notifications.success('Standing eliminado correctamente');
+          this.load();
+        },
+        error: (error: unknown) => this.notifications.error(this.errorMapper.map(error).message)
+      });
   }
 }

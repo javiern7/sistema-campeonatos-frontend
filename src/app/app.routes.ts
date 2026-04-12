@@ -417,6 +417,22 @@ export const appRoutes: Routes = [
         data: { resource: 'standings', action: 'read' },
         loadComponent: () =>
           import('./features/standings/standings-page.component').then((m) => m.StandingsPageComponent)
+      },
+      {
+        path: 'standings/new',
+        title: 'Crear standing',
+        canActivate: [authorizationGuard],
+        data: { resource: 'standings', action: 'manage' },
+        loadComponent: () =>
+          import('./features/standings/standing-form-page.component').then((m) => m.StandingFormPageComponent)
+      },
+      {
+        path: 'standings/:id/edit',
+        title: 'Editar standing',
+        canActivate: [authorizationGuard],
+        data: { resource: 'standings', action: 'manage' },
+        loadComponent: () =>
+          import('./features/standings/standing-form-page.component').then((m) => m.StandingFormPageComponent)
       }
     ]
   },
