@@ -1,6 +1,8 @@
 import { PageResponse } from '../../core/api/api.models';
 
 export type MatchStatus = 'SCHEDULED' | 'PLAYED' | 'FORFEIT' | 'CANCELLED';
+export type MatchEventType = 'SCORE' | 'YELLOW_CARD' | 'RED_CARD' | 'SUBSTITUTION' | 'INCIDENT' | 'NOTE';
+export type MatchEventStatus = 'ACTIVE' | 'ANNULLED';
 
 export interface MatchGame {
   id: number;
@@ -49,3 +51,40 @@ export interface MatchFormValue {
 }
 
 export type MatchPage = PageResponse<MatchGame>;
+
+export interface MatchEvent {
+  id: number;
+  matchId: number;
+  tournamentId: number;
+  eventType: MatchEventType;
+  status: MatchEventStatus;
+  tournamentTeamId: number | null;
+  playerId: number | null;
+  relatedPlayerId: number | null;
+  periodLabel: string | null;
+  eventMinute: number | null;
+  eventSecond: number | null;
+  eventValue: number | null;
+  notes: string | null;
+  createdByUserId: number | null;
+  annulledByUserId: number | null;
+  annulledAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface MatchEventFormValue {
+  eventType: MatchEventType;
+  tournamentTeamId: number | null;
+  playerId: number | null;
+  relatedPlayerId: number | null;
+  periodLabel: string | null;
+  eventMinute: number | null;
+  eventSecond: number | null;
+  eventValue: number | null;
+  notes: string | null;
+}
+
+export interface AnnulMatchEventValue {
+  notes: string | null;
+}

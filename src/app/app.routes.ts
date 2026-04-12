@@ -401,6 +401,14 @@ export const appRoutes: Routes = [
           import('./features/matches/match-form-page.component').then((m) => m.MatchFormPageComponent)
       },
       {
+        path: 'matches/:id/events',
+        title: 'Eventos del partido',
+        canActivate: [authorizationGuard],
+        data: { resource: 'matches', action: 'read' },
+        loadComponent: () =>
+          import('./features/matches/match-events-page.component').then((m) => m.MatchEventsPageComponent)
+      },
+      {
         path: 'matches/:id/discipline',
         title: 'Match Discipline',
         canActivate: [authorizationGuard],

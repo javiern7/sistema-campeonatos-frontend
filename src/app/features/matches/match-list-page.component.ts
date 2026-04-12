@@ -187,6 +187,7 @@ const parseQueryNumber = (value: string | null): number | '' => {
                 <ng-container matColumnDef="actions">
                   <th mat-header-cell *matHeaderCellDef>Acciones</th>
                   <td mat-cell *matCellDef="let row">
+                    <a mat-button [routerLink]="['/matches', row.id, 'events']">Eventos</a>
                     <a mat-button [routerLink]="['/matches', row.id, 'discipline']">Disciplina</a>
                     @if (canManage()) {
                       <a mat-button [routerLink]="['/matches', row.id, 'edit']">Editar</a>

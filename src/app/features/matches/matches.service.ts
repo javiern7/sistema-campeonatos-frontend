@@ -2,7 +2,15 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 
 import { ApiClientService } from '../../core/api/api-client.service';
-import { MatchFilters, MatchFormValue, MatchGame, MatchPage } from './match.models';
+import {
+  AnnulMatchEventValue,
+  MatchEvent,
+  MatchEventFormValue,
+  MatchFilters,
+  MatchFormValue,
+  MatchGame,
+  MatchPage
+} from './match.models';
 
 @Injectable({ providedIn: 'root' })
 export class MatchesService {
@@ -26,5 +34,21 @@ export class MatchesService {
 
   delete(id: number): Observable<void> {
     return this.api.delete(`/matches/${id}`);
+  }
+
+  listEvents(matchId: number): Observable<MatchEvent[]> {
+    return this.api.get<MatchEvent[]>(`/matches/${matchId}/events`);
+  }
+
+  createEvent(matchId: number, payload: MatchEventFormValue): Observable<MatchEvent> {
+    return this.api.post<MatchEvent, MatchEventFormValue>(`/matches/${matchId}/events`, payload);
+  }
+
+  updateEvent(matchId: number, eventId: number, payload: MatchEventFormValue): Observable<MatchEvent> {
+    return this.api.put<MatchEvent, MatchEventFormValue>(`/matches/${matchId}/events/${eventId}`, payload);
+  }
+
+  annulEvent(matchId: number, eventId: number, payload: AnnulMatchEventValue): Observable<MatchEvent> {
+    return this.api.deleteWithBody<MatchEvent, AnnulMatchEventValue>(`/matches/${matchId}/events/${eventId}`, payload);
   }
 }

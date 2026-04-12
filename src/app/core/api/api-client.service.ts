@@ -35,6 +35,12 @@ export class ApiClientService {
       .pipe(map((response) => this.unwrap(response)));
   }
 
+  deleteWithBody<TResponse, TRequest>(path: string, body: TRequest): Observable<TResponse> {
+    return this.http
+      .delete<ApiResponse<TResponse>>(this.buildUrl(path), { body })
+      .pipe(map((response) => this.unwrap(response)));
+  }
+
   buildParams(query?: object): HttpParams {
     let params = new HttpParams();
 
