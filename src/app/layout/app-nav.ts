@@ -14,6 +14,7 @@ export const APP_NAV_ITEMS: AppNavItem[] = [
   { label: 'Torneos', path: '/tournaments', resource: 'tournaments' },
   { label: 'Competencia avanzada', path: '/competition-advanced', resource: 'tournaments' },
   { label: 'Estadisticas basicas', path: '/statistics-basic', resource: 'tournaments' },
+  { label: 'Estadisticas eventos', path: '/statistics-events', resource: 'matches' },
   { label: 'Disciplina', path: '/discipline', resource: 'tournaments' },
   { label: 'Finanzas basicas', path: '/finances-basic', resource: 'tournaments' },
   { label: 'Inscripciones', path: '/tournament-teams', resource: 'tournamentTeams' },

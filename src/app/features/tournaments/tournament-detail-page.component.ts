@@ -135,6 +135,12 @@ const qp = (params: Record<string, string | number>): Record<string, string | nu
               </a>
               <a
                 mat-stroked-button
+                [routerLink]="['/tournaments', tournament()!.id, 'statistics', 'events']"
+              >
+                Estadisticas eventos
+              </a>
+              <a
+                mat-stroked-button
                 [routerLink]="['/tournaments', tournament()!.id, 'discipline']"
               >
                 Disciplina
@@ -958,6 +964,13 @@ export class TournamentDetailPageComponent {
         queryParams: firstRegistration
           ? qp({ tournamentTeamId: firstRegistration.registration.id, rosterStatus: 'ACTIVE' })
           : qp({ rosterStatus: 'ACTIVE' })
+      },
+      {
+        label: 'Estadisticas eventos',
+        description: 'Leer goleadores, tarjetas y resumenes derivados de eventos activos.',
+        cta: 'Abrir lectura',
+        path: `/tournaments/${tournament.id}/statistics/events`,
+        queryParams: qp({})
       },
       {
         label: 'Partidos',

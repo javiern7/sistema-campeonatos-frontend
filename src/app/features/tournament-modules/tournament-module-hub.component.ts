@@ -16,7 +16,12 @@ import { PageHeaderComponent } from '../../shared/page-header/page-header.compon
 import { Tournament, TournamentStatus } from '../tournaments/tournament.models';
 import { TournamentsService } from '../tournaments/tournaments.service';
 
-type TournamentModuleKey = 'competitionAdvanced' | 'statisticsBasic' | 'discipline' | 'financesBasic';
+type TournamentModuleKey =
+  | 'competitionAdvanced'
+  | 'statisticsBasic'
+  | 'eventStatistics'
+  | 'discipline'
+  | 'financesBasic';
 
 type TournamentModuleConfig = {
   title: string;
@@ -40,6 +45,13 @@ const MODULE_CONFIGS: Record<TournamentModuleKey, TournamentModuleConfig> = {
     banner: 'Selecciona un torneo para revisar sus metricas basicas consolidadas.',
     actionLabel: 'Abrir estadisticas',
     path: (tournamentId) => `/tournaments/${tournamentId}/statistics/basic`
+  },
+  eventStatistics: {
+    title: 'Estadisticas por eventos',
+    subtitle: 'Goleadores, tarjetas y resumenes read-only desde eventos.',
+    banner: 'Selecciona un torneo para revisar sus estadisticas derivadas de eventos activos.',
+    actionLabel: 'Abrir estadisticas',
+    path: (tournamentId) => `/tournaments/${tournamentId}/statistics/events`
   },
   discipline: {
     title: 'Disciplina',

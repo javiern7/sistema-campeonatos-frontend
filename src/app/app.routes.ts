@@ -197,6 +197,16 @@ export const appRoutes: Routes = [
           )
       },
       {
+        path: 'tournaments/:id/statistics/events',
+        title: 'Estadisticas por eventos',
+        canActivate: [authorizationGuard],
+        data: { resource: 'matches', action: 'read' },
+        loadComponent: () =>
+          import('./features/event-statistics/event-statistics-page.component').then(
+            (m) => m.EventStatisticsPageComponent
+          )
+      },
+      {
         path: 'tournaments/:id/discipline',
         title: 'Discipline Sanctions',
         canActivate: [authorizationGuard],
@@ -231,6 +241,16 @@ export const appRoutes: Routes = [
         title: 'Estadisticas basicas',
         canActivate: [authorizationGuard],
         data: { resource: 'tournaments', action: 'read', module: 'statisticsBasic' },
+        loadComponent: () =>
+          import('./features/tournament-modules/tournament-module-hub.component').then(
+            (m) => m.TournamentModuleHubComponent
+          )
+      },
+      {
+        path: 'statistics-events',
+        title: 'Estadisticas por eventos',
+        canActivate: [authorizationGuard],
+        data: { resource: 'matches', action: 'read', module: 'eventStatistics' },
         loadComponent: () =>
           import('./features/tournament-modules/tournament-module-hub.component').then(
             (m) => m.TournamentModuleHubComponent
