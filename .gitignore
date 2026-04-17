@@ -96,3 +96,4 @@ e2e/*
 !e2e/crud-operativo-standings.spec.ts
 !e2e/match-events-v4.spec.ts
 !e2e/event-statistics-v4.spec.ts
+!e2e/reporting-export-v4.spec.ts

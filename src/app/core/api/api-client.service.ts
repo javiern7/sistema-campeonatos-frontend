@@ -41,6 +41,13 @@ export class ApiClientService {
       .pipe(map((response) => this.unwrap(response)));
   }
 
+  download(path: string, query?: object): Observable<Blob> {
+    return this.http.get(this.buildUrl(path), {
+      params: this.buildParams(query),
+      responseType: 'blob'
+    });
+  }
+
   buildParams(query?: object): HttpParams {
     let params = new HttpParams();
 

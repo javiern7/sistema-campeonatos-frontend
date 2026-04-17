@@ -17,6 +17,7 @@ export const APP_NAV_ITEMS: AppNavItem[] = [
   { label: 'Estadisticas eventos', path: '/statistics-events', resource: 'matches' },
   { label: 'Disciplina', path: '/discipline', resource: 'tournaments' },
   { label: 'Finanzas basicas', path: '/finances-basic', resource: 'tournaments' },
+  { label: 'Reportes', path: '/reporting', resource: 'tournaments' },
   { label: 'Inscripciones', path: '/tournament-teams', resource: 'tournamentTeams' },
   { label: 'Etapas', path: '/tournament-stages', resource: 'tournamentStages' },
   { label: 'Grupos', path: '/stage-groups', resource: 'stageGroups' },

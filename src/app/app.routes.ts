@@ -277,6 +277,22 @@ export const appRoutes: Routes = [
           )
       },
       {
+        path: 'reporting',
+        title: 'Reportes',
+        canActivate: [authorizationGuard],
+        data: { resource: 'tournaments', action: 'read' },
+        loadComponent: () =>
+          import('./features/reporting/reporting-hub.component').then((m) => m.ReportingHubComponent)
+      },
+      {
+        path: 'tournaments/:id/reports',
+        title: 'Reporteria y exportacion',
+        canActivate: [authorizationGuard],
+        data: { resource: 'tournaments', action: 'read' },
+        loadComponent: () =>
+          import('./features/reporting/reporting-page.component').then((m) => m.ReportingPageComponent)
+      },
+      {
         path: 'tournament-teams',
         title: 'Tournament Teams',
         canActivate: [authorizationGuard],
