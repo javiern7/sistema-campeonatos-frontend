@@ -39,16 +39,20 @@ import { NotificationService } from '../../core/error/notification.service';
         background: rgba(255, 255, 255, 0.88);
         border-bottom: 1px solid var(--border);
         backdrop-filter: blur(14px);
+        gap: 0.75rem;
+        min-height: 72px;
       }
 
       .topbar-title {
         font-weight: 700;
+        line-height: 1.2;
       }
 
       .topbar-subtitle,
       .topbar-expiry {
         color: var(--text-soft);
         font-size: 0.85rem;
+        line-height: 1.35;
       }
 
       .topbar-spacer {
@@ -61,6 +65,10 @@ import { NotificationService } from '../../core/error/notification.service';
         align-items: flex-end;
         margin-right: 0.75rem;
         color: var(--text-soft);
+        max-width: 36rem;
+        min-width: 0;
+        text-align: right;
+        word-break: break-word;
       }
 
       a[mat-stroked-button] {
@@ -71,6 +79,38 @@ import { NotificationService } from '../../core/error/notification.service';
         font-size: 0.78rem;
         text-transform: uppercase;
         letter-spacing: 0.04em;
+      }
+
+      @media (max-width: 900px) {
+        .topbar {
+          align-items: flex-start;
+          flex-wrap: wrap;
+          height: auto;
+          padding-block: 0.75rem;
+        }
+
+        .topbar-spacer {
+          display: none;
+        }
+
+        .topbar-user {
+          order: 3;
+          width: 100%;
+          align-items: flex-start;
+          margin-right: 0;
+          text-align: left;
+        }
+
+        a[mat-stroked-button] {
+          margin-right: 0;
+        }
+      }
+
+      @media (max-width: 520px) {
+        a[mat-stroked-button],
+        button[mat-stroked-button] {
+          flex: 1 1 100%;
+        }
       }
     `
   ],

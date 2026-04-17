@@ -22,16 +22,32 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
         gap: 1rem;
         align-items: start;
         justify-content: space-between;
+        min-width: 0;
+      }
+
+      .page-header > div {
+        min-width: 0;
       }
 
       h1 {
         margin: 0;
         font-size: 1.75rem;
+        line-height: 1.15;
+        overflow-wrap: anywhere;
       }
 
       p {
         margin: 0.35rem 0 0;
         color: var(--text-soft);
+        line-height: 1.45;
+        overflow-wrap: anywhere;
+      }
+
+      @media (max-width: 720px) {
+        .page-header {
+          align-items: stretch;
+          flex-direction: column;
+        }
       }
     `
   ],

@@ -33,13 +33,35 @@ import { UsersBasicService } from './users-basic.service';
 
       <section class="card page-card app-page">
         <div class="context-banner">
-          <strong>Alcance del bloque</strong>
-          <span class="muted">No es un motor general de settings: solo expone la configuracion operativa minima declarada por backend.</span>
+          <strong>Identidad operativa del sistema</strong>
+          <span class="muted">
+            Define el nombre que ve el equipo interno, el correo de soporte y la zona horaria usada como referencia en la operacion diaria.
+          </span>
         </div>
 
         @if (loading()) {
           <app-loading-state label="Cargando configuracion basica..." />
         } @else {
+          <div class="purpose-grid">
+            <article class="purpose-card">
+              <span class="purpose-kicker">Nombre</span>
+              <strong>Reconocimiento interno</strong>
+              <p class="muted">Ayuda a identificar la organizacion en pantallas operativas y reportes simples.</p>
+            </article>
+
+            <article class="purpose-card">
+              <span class="purpose-kicker">Soporte</span>
+              <strong>Punto de contacto</strong>
+              <p class="muted">Centraliza el correo visible para incidencias, consultas y seguimiento operativo.</p>
+            </article>
+
+            <article class="purpose-card">
+              <span class="purpose-kicker">Tiempo</span>
+              <strong>Referencia horaria</strong>
+              <p class="muted">Ordena fechas y horarios base sin abrir configuraciones avanzadas ni regionalizacion pesada.</p>
+            </article>
+          </div>
+
           <form [formGroup]="form" class="settings-form">
             <mat-form-field appearance="outline">
               <mat-label>Nombre operativo</mat-label>
@@ -58,8 +80,10 @@ import { UsersBasicService } from './users-basic.service';
           </form>
 
           <div class="context-banner neutral-banner">
-            <strong>Ultima actualizacion</strong>
-            <span class="muted">{{ updatedAtLabel() }}</span>
+            <strong>Bloque acotado</strong>
+            <span class="muted">
+              Ultima actualizacion: {{ updatedAtLabel() }}. Esta pantalla no reemplaza permisos, usuarios ni configuracion multideporte.
+            </span>
           </div>
 
           <div class="actions-row">
@@ -82,6 +106,40 @@ import { UsersBasicService } from './users-basic.service';
         display: grid;
         gap: 1rem;
         grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      }
+
+      .purpose-grid {
+        display: grid;
+        gap: 1rem;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      }
+
+      .purpose-card {
+        display: grid;
+        gap: 0.45rem;
+        padding: 1rem;
+        border-radius: 8px;
+        border: 1px solid rgba(10, 110, 90, 0.14);
+        background:
+          linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(241, 246, 244, 0.9)),
+          var(--surface);
+      }
+
+      .purpose-card strong,
+      .purpose-card p {
+        margin: 0;
+      }
+
+      .purpose-kicker {
+        width: fit-content;
+        padding: 0.25rem 0.55rem;
+        border-radius: 999px;
+        background: rgba(10, 110, 90, 0.1);
+        color: var(--primary-strong);
+        font-size: 0.75rem;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
       }
 
       .neutral-banner {

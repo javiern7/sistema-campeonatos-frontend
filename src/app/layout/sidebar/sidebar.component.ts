@@ -34,7 +34,9 @@ import { APP_NAV_ITEMS } from '../app-nav';
         display: block;
         height: 100%;
         padding: 1rem 0.75rem;
-        background: linear-gradient(180deg, #10232b 0%, #163847 100%);
+        background:
+          linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0)),
+          linear-gradient(155deg, #123c34 0%, #0f5f5b 52%, #38477a 100%);
         color: #f8fafc;
       }
 
@@ -44,7 +46,7 @@ import { APP_NAV_ITEMS } from '../app-nav';
 
       .sidebar-kicker {
         display: block;
-        color: #9ac6bb;
+        color: #b9eadf;
         font-size: 0.78rem;
         text-transform: uppercase;
         letter-spacing: 0.08em;
@@ -58,12 +60,19 @@ import { APP_NAV_ITEMS } from '../app-nav';
 
       a {
         color: #e2e8f0;
-        border-radius: 12px;
+        border-radius: 8px;
         margin-bottom: 0.15rem;
       }
 
       .active-link {
-        background: rgba(255, 255, 255, 0.12);
+        background: rgba(255, 255, 255, 0.16);
+        color: #ffffff;
+      }
+
+      @media (max-width: 900px) {
+        :host {
+          overflow-y: auto;
+        }
       }
     `
   ],
