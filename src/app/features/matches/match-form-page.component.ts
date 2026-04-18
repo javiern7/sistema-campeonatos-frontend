@@ -387,8 +387,8 @@ export class MatchFormPageComponent {
   protected readonly form = this.fb.nonNullable.group(
     {
       tournamentId: [0],
-      stageId: [''],
-      groupId: [''],
+      stageId: ['' as number | ''],
+      groupId: ['' as number | ''],
       roundNumber: ['', [Validators.min(1)]],
       matchdayNumber: ['', [Validators.min(1)]],
       homeTournamentTeamId: [0, [positiveSelectionValidator('homeTournamentTeamId')]],
@@ -400,7 +400,7 @@ export class MatchFormPageComponent {
       status: ['SCHEDULED' as MatchStatus, Validators.required],
       homeScore: ['', [Validators.min(0)]],
       awayScore: ['', [Validators.min(0)]],
-      winnerTournamentTeamId: [''],
+      winnerTournamentTeamId: ['' as number | ''],
       notes: ['']
     },
     { validators: [matchConsistencyValidator] }
@@ -418,10 +418,16 @@ export class MatchFormPageComponent {
     });
 
     this.catalogLoader.loadAll((page, size) => this.stagesService.list({ page, size })).subscribe({
-      next: (items) => this.allStages.set(items)
+      next: (items) => {
+        this.allStages.set(items);
+        this.applyDefaultStageAndGroupForTournament();
+      }
     });
     this.catalogLoader.loadAll((page, size) => this.groupsService.list({ page, size })).subscribe({
-      next: (items) => this.allGroups.set(items)
+      next: (items) => {
+        this.allGroups.set(items);
+        this.applyDefaultStageAndGroupForTournament();
+      }
     });
     this.catalogLoader.loadAll((page, size) => this.teamsService.list({ page, size })).subscribe({
       next: (items) => this.teams.set(items)
@@ -442,6 +448,7 @@ export class MatchFormPageComponent {
       const tournamentId = Number(value);
       this.selectedTournamentId.set(tournamentId);
       const validStageIds = new Set(this.allStages().filter((item) => item.tournamentId === tournamentId).map((item) => item.id));
+      const currentGroupId = Number(this.form.controls.groupId.getRawValue());
       const validTeamIds = new Set(
         this.allTournamentTeams().filter((item) => item.tournamentId === tournamentId).map((item) => item.id)
       );
@@ -452,11 +459,11 @@ export class MatchFormPageComponent {
 
       this.form.patchValue(
         {
-          stageId: currentStageId && validStageIds.has(currentStageId) ? String(currentStageId) : '',
-          groupId: '',
+          stageId: currentStageId && validStageIds.has(currentStageId) ? currentStageId : '',
+          groupId: currentStageId && validStageIds.has(currentStageId) ? currentGroupId || '' : '',
           homeTournamentTeamId: validTeamIds.has(currentHomeTeamId) ? currentHomeTeamId : 0,
           awayTournamentTeamId: validTeamIds.has(currentAwayTeamId) ? currentAwayTeamId : 0,
-          winnerTournamentTeamId: validTeamIds.has(currentWinnerTeamId) ? String(currentWinnerTeamId) : ''
+          winnerTournamentTeamId: validTeamIds.has(currentWinnerTeamId) ? currentWinnerTeamId : ''
         },
         { emitEvent: false }
       );
@@ -473,9 +480,11 @@ export class MatchFormPageComponent {
       const validGroupIds = new Set(this.allGroups().filter((item) => item.stageId === stageId).map((item) => item.id));
       const currentGroupId = Number(this.form.controls.groupId.getRawValue());
 
-      if (currentGroupId && !validGroupIds.has(currentGroupId)) {
+      if (currentGroupId && validGroupIds.size > 0 && !validGroupIds.has(currentGroupId)) {
         this.form.patchValue({ groupId: '' }, { emitEvent: false });
       }
+
+      this.applyDefaultStageAndGroupForTournament();
     });
 
     this.form.controls.homeTournamentTeamId.valueChanges.pipe(takeUntilDestroyed()).subscribe(() => {
@@ -499,26 +508,30 @@ export class MatchFormPageComponent {
       .pipe(finalize(() => this.pageLoading.set(false)))
       .subscribe({
         next: (match) => {
-          this.form.patchValue({
-            tournamentId: match.tournamentId,
-            stageId: match.stageId ? String(match.stageId) : '',
-            groupId: match.groupId ? String(match.groupId) : '',
-            roundNumber: match.roundNumber ? String(match.roundNumber) : '',
-            matchdayNumber: match.matchdayNumber ? String(match.matchdayNumber) : '',
-            homeTournamentTeamId: match.homeTournamentTeamId,
-            awayTournamentTeamId: match.awayTournamentTeamId,
-            scheduledAt: toDateTimeLocalInputValue(match.scheduledAt),
-            venueName: match.venueName ?? '',
-            status: match.status,
-            homeScore: match.homeScore !== null ? String(match.homeScore) : '',
-            awayScore: match.awayScore !== null ? String(match.awayScore) : '',
-            winnerTournamentTeamId: match.winnerTournamentTeamId ? String(match.winnerTournamentTeamId) : '',
-            notes: match.notes ?? ''
-          });
+          this.form.patchValue(
+            {
+              tournamentId: match.tournamentId,
+              stageId: match.stageId ?? '',
+              groupId: match.groupId ?? '',
+              roundNumber: match.roundNumber ? String(match.roundNumber) : '',
+              matchdayNumber: match.matchdayNumber ? String(match.matchdayNumber) : '',
+              homeTournamentTeamId: match.homeTournamentTeamId,
+              awayTournamentTeamId: match.awayTournamentTeamId,
+              scheduledAt: toDateTimeLocalInputValue(match.scheduledAt),
+              venueName: match.venueName ?? '',
+              status: match.status,
+              homeScore: match.homeScore !== null ? String(match.homeScore) : '',
+              awayScore: match.awayScore !== null ? String(match.awayScore) : '',
+              winnerTournamentTeamId: match.winnerTournamentTeamId ?? '',
+              notes: match.notes ?? ''
+            },
+            { emitEvent: false }
+          );
           this.selectedTournamentId.set(match.tournamentId);
           this.selectedStageId.set(match.stageId ?? 0);
           this.syncSelectedTeamTournamentIds();
           this.syncWinnerSelection();
+          this.applyDefaultStageAndGroupForTournament();
         },
         error: (error: unknown) => this.notifications.error(this.errorMapper.map(error).message)
       });
@@ -662,6 +675,31 @@ export class MatchFormPageComponent {
       { emitEvent: false }
     );
     this.syncSelectedTeamTournamentIds();
+  }
+
+  private applyDefaultStageAndGroupForTournament(): void {
+    const tournamentId = this.selectedTournamentId();
+    if (!tournamentId) {
+      return;
+    }
+
+    let stageId = Number(this.form.controls.stageId.getRawValue());
+    if (!stageId) {
+      const tournamentStages = this.allStages().filter((item) => item.tournamentId === tournamentId);
+      if (tournamentStages.length === 1) {
+        stageId = tournamentStages[0].id;
+        this.selectedStageId.set(stageId);
+        this.form.patchValue({ stageId }, { emitEvent: false });
+      }
+    }
+
+    const groupId = Number(this.form.controls.groupId.getRawValue());
+    if (!groupId && stageId) {
+      const stageGroups = this.allGroups().filter((item) => item.stageId === stageId);
+      if (stageGroups.length === 1) {
+        this.form.patchValue({ groupId: stageGroups[0].id }, { emitEvent: false });
+      }
+    }
   }
 
   private syncSelectedTeamTournamentIds(): void {

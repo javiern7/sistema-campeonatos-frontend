@@ -255,9 +255,13 @@ test.describe('Fase A assets locales y validacion demo', () => {
     await page.route(`${apiBaseUrl}/tournament-teams**`, (route) =>
       route.fulfill({ json: apiEnvelope('TOURNAMENT_TEAMS_FOUND', pageResponse(registrations)) })
     );
-    await page.route(`${apiBaseUrl}/matches**`, (route) =>
-      route.fulfill({ json: apiEnvelope('MATCHES_FOUND', pageResponse(matches)) })
-    );
+    await page.route(`${apiBaseUrl}/matches**`, (route) => {
+      if (route.request().url() === `${apiBaseUrl}/matches/500`) {
+        return route.fulfill({ json: apiEnvelope('MATCH_FOUND', matches[0]) });
+      }
+
+      return route.fulfill({ json: apiEnvelope('MATCHES_FOUND', pageResponse(matches)) });
+    });
     await page.route(`${apiBaseUrl}/standings**`, (route) =>
       route.fulfill({ json: apiEnvelope('STANDINGS_FOUND', pageResponse(standings)) })
     );
@@ -342,6 +346,24 @@ test.describe('Fase A assets locales y validacion demo', () => {
     await expect(page.getByRole('heading', { name: 'Partidos' })).toBeVisible();
     expect(await hasHorizontalOverflow(page)).toBe(false);
     await page.screenshot({ path: '.codex-artifacts/validation/fase-a-partidos-mobile.png', fullPage: true });
+  });
+
+  test('edicion de partido conserva etapa y grupo asociados', async ({ page }) => {
+    await page.addInitScript(
+      (payload) => window.localStorage.setItem('championships.auth.session', JSON.stringify(payload)),
+      session
+    );
+
+    await page.setViewportSize({ width: 1366, height: 768 });
+    await page.goto('/matches/500/edit');
+
+    await expect(page.getByRole('heading', { name: 'Editar partido' })).toBeVisible();
+    await expect(page.getByLabel('Etapa')).toContainText('Fase regular');
+    await expect(page.getByLabel('Grupo')).toContainText('Grupo unico');
+    await expect(page.getByLabel('Equipo local')).toContainText('Club Norte Operativo');
+    await expect(page.getByLabel('Equipo visita')).toContainText('Academia Sur Demo');
+    expect(await hasHorizontalOverflow(page)).toBe(false);
+    await page.screenshot({ path: '.codex-artifacts/validation/fase-a-editar-partido-contexto.png', fullPage: true });
   });
 });
 
