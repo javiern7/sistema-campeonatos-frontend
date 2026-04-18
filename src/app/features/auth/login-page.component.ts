@@ -82,7 +82,7 @@ import { NotificationService } from '../../core/error/notification.service';
         background:
           linear-gradient(180deg, rgba(7, 89, 73, 0.16), rgba(7, 89, 73, 0.88)),
           linear-gradient(120deg, rgba(14, 116, 144, 0.25), rgba(109, 91, 208, 0.2)),
-          url('https://images.unsplash.com/photo-1517649763962-0c623066013b?auto=format&fit=crop&w=1200&q=80') center / cover;
+          url('/assets/login-demo-sports.svg') center / cover;
         color: #ffffff;
       }
 

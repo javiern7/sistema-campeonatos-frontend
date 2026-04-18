@@ -99,3 +99,4 @@ e2e/*
 !e2e/reporting-export-v4.spec.ts
 !e2e/post-v4-demo-polish.spec.ts
 !e2e/post-v4-visual-demo-ii.spec.ts
+!e2e/fase-a-assets-locales-validacion-demo.spec.ts
