@@ -63,6 +63,16 @@ export const appRoutes: Routes = [
           )
       },
       {
+        path: 'operations/users/:userId',
+        title: 'Detalle operativo de usuario',
+        canActivate: [authorizationGuard],
+        data: { resource: 'users', action: 'read' },
+        loadComponent: () =>
+          import('./features/users-basic/operational-user-detail-page.component').then(
+            (m) => m.OperationalUserDetailPageComponent
+          )
+      },
+      {
         path: 'operations/basic-configuration',
         title: 'Configuracion basica',
         canActivate: [authorizationGuard],

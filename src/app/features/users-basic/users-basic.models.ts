@@ -1,12 +1,16 @@
 import { PageResponse, QueryParams } from '../../core/api/api.models';
 
-export type OperationalUserStatus = 'ACTIVE' | 'INACTIVE' | 'LOCKED';
-export type OperationalRoleCode = 'SUPER_ADMIN' | 'TOURNAMENT_ADMIN' | 'OPERATOR' | string;
+export type OperationalUserStatus = string;
+export type OperationalRoleCode = string;
 export const OPERATIONAL_USERS_DEFAULT_SORT = 'fullName,asc';
 
 export interface OperationalUserRole {
   roleCode: OperationalRoleCode;
   roleName: string;
+  description?: string | null;
+  mutable?: boolean;
+  assignable?: boolean;
+  manageabilityReason?: string | null;
 }
 
 export type OperationalUserRoleValue = OperationalRoleCode | OperationalUserRole;
@@ -22,6 +26,13 @@ export interface OperationalUser {
   lastLoginAt: string | null;
   roles: OperationalUserRoleValue[];
   statusManageable: boolean;
+  statusManageabilityReason?: string | null;
+}
+
+export interface OperationalUserDetail extends OperationalUser {
+  roles: OperationalUserRole[];
+  rolesManageable: boolean;
+  rolesManageabilityReason: string | null;
 }
 
 export interface OperationalUsersFilters extends QueryParams {
@@ -37,6 +48,39 @@ export type OperationalUsersPage = PageResponse<OperationalUser>;
 
 export interface UserStatusUpdateRequest {
   status: OperationalUserStatus;
+  reason: string;
+}
+
+export interface OperationalRoleCatalogItem {
+  roleCode: OperationalRoleCode;
+  roleName: string;
+  description: string | null;
+  mutable: boolean;
+  assignable: boolean;
+  manageabilityReason: string | null;
+}
+
+export interface OperationalUserStatusCatalogItem {
+  code: OperationalUserStatus;
+  name: string;
+  description: string | null;
+}
+
+export interface OperationalPermission {
+  code: string;
+  name: string;
+  description: string | null;
+}
+
+export interface OperationalUserPermissionSummary {
+  userId: number;
+  username: string;
+  roles: OperationalUserRole[];
+  permissions: OperationalPermission[];
+}
+
+export interface UserRolesUpdateRequest {
+  roleCodes: OperationalRoleCode[];
   reason: string;
 }
 

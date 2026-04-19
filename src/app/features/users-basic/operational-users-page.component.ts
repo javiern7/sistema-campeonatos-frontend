@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
-import { finalize } from 'rxjs';
+import { RouterLink } from '@angular/router';
+import { finalize, forkJoin } from 'rxjs';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -16,9 +17,12 @@ import { PageHeaderComponent } from '../../shared/page-header/page-header.compon
 import {
   OPERATIONAL_USERS_DEFAULT_SORT,
   OperationalRoleCode,
+  OperationalRoleCatalogItem,
   OperationalUser,
   OperationalUserRoleValue,
   OperationalUserStatus,
+  OperationalUserStatusCatalogItem,
+  OperationalUsersFilters,
   OperationalUsersPage
 } from './users-basic.models';
 import { UsersBasicService } from './users-basic.service';
@@ -28,24 +32,12 @@ type StatusAction = {
   value: OperationalUserStatus;
 };
 
-const STATUS_OPTIONS: StatusAction[] = [
-  { label: 'Activar', value: 'ACTIVE' },
-  { label: 'Inactivar', value: 'INACTIVE' },
-  { label: 'Bloquear', value: 'LOCKED' }
-];
-
-const ROLE_OPTIONS: Array<{ label: string; value: OperationalRoleCode | '' }> = [
-  { label: 'Todos', value: '' },
-  { label: 'SUPER_ADMIN', value: 'SUPER_ADMIN' },
-  { label: 'TOURNAMENT_ADMIN', value: 'TOURNAMENT_ADMIN' },
-  { label: 'OPERATOR', value: 'OPERATOR' }
-];
-
 @Component({
   selector: 'app-operational-users-page',
   standalone: true,
   imports: [
     ReactiveFormsModule,
+    RouterLink,
     MatButtonModule,
     MatFormFieldModule,
     MatInputModule,
@@ -59,13 +51,13 @@ const ROLE_OPTIONS: Array<{ label: string; value: OperationalRoleCode | '' }> = 
     <section class="app-page">
       <app-page-header
         title="Usuarios operativos"
-        subtitle="Lectura administrativa minima de usuarios existentes y cambio acotado de estado segun contrato backend."
+        subtitle="Lectura administrativa de usuarios existentes con catalogos y gestionabilidad provistos por backend."
       />
 
       <section class="card page-card app-page">
         <div class="context-banner">
           <strong>Guardrail del bloque</strong>
-          <span class="muted">La pantalla solo lista usuarios operativos y permite cambio de estado cuando backend lo marca como gestionable.</span>
+          <span class="muted">No se crean usuarios, no se editan datos basicos y no se infieren reglas sensibles en frontend.</span>
         </div>
 
         <form [formGroup]="filtersForm" class="filter-row">
@@ -78,8 +70,8 @@ const ROLE_OPTIONS: Array<{ label: string; value: OperationalRoleCode | '' }> = 
             <mat-label>Estado</mat-label>
             <mat-select formControlName="status">
               <mat-option value="">Todos</mat-option>
-              @for (status of statusOptions; track status.value) {
-                <mat-option [value]="status.value">{{ statusLabel(status.value) }}</mat-option>
+              @for (status of statusesCatalog(); track status.code) {
+                <mat-option [value]="status.code">{{ status.name }}</mat-option>
               }
             </mat-select>
           </mat-form-field>
@@ -87,8 +79,9 @@ const ROLE_OPTIONS: Array<{ label: string; value: OperationalRoleCode | '' }> = 
           <mat-form-field appearance="outline">
             <mat-label>Rol</mat-label>
             <mat-select formControlName="roleCode">
-              @for (role of roleOptions; track role.label) {
-                <mat-option [value]="role.value">{{ role.label }}</mat-option>
+              <mat-option value="">Todos</mat-option>
+              @for (role of rolesCatalog(); track role.roleCode) {
+                <mat-option [value]="role.roleCode">{{ role.roleName || role.roleCode }}</mat-option>
               }
             </mat-select>
           </mat-form-field>
@@ -130,7 +123,7 @@ const ROLE_OPTIONS: Array<{ label: string; value: OperationalRoleCode | '' }> = 
                 <ng-container matColumnDef="status">
                   <th mat-header-cell *matHeaderCellDef>Estado</th>
                   <td mat-cell *matCellDef="let user">
-                    <span class="chip-status" [class.active]="user.status === 'ACTIVE'" [class.inactive]="user.status !== 'ACTIVE'">
+                    <span class="chip-status">
                       {{ statusLabel(user.status) }}
                     </span>
                   </td>
@@ -144,17 +137,18 @@ const ROLE_OPTIONS: Array<{ label: string; value: OperationalRoleCode | '' }> = 
                 <ng-container matColumnDef="actions">
                   <th mat-header-cell *matHeaderCellDef>Acciones</th>
                   <td mat-cell *matCellDef="let user">
-                    @if (!canManageUsers()) {
-                      <span class="muted">Solo lectura</span>
-                    } @else if (!user.statusManageable) {
-                      <span class="muted">No gestionable</span>
-                    } @else {
-                      <div class="inline-actions">
+                    <div class="inline-actions">
+                      <a mat-button [routerLink]="['/operations/users', user.userId]">Ver detalle</a>
+                      @if (!canManageUsers()) {
+                        <span class="muted">Solo lectura</span>
+                      } @else if (!user.statusManageable) {
+                        <span class="muted">{{ user.statusManageabilityReason || 'No gestionable' }}</span>
+                      } @else {
                         @for (action of statusActions(user); track action.value) {
                           <button mat-button type="button" (click)="changeStatus(user, action.value)">{{ action.label }}</button>
                         }
-                      </div>
-                    }
+                      }
+                    </div>
                   </td>
                 </ng-container>
 
@@ -206,11 +200,11 @@ export class OperationalUsersPageComponent {
   protected readonly loading = signal(true);
   protected readonly page = signal<OperationalUsersPage | null>(null);
   protected readonly rows = signal<OperationalUser[]>([]);
+  protected readonly rolesCatalog = signal<OperationalRoleCatalogItem[]>([]);
+  protected readonly statusesCatalog = signal<OperationalUserStatusCatalogItem[]>([]);
   protected readonly pageIndex = signal(0);
   protected readonly pageSize = signal(20);
   protected readonly pageSizeOptions = [10, 20, 50];
-  protected readonly roleOptions = ROLE_OPTIONS;
-  protected readonly statusOptions = STATUS_OPTIONS;
   protected readonly displayedColumns = ['identity', 'roles', 'status', 'lastLoginAt', 'actions'];
   protected readonly canManageUsers = computed(() => this.authorization.canManage('users'));
 
@@ -221,22 +215,32 @@ export class OperationalUsersPageComponent {
   });
 
   constructor() {
-    this.load();
+    this.loadInitialData();
+  }
+
+  private loadInitialData(): void {
+    this.loading.set(true);
+    forkJoin({
+      roles: this.usersBasicService.listRoles(),
+      statuses: this.usersBasicService.listUserStatuses(),
+      page: this.usersBasicService.listUsers(this.currentFilters())
+    })
+      .pipe(finalize(() => this.loading.set(false)))
+      .subscribe({
+        next: ({ roles, statuses, page }) => {
+          this.rolesCatalog.set(roles);
+          this.statusesCatalog.set(statuses);
+          this.page.set(page);
+          this.rows.set(page.content);
+        },
+        error: (error: unknown) => this.notifications.error(this.errorMapper.map(error).message)
+      });
   }
 
   protected load(): void {
     this.loading.set(true);
-    const filters = this.filtersForm.getRawValue();
-
     this.usersBasicService
-      .listUsers({
-        query: filters.query.trim(),
-        status: filters.status,
-        roleCode: filters.roleCode,
-        page: this.pageIndex(),
-        size: this.pageSize(),
-        sort: OPERATIONAL_USERS_DEFAULT_SORT
-      })
+      .listUsers(this.currentFilters())
       .pipe(finalize(() => this.loading.set(false)))
       .subscribe({
         next: (page) => {
@@ -268,13 +272,7 @@ export class OperationalUsersPageComponent {
   }
 
   protected statusLabel(status: OperationalUserStatus): string {
-    const labels: Record<OperationalUserStatus, string> = {
-      ACTIVE: 'Activo',
-      INACTIVE: 'Inactivo',
-      LOCKED: 'Bloqueado'
-    };
-
-    return labels[status];
+    return this.statusesCatalog().find((item) => item.code === status)?.name ?? status;
   }
 
   protected dateLabel(value: string | null): string {
@@ -289,7 +287,12 @@ export class OperationalUsersPageComponent {
   }
 
   protected statusActions(user: OperationalUser): StatusAction[] {
-    return STATUS_OPTIONS.filter((action) => action.value !== user.status);
+    return this.statusesCatalog()
+      .filter((status) => status.code !== user.status)
+      .map((status) => ({
+        label: status.name,
+        value: status.code
+      }));
   }
 
   private roleLabel(role: OperationalUserRoleValue): string {
@@ -298,6 +301,19 @@ export class OperationalUsersPageComponent {
     }
 
     return role.roleName || role.roleCode;
+  }
+
+  private currentFilters(): OperationalUsersFilters {
+    const filters = this.filtersForm.getRawValue();
+
+    return {
+      query: filters.query.trim(),
+      status: filters.status,
+      roleCode: filters.roleCode,
+      page: this.pageIndex(),
+      size: this.pageSize(),
+      sort: OPERATIONAL_USERS_DEFAULT_SORT
+    };
   }
 
   protected changeStatus(user: OperationalUser, status: OperationalUserStatus): void {
