@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { Meta, Title } from '@angular/platform-browser';
@@ -228,7 +228,8 @@ type FilterState = {
   ],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class PublicTournamentListPageComponent {
+export class TournamentListComponent {
+  private readonly destroyRef = inject(DestroyRef);
   private readonly publicPortalService = inject(PublicPortalService);
   private readonly errorMapper = inject(ErrorMapper);
   private readonly title = inject(Title);
@@ -298,14 +299,14 @@ export class PublicTournamentListPageComponent {
     this.errorMessage.set('');
 
     this.publicPortalService
-      .listTournaments({
+      .getTournaments({
         name: this.draftFilters.name,
         status: this.draftFilters.status,
         page: 0,
         size: 12,
         sort: 'startDate,asc'
       })
-      .pipe(takeUntilDestroyed())
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (response) => {
           this.tournaments.set(response.content);

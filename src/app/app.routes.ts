@@ -19,7 +19,7 @@ export const appRoutes: Routes = [
         title: 'Torneos publicos',
         loadComponent: () =>
           import('./features/public-portal/public-tournament-list-page.component').then(
-            (m) => m.PublicTournamentListPageComponent
+            (m) => m.TournamentListComponent
           )
       },
       {
@@ -27,7 +27,7 @@ export const appRoutes: Routes = [
         title: 'Detalle publico de torneo',
         loadComponent: () =>
           import('./features/public-portal/public-tournament-detail-page.component').then(
-            (m) => m.PublicTournamentDetailPageComponent
+            (m) => m.TournamentDetailComponent
           )
       }
     ]

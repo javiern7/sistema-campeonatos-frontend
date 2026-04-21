@@ -4,6 +4,9 @@ import { Observable } from 'rxjs';
 import { ApiClientService } from '../../core/api/api-client.service';
 import {
   PublicHome,
+  PublicTournamentCalendar,
+  PublicTournamentCalendarFilters,
+  PublicTournamentContextFilters,
   PublicTournamentDetail,
   PublicTournamentListFilters,
   PublicTournamentPage,
@@ -23,15 +26,23 @@ export class PublicPortalService {
     return this.api.get<PublicTournamentPage>('/public/tournaments', filters);
   }
 
+  getTournaments(filters: PublicTournamentListFilters = {}): Observable<PublicTournamentPage> {
+    return this.listTournaments(filters);
+  }
+
   getTournament(slug: string): Observable<PublicTournamentDetail> {
     return this.api.get<PublicTournamentDetail>(`/public/tournaments/${slug}`);
   }
 
-  getStandings(slug: string): Observable<PublicTournamentStandings> {
-    return this.api.get<PublicTournamentStandings>(`/public/tournaments/${slug}/standings`);
+  getCalendar(slug: string, filters: PublicTournamentCalendarFilters = {}): Observable<PublicTournamentCalendar> {
+    return this.api.get<PublicTournamentCalendar>(`/public/tournaments/${slug}/calendar`, filters);
   }
 
-  getResults(slug: string): Observable<PublicTournamentResults> {
-    return this.api.get<PublicTournamentResults>(`/public/tournaments/${slug}/results`);
+  getStandings(slug: string, filters: PublicTournamentContextFilters = {}): Observable<PublicTournamentStandings> {
+    return this.api.get<PublicTournamentStandings>(`/public/tournaments/${slug}/standings`, filters);
+  }
+
+  getResults(slug: string, filters: PublicTournamentContextFilters = {}): Observable<PublicTournamentResults> {
+    return this.api.get<PublicTournamentResults>(`/public/tournaments/${slug}/results`, filters);
   }
 }

@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Meta, Title } from '@angular/platform-browser';
 import { ActivatedRoute, RouterLink } from '@angular/router';
@@ -8,14 +8,16 @@ import { MatButtonModule } from '@angular/material/button';
 import { ErrorMapper } from '../../core/error/error.mapper';
 import { parseBackendDateTime } from '../../shared/date/date-time.utils';
 import { LoadingStateComponent } from '../../shared/loading-state/loading-state.component';
-import { VisualIdentityComponent } from '../../shared/visual-identity/visual-identity.component';
+import { CalendarSectionComponent } from './calendar-section.component';
 import {
+  PublicTournamentCalendar,
   PublicTournamentDetail,
-  PublicTournamentResultEntry,
   PublicTournamentResults,
   PublicTournamentStandings
 } from './public-portal.models';
 import { PublicPortalService } from './public-portal.service';
+import { ResultsSectionComponent } from './results-section.component';
+import { StandingsSectionComponent } from './standings-section.component';
 
 type DetailMetric = {
   label: string;
@@ -26,7 +28,14 @@ type DetailMetric = {
 @Component({
   selector: 'app-public-tournament-detail-page',
   standalone: true,
-  imports: [RouterLink, MatButtonModule, LoadingStateComponent, VisualIdentityComponent],
+  imports: [
+    RouterLink,
+    MatButtonModule,
+    LoadingStateComponent,
+    CalendarSectionComponent,
+    ResultsSectionComponent,
+    StandingsSectionComponent
+  ],
   template: `
     <section class="public-page">
       @if (loading()) {
@@ -84,106 +93,9 @@ type DetailMetric = {
           }
         </section>
 
-        <section class="card public-card">
-          <div class="section-heading">
-            <div>
-              <h2>Tabla publica</h2>
-              <p class="muted">{{ standingsContextLabel() }}</p>
-            </div>
-          </div>
-
-          @if (standings()?.standings?.length) {
-            <div class="table-wrapper">
-              <table class="public-table">
-                <thead>
-                  <tr>
-                    <th>#</th>
-                    <th>Equipo</th>
-                    <th>PJ</th>
-                    <th>PG</th>
-                    <th>PE</th>
-                    <th>PP</th>
-                    <th>DG</th>
-                    <th>PTS</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  @for (entry of standings()!.standings; track entry.position + '-' + entry.teamName) {
-                    <tr>
-                      <td>
-                        <span class="position-pill" [class.leader]="entry.position === 1">{{ entry.position }}</span>
-                      </td>
-                      <td>
-                        <app-visual-identity
-                          [label]="entry.teamName"
-                          [shortLabel]="entry.teamShortName"
-                          [code]="entry.teamCode"
-                          [meta]="entry.scoreDiff > 0 ? 'DG +' + entry.scoreDiff : 'DG ' + entry.scoreDiff"
-                          [compact]="true"
-                        />
-                      </td>
-                      <td>{{ entry.played }}</td>
-                      <td>{{ entry.wins }}</td>
-                      <td>{{ entry.draws }}</td>
-                      <td>{{ entry.losses }}</td>
-                      <td>{{ entry.scoreDiff }}</td>
-                      <td>{{ entry.points }}</td>
-                    </tr>
-                  }
-                </tbody>
-              </table>
-            </div>
-          } @else {
-            <div class="empty-state">
-              <strong>No hay standings publicados aun.</strong>
-              <p class="muted">El backend devolvio una lectura valida, pero sin entradas visibles para este contexto.</p>
-            </div>
-          }
-        </section>
-
-        <section class="card public-card">
-          <div class="section-heading">
-            <div>
-              <h2>Resultados publicados</h2>
-              <p class="muted">Partidos cerrados visibles sin notas internas ni secciones editoriales.</p>
-            </div>
-          </div>
-
-          @if (results()?.results?.length) {
-            <div class="results-grid">
-              @for (entry of results()!.results; track entry.match.matchId) {
-                <article class="result-card">
-                  <div class="card-head">
-                    <span class="meta-chip">{{ entry.match.stageName || 'Sin etapa visible' }}</span>
-                    <span class="meta-chip">{{ entry.match.status }}</span>
-                  </div>
-                  <div class="scoreboard">
-                    <app-visual-identity
-                      [label]="entry.match.homeTeam.teamName"
-                      [shortLabel]="entry.match.homeTeam.shortName"
-                      [code]="entry.match.homeTeam.code"
-                      [compact]="true"
-                    />
-                    <strong class="score-value">{{ scoreLabel(entry) }}</strong>
-                    <app-visual-identity
-                      [label]="entry.match.awayTeam.teamName"
-                      [shortLabel]="entry.match.awayTeam.shortName"
-                      [code]="entry.match.awayTeam.code"
-                      [compact]="true"
-                    />
-                  </div>
-                  <p class="muted">{{ scopeLabel(entry) }}</p>
-                  <p class="muted">{{ scheduleLabel(entry) }}</p>
-                </article>
-              }
-            </div>
-          } @else {
-            <div class="empty-state">
-              <strong>No hay resultados publicos adicionales.</strong>
-              <p class="muted">Solo se exponen partidos cerrados que el backend considera publicables.</p>
-            </div>
-          }
-        </section>
+        <app-calendar-section [calendar]="calendar()" />
+        <app-results-section [results]="results()" />
+        <app-standings-section [standings]="standings()" />
 
         @if (!tournament()!.modules.approvedPiecesEnabled) {
           <section class="card public-card">
@@ -412,7 +324,8 @@ type DetailMetric = {
   ],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class PublicTournamentDetailPageComponent {
+export class TournamentDetailComponent {
+  private readonly destroyRef = inject(DestroyRef);
   private readonly route = inject(ActivatedRoute);
   private readonly publicPortalService = inject(PublicPortalService);
   private readonly errorMapper = inject(ErrorMapper);
@@ -421,6 +334,7 @@ export class PublicTournamentDetailPageComponent {
 
   protected readonly loading = signal(true);
   protected readonly tournament = signal<PublicTournamentDetail | null>(null);
+  protected readonly calendar = signal<PublicTournamentCalendar | null>(null);
   protected readonly standings = signal<PublicTournamentStandings | null>(null);
   protected readonly results = signal<PublicTournamentResults | null>(null);
   protected readonly errorMessage = signal('');
@@ -442,7 +356,7 @@ export class PublicTournamentDetailPageComponent {
   });
 
   constructor() {
-    this.route.paramMap.pipe(takeUntilDestroyed()).subscribe((params) => {
+    this.route.paramMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
       const slug = params.get('slug');
       if (!slug) {
         this.errorMessage.set('No se encontro el slug publico del torneo.');
@@ -478,35 +392,6 @@ export class PublicTournamentDetailPageComponent {
     return labels[format] ?? format;
   }
 
-  protected standingsContextLabel(): string {
-    const standings = this.standings();
-    if (!standings) {
-      return 'Cargando contexto de standings...';
-    }
-
-    const context = [standings.stageName, standings.groupName].filter(Boolean).join(' / ');
-    return context || 'Lectura consolidada sin filtro adicional de etapa o grupo.';
-  }
-
-  protected matchLabel(entry: PublicTournamentResultEntry): string {
-    return `${entry.match.homeTeam.shortName || entry.match.homeTeam.teamName} vs ${entry.match.awayTeam.shortName || entry.match.awayTeam.teamName}`;
-  }
-
-  protected scoreLabel(entry: PublicTournamentResultEntry): string {
-    const { homeScore, awayScore } = entry.match;
-    return homeScore !== null && awayScore !== null ? `${homeScore} - ${awayScore}` : 'Marcador no disponible';
-  }
-
-  protected scopeLabel(entry: PublicTournamentResultEntry): string {
-    return entry.affectsStandings ? `Impacta standings (${entry.standingScope || 'sin alcance'})` : 'Sin impacto visible en tabla';
-  }
-
-  protected scheduleLabel(entry: PublicTournamentResultEntry): string {
-    return entry.match.scheduledAt
-      ? `Programado ${this.dateTimeLabel(entry.match.scheduledAt)}`
-      : entry.match.venueName || 'Fecha y sede no publicadas';
-  }
-
   protected dateTimeLabel(value: string | null): string {
     const parsed = parseBackendDateTime(value);
     return parsed
@@ -532,13 +417,15 @@ export class PublicTournamentDetailPageComponent {
 
     forkJoin({
       tournament: this.publicPortalService.getTournament(slug),
+      calendar: this.publicPortalService.getCalendar(slug),
       standings: this.publicPortalService.getStandings(slug),
       results: this.publicPortalService.getResults(slug)
     })
-      .pipe(takeUntilDestroyed())
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: ({ tournament, standings, results }) => {
+        next: ({ tournament, calendar, standings, results }) => {
           this.tournament.set(tournament);
+          this.calendar.set(calendar);
           this.standings.set(standings);
           this.results.set(results);
           this.updateMetadata(tournament);

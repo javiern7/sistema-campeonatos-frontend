@@ -77,6 +77,26 @@ export interface PublicTournamentStandings {
   standings: PublicStandingEntry[];
 }
 
+export interface PublicTournamentContextFilters {
+  stageId?: number | '';
+  groupId?: number | '';
+}
+
+export type PublicMatchStatus =
+  | 'SCHEDULED'
+  | 'IN_PROGRESS'
+  | 'PLAYED'
+  | 'FORFEIT'
+  | 'CANCELLED'
+  | 'POSTPONED'
+  | string;
+
+export interface PublicTournamentCalendarFilters extends PublicTournamentContextFilters {
+  status?: PublicMatchStatus | '';
+  from?: string;
+  to?: string;
+}
+
 export interface PublicResultTeam {
   tournamentTeamId: number;
   teamId: number;
@@ -86,7 +106,7 @@ export interface PublicResultTeam {
   seedNumber: number | null;
 }
 
-export interface PublicMatchResult {
+export interface PublicMatchSummary {
   matchId: number;
   stageId: number | null;
   stageName: string | null;
@@ -98,7 +118,7 @@ export interface PublicMatchResult {
   matchdayNumber: number | null;
   scheduledAt: string | null;
   venueName: string | null;
-  status: string;
+  status: PublicMatchStatus;
   homeScore: number | null;
   awayScore: number | null;
   homeTeam: PublicResultTeam;
@@ -107,7 +127,7 @@ export interface PublicMatchResult {
 }
 
 export interface PublicTournamentResultEntry {
-  match: PublicMatchResult;
+  match: PublicMatchSummary;
   affectsStandings: boolean;
   standingScope: string | null;
   standingStatus: string | null;
@@ -120,6 +140,20 @@ export interface PublicTournamentResults {
   groupId: number | null;
   totalClosedMatches: number;
   results: PublicTournamentResultEntry[];
+}
+
+export interface PublicTournamentCalendar {
+  tournamentId: number;
+  tournamentSlug: string;
+  stageId: number | null;
+  groupId: number | null;
+  status: PublicMatchStatus | null;
+  from: string | null;
+  to: string | null;
+  totalMatches: number;
+  scheduledMatches: number;
+  closedMatches: number;
+  matches: PublicMatchSummary[];
 }
 
 export type PublicTournamentPage = PageResponse<PublicTournamentSummary>;
