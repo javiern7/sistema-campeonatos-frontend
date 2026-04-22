@@ -252,6 +252,16 @@ button {
   overflow-wrap: anywhere;
 }
 
+.empty-state.error-state {
+  border-style: solid;
+  border-color: rgba(194, 65, 12, 0.34);
+  background: linear-gradient(135deg, rgba(255, 247, 237, 0.98), rgba(255, 255, 255, 0.94));
+}
+
+.empty-state.error-state strong {
+  color: #9a3412;
+}
+
 .stack-sm {
   display: grid;
   gap: 0.25rem;

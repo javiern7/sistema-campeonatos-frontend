@@ -5,6 +5,7 @@ import { finalize, forkJoin } from 'rxjs';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
+import { MatDialog } from '@angular/material/dialog';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatSelectModule } from '@angular/material/select';
 import { MatTableModule } from '@angular/material/table';
@@ -12,6 +13,10 @@ import { MatTableModule } from '@angular/material/table';
 import { AuthorizationService } from '../../core/auth/authorization.service';
 import { ErrorMapper } from '../../core/error/error.mapper';
 import { NotificationService } from '../../core/error/notification.service';
+import {
+  ActionReasonDialogComponent,
+  ActionReasonDialogResult
+} from '../../shared/action-reason-dialog/action-reason-dialog.component';
 import { LoadingStateComponent } from '../../shared/loading-state/loading-state.component';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
 import {
@@ -94,6 +99,12 @@ type StatusAction = {
 
         @if (loading()) {
           <app-loading-state label="Cargando usuarios operativos..." />
+        } @else if (pageError()) {
+          <div class="empty-state error-state" role="alert">
+            <strong>No se pudo cargar usuarios operativos.</strong>
+            <p class="muted">{{ pageError() }}</p>
+            <button mat-stroked-button type="button" (click)="retry()">Reintentar</button>
+          </div>
         } @else {
           <p class="muted">Total: {{ page()?.totalElements ?? 0 }}</p>
 
@@ -196,8 +207,10 @@ export class OperationalUsersPageComponent {
   private readonly notifications = inject(NotificationService);
   private readonly errorMapper = inject(ErrorMapper);
   private readonly authorization = inject(AuthorizationService);
+  private readonly dialog = inject(MatDialog);
 
   protected readonly loading = signal(true);
+  protected readonly pageError = signal<string | null>(null);
   protected readonly page = signal<OperationalUsersPage | null>(null);
   protected readonly rows = signal<OperationalUser[]>([]);
   protected readonly rolesCatalog = signal<OperationalRoleCatalogItem[]>([]);
@@ -232,8 +245,9 @@ export class OperationalUsersPageComponent {
           this.statusesCatalog.set(statuses);
           this.page.set(page);
           this.rows.set(page.content);
+          this.pageError.set(null);
         },
-        error: (error: unknown) => this.notifications.error(this.errorMapper.map(error).message)
+        error: (error: unknown) => this.applyPageError(error)
       });
   }
 
@@ -246,9 +260,19 @@ export class OperationalUsersPageComponent {
         next: (page) => {
           this.page.set(page);
           this.rows.set(page.content);
+          this.pageError.set(null);
         },
-        error: (error: unknown) => this.notifications.error(this.errorMapper.map(error).message)
+        error: (error: unknown) => this.applyPageError(error)
       });
+  }
+
+  protected retry(): void {
+    if (this.rolesCatalog().length === 0 || this.statusesCatalog().length === 0) {
+      this.loadInitialData();
+      return;
+    }
+
+    this.load();
   }
 
   protected resetFilters(): void {
@@ -317,31 +341,43 @@ export class OperationalUsersPageComponent {
   }
 
   protected changeStatus(user: OperationalUser, status: OperationalUserStatus): void {
-    const reason = window.prompt(
-      `Motivo del cambio a "${this.statusLabel(status)}" para ${user.fullName || user.username}:`,
-      `Ajuste operativo de estado a ${this.statusLabel(status).toLowerCase()}`
-    );
+    const statusLabel = this.statusLabel(status);
+    this.dialog
+      .open<ActionReasonDialogComponent, unknown, ActionReasonDialogResult>(ActionReasonDialogComponent, {
+        width: 'min(520px, 92vw)',
+        data: {
+          title: 'Cambiar estado operativo',
+          description: `Se cambiara el estado de ${user.fullName || user.username} a "${statusLabel}". El backend validara permisos y reglas finales.`,
+          reasonLabel: 'Motivo operativo',
+          confirmLabel: 'Cambiar estado',
+          defaultReason: `Ajuste operativo de estado a ${statusLabel.toLowerCase()}`
+        }
+      })
+      .afterClosed()
+      .subscribe((result) => {
+        if (!result) {
+          return;
+        }
 
-    if (reason === null) {
-      return;
-    }
-
-    const normalizedReason = reason.trim();
-    if (!normalizedReason) {
-      this.notifications.error('Debes indicar un motivo para cambiar el estado operativo.');
-      return;
-    }
-
-    this.loading.set(true);
-    this.usersBasicService
-      .updateUserStatus(user.userId, { status, reason: normalizedReason })
-      .pipe(finalize(() => this.loading.set(false)))
-      .subscribe({
-        next: (updatedUser) => {
-          this.notifications.success(`Estado actualizado a ${this.statusLabel(updatedUser.status).toLowerCase()}.`);
-          this.rows.update((rows) => rows.map((row) => (row.userId === updatedUser.userId ? updatedUser : row)));
-        },
-        error: (error: unknown) => this.notifications.error(this.errorMapper.map(error).message)
+        this.loading.set(true);
+        this.usersBasicService
+          .updateUserStatus(user.userId, { status, reason: result.reason })
+          .pipe(finalize(() => this.loading.set(false)))
+          .subscribe({
+            next: (updatedUser) => {
+              this.notifications.success(`Estado actualizado a ${this.statusLabel(updatedUser.status).toLowerCase()}.`);
+              this.rows.update((rows) => rows.map((row) => (row.userId === updatedUser.userId ? updatedUser : row)));
+            },
+            error: (error: unknown) => this.notifications.error(this.errorMapper.map(error).message)
+          });
       });
+  }
+
+  private applyPageError(error: unknown): void {
+    const message = this.errorMapper.map(error).message;
+    this.pageError.set(message);
+    this.page.set(null);
+    this.rows.set([]);
+    this.notifications.error(message);
   }
 }

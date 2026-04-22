@@ -12,7 +12,7 @@ import { PublicTournamentResultEntry, PublicTournamentResults } from './public-p
     <section class="card public-card">
       <div class="section-heading">
         <div>
-          <h2>Resultados</h2>
+          <h2>Resultados publicados</h2>
           <p class="muted">Partidos cerrados publicados por el backend.</p>
         </div>
         @if (results) {

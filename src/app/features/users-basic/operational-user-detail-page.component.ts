@@ -4,6 +4,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { finalize, forkJoin } from 'rxjs';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatDialog } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
@@ -12,6 +13,10 @@ import { MatTableModule } from '@angular/material/table';
 import { AuthorizationService } from '../../core/auth/authorization.service';
 import { ErrorMapper } from '../../core/error/error.mapper';
 import { NotificationService } from '../../core/error/notification.service';
+import {
+  ActionReasonDialogComponent,
+  ActionReasonDialogResult
+} from '../../shared/action-reason-dialog/action-reason-dialog.component';
 import { LoadingStateComponent } from '../../shared/loading-state/loading-state.component';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
 import {
@@ -52,6 +57,12 @@ import { UsersBasicService } from './users-basic.service';
       <section class="card page-card app-page">
         @if (loading()) {
           <app-loading-state label="Cargando detalle operativo..." />
+        } @else if (pageError()) {
+          <div class="empty-state error-state" role="alert">
+            <strong>No se pudo cargar el detalle operativo.</strong>
+            <p class="muted">{{ pageError() }}</p>
+            <button mat-stroked-button type="button" (click)="load()">Reintentar</button>
+          </div>
         } @else if (user()) {
           <div class="context-banner">
             <strong>{{ user()!.fullName || user()!.username }}</strong>
@@ -303,10 +314,12 @@ export class OperationalUserDetailPageComponent {
   private readonly notifications = inject(NotificationService);
   private readonly errorMapper = inject(ErrorMapper);
   private readonly authorization = inject(AuthorizationService);
+  private readonly dialog = inject(MatDialog);
 
   protected readonly loading = signal(true);
   protected readonly savingStatus = signal(false);
   protected readonly savingRoles = signal(false);
+  protected readonly pageError = signal<string | null>(null);
   protected readonly user = signal<OperationalUserDetail | null>(null);
   protected readonly permissionsSummary = signal<OperationalUserPermissionSummary | null>(null);
   protected readonly rolesCatalog = signal<OperationalRoleCatalogItem[]>([]);
@@ -334,10 +347,12 @@ export class OperationalUserDetailPageComponent {
     const userId = this.userId();
     if (!userId) {
       this.loading.set(false);
+      this.pageError.set('El identificador de usuario no es valido.');
       return;
     }
 
     this.loading.set(true);
+    this.pageError.set(null);
     forkJoin({
       user: this.usersBasicService.getUserDetail(userId),
       permissions: this.usersBasicService.getUserPermissions(userId),
@@ -352,8 +367,15 @@ export class OperationalUserDetailPageComponent {
           this.rolesCatalog.set(roles);
           this.statusesCatalog.set(statuses);
           this.statusForm.setValue({ status: this.availableStatuses()[0]?.code ?? '' });
+          this.pageError.set(null);
         },
-        error: (error: unknown) => this.notifications.error(this.errorMapper.map(error).message)
+        error: (error: unknown) => {
+          const message = this.errorMapper.map(error).message;
+          this.pageError.set(message);
+          this.user.set(null);
+          this.permissionsSummary.set(null);
+          this.notifications.error(message);
+        }
       });
   }
 
@@ -393,31 +415,35 @@ export class OperationalUserDetailPageComponent {
       return;
     }
 
-    const reason = window.prompt(
-      `Motivo del cambio a "${this.statusLabel(status)}" para ${user.fullName || user.username}:`,
-      `Ajuste operativo de estado a ${this.statusLabel(status).toLowerCase()}`
-    );
+    const statusLabel = this.statusLabel(status);
+    this.dialog
+      .open<ActionReasonDialogComponent, unknown, ActionReasonDialogResult>(ActionReasonDialogComponent, {
+        width: 'min(520px, 92vw)',
+        data: {
+          title: 'Cambiar estado operativo',
+          description: `Se cambiara el estado de ${user.fullName || user.username} a "${statusLabel}". El backend validara permisos y reglas finales.`,
+          reasonLabel: 'Motivo operativo',
+          confirmLabel: 'Cambiar estado',
+          defaultReason: `Ajuste operativo de estado a ${statusLabel.toLowerCase()}`
+        }
+      })
+      .afterClosed()
+      .subscribe((result) => {
+        if (!result) {
+          return;
+        }
 
-    if (reason === null) {
-      return;
-    }
-
-    const normalizedReason = reason.trim();
-    if (!normalizedReason) {
-      this.notifications.error('Debes indicar un motivo para cambiar el estado operativo.');
-      return;
-    }
-
-    this.savingStatus.set(true);
-    this.usersBasicService
-      .updateUserStatus(user.userId, { status, reason: normalizedReason })
-      .pipe(finalize(() => this.savingStatus.set(false)))
-      .subscribe({
-        next: () => {
-          this.notifications.success(`Estado actualizado a ${this.statusLabel(status).toLowerCase()}.`);
-          this.load();
-        },
-        error: (error: unknown) => this.notifications.error(this.errorMapper.map(error).message)
+        this.savingStatus.set(true);
+        this.usersBasicService
+          .updateUserStatus(user.userId, { status, reason: result.reason })
+          .pipe(finalize(() => this.savingStatus.set(false)))
+          .subscribe({
+            next: () => {
+              this.notifications.success(`Estado actualizado a ${this.statusLabel(status).toLowerCase()}.`);
+              this.load();
+            },
+            error: (error: unknown) => this.notifications.error(this.errorMapper.map(error).message)
+          });
       });
   }
 
@@ -433,32 +459,35 @@ export class OperationalUserDetailPageComponent {
       return;
     }
 
-    if (!window.confirm(`Se reemplazara el conjunto completo de roles de ${user.fullName || user.username}.`)) {
-      return;
-    }
+    this.dialog
+      .open<ActionReasonDialogComponent, unknown, ActionReasonDialogResult>(ActionReasonDialogComponent, {
+        width: 'min(520px, 92vw)',
+        data: {
+          title: 'Guardar cambios de roles',
+          description: `Se reemplazara el conjunto completo de roles de ${user.fullName || user.username}. El backend conserva la autoridad final sobre roles asignables.`,
+          reasonLabel: 'Motivo del cambio de roles',
+          confirmLabel: 'Guardar roles',
+          defaultReason: 'Ajuste operativo de roles'
+        }
+      })
+      .afterClosed()
+      .subscribe((result) => {
+        if (!result) {
+          return;
+        }
 
-    const reason = window.prompt(`Motivo del cambio de roles para ${user.fullName || user.username}:`, 'Ajuste operativo de roles');
-    if (reason === null) {
-      return;
-    }
-
-    const normalizedReason = reason.trim();
-    if (!normalizedReason) {
-      this.notifications.error('Debes indicar un motivo para cambiar roles.');
-      return;
-    }
-
-    this.savingRoles.set(true);
-    this.usersBasicService
-      .updateUserRoles(user.userId, { roleCodes, reason: normalizedReason })
-      .pipe(finalize(() => this.savingRoles.set(false)))
-      .subscribe({
-        next: (updatedUser) => {
-          this.notifications.success('Roles actualizados correctamente.');
-          this.applyUser(updatedUser);
-          this.reloadPermissions(updatedUser.userId);
-        },
-        error: (error: unknown) => this.notifications.error(this.errorMapper.map(error).message)
+        this.savingRoles.set(true);
+        this.usersBasicService
+          .updateUserRoles(user.userId, { roleCodes, reason: result.reason })
+          .pipe(finalize(() => this.savingRoles.set(false)))
+          .subscribe({
+            next: (updatedUser) => {
+              this.notifications.success('Roles actualizados correctamente.');
+              this.applyUser(updatedUser);
+              this.reloadPermissions(updatedUser.userId);
+            },
+            error: (error: unknown) => this.notifications.error(this.errorMapper.map(error).message)
+          });
       });
   }
 

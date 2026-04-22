@@ -115,6 +115,14 @@ const parseQueryNumber = (value: string | null): number | '' => {
           <button mat-flat-button color="primary" type="button" (click)="load()">Buscar</button>
         </div>
 
+        @if (catalogErrors().length > 0) {
+          <div class="empty-state error-state" role="alert">
+            <strong>Algunos catalogos no se pudieron cargar.</strong>
+            <p class="muted">{{ catalogErrorSummary() }}</p>
+            <button mat-stroked-button type="button" (click)="reloadCatalogs()">Reintentar catalogos</button>
+          </div>
+        }
+
         @if (loading()) {
           <app-loading-state />
         } @else {
@@ -236,6 +244,7 @@ export class MatchListPageComponent {
   protected readonly loading = signal(true);
   protected readonly page = signal<MatchPage | null>(null);
   protected readonly rows = signal<MatchGame[]>([]);
+  protected readonly catalogErrors = signal<string[]>([]);
   protected readonly tournaments = signal<Tournament[]>([]);
   private readonly allStages = signal<TournamentStage[]>([]);
   private readonly allGroups = signal<StageGroup[]>([]);
@@ -265,6 +274,7 @@ export class MatchListPageComponent {
 
     return labels.length > 0 ? labels.join(' / ') : 'Todos los torneos y estados';
   });
+  protected readonly catalogErrorSummary = computed(() => this.catalogErrors().join(' '));
   protected readonly summaryCards = computed<SummaryCard[]>(() => {
     const matches = this.rows();
     const played = matches.filter((item) => item.status === 'PLAYED').length;
@@ -321,21 +331,7 @@ export class MatchListPageComponent {
     this.selectedStageId.set(Number(queryParams.get('stageId') ?? 0));
     this.selectedStatus.set((queryParams.get('status') as MatchStatus | null) ?? '');
 
-    this.catalogLoader
-      .loadAll((page, size) => this.tournamentsService.list({ page, size }))
-      .subscribe({ next: (items) => this.tournaments.set(items) });
-    this.catalogLoader
-      .loadAll((page, size) => this.stagesService.list({ page, size }))
-      .subscribe({ next: (items) => this.allStages.set(items) });
-    this.catalogLoader
-      .loadAll((page, size) => this.groupsService.list({ page, size }))
-      .subscribe({ next: (items) => this.allGroups.set(items) });
-    this.catalogLoader
-      .loadAll((page, size) => this.teamsService.list({ page, size }))
-      .subscribe({ next: (items) => this.teams.set(items) });
-    this.catalogLoader
-      .loadAll((page, size) => this.tournamentTeamsService.list({ page, size }))
-      .subscribe({ next: (items) => this.tournamentTeams.set(items) });
+    this.reloadCatalogs();
 
     this.filtersForm.controls.tournamentId.valueChanges.pipe(takeUntilDestroyed()).subscribe((value) => {
       const tournamentId = Number(value);
@@ -391,6 +387,30 @@ export class MatchListPageComponent {
         },
         error: (error: unknown) => this.notifications.error(this.errorMapper.map(error).message)
       });
+  }
+
+  protected reloadCatalogs(): void {
+    this.catalogErrors.set([]);
+    this.catalogLoader.loadAll((page, size) => this.tournamentsService.list({ page, size })).subscribe({
+      next: (items) => this.tournaments.set(items),
+      error: (error: unknown) => this.addCatalogError('torneos', error)
+    });
+    this.catalogLoader.loadAll((page, size) => this.stagesService.list({ page, size })).subscribe({
+      next: (items) => this.allStages.set(items),
+      error: (error: unknown) => this.addCatalogError('etapas', error)
+    });
+    this.catalogLoader.loadAll((page, size) => this.groupsService.list({ page, size })).subscribe({
+      next: (items) => this.allGroups.set(items),
+      error: (error: unknown) => this.addCatalogError('grupos', error)
+    });
+    this.catalogLoader.loadAll((page, size) => this.teamsService.list({ page, size })).subscribe({
+      next: (items) => this.teams.set(items),
+      error: (error: unknown) => this.addCatalogError('equipos', error)
+    });
+    this.catalogLoader.loadAll((page, size) => this.tournamentTeamsService.list({ page, size })).subscribe({
+      next: (items) => this.tournamentTeams.set(items),
+      error: (error: unknown) => this.addCatalogError('inscripciones', error)
+    });
   }
 
   protected resetFilters(): void {
@@ -510,5 +530,10 @@ export class MatchListPageComponent {
 
   protected statusClass(status: MatchStatus): string {
     return `status-pill ${status.toLowerCase()}`;
+  }
+
+  private addCatalogError(label: string, error: unknown): void {
+    const message = this.errorMapper.map(error).message;
+    this.catalogErrors.update((errors) => [...errors, `No se pudo cargar ${label}: ${message}.`]);
   }
 }

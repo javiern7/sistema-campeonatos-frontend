@@ -41,6 +41,12 @@ import { UsersBasicService } from './users-basic.service';
 
         @if (loading()) {
           <app-loading-state label="Cargando configuracion basica..." />
+        } @else if (pageError()) {
+          <div class="empty-state error-state" role="alert">
+            <strong>No se pudo cargar la configuracion basica.</strong>
+            <p class="muted">{{ pageError() }}</p>
+            <button mat-stroked-button type="button" (click)="reload()">Reintentar</button>
+          </div>
         } @else {
           <div class="purpose-grid">
             <article class="purpose-card">
@@ -159,6 +165,7 @@ export class BasicConfigurationPageComponent {
 
   protected readonly loading = signal(true);
   protected readonly saving = signal(false);
+  protected readonly pageError = signal<string | null>(null);
   protected readonly configuration = signal<BasicConfiguration | null>(null);
   protected readonly canManage = computed(() => this.authorization.canManage('configuration:basic'));
   protected readonly updatedAtLabel = computed(() => {
@@ -185,6 +192,7 @@ export class BasicConfigurationPageComponent {
 
   protected reload(): void {
     this.loading.set(true);
+    this.pageError.set(null);
     this.usersBasicService
       .getBasicConfiguration()
       .pipe(finalize(() => this.loading.set(false)))
@@ -196,8 +204,14 @@ export class BasicConfigurationPageComponent {
             supportEmail: configuration.supportEmail,
             defaultTimezone: configuration.defaultTimezone
           });
+          this.pageError.set(null);
         },
-        error: (error: unknown) => this.notifications.error(this.errorMapper.map(error).message)
+        error: (error: unknown) => {
+          const message = this.errorMapper.map(error).message;
+          this.configuration.set(null);
+          this.pageError.set(message);
+          this.notifications.error(message);
+        }
       });
   }
 

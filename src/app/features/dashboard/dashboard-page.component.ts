@@ -49,6 +49,12 @@ type DashboardCard = {
 
       @if (loading()) {
         <app-loading-state />
+      } @else if (summaryError()) {
+        <div class="empty-state error-state" role="alert">
+          <strong>No se pudo cargar el dashboard.</strong>
+          <p class="muted">{{ summaryError() }}</p>
+          <button mat-stroked-button type="button" (click)="loadSummary()">Reintentar</button>
+        </div>
       } @else {
         <div class="context-banner">
           <strong>Resumen transversal del sistema</strong>
@@ -999,6 +1005,7 @@ export class DashboardPageComponent {
   protected readonly loading = signal(true);
   protected readonly operationsLoading = signal(false);
   protected readonly governanceSaving = signal(false);
+  protected readonly summaryError = signal<string | null>(null);
   protected readonly activitySummaryError = signal<string | null>(null);
   protected readonly recentAuditEventsError = signal<string | null>(null);
   protected readonly governanceError = signal<string | null>(null);
@@ -1240,17 +1247,31 @@ export class DashboardPageComponent {
   });
 
   constructor() {
-    this.dashboardService
-      .getSummary()
-      .pipe(finalize(() => this.loading.set(false)))
-      .subscribe({
-        next: (summary) => this.summary.set(summary),
-        error: (error: unknown) => this.notifications.error(this.errorMapper.map(error).message)
-      });
+    this.loadSummary();
 
     if (this.operationsVisible()) {
       this.loadOperationalReadout();
     }
+  }
+
+  protected loadSummary(): void {
+    this.loading.set(true);
+    this.summaryError.set(null);
+    this.dashboardService
+      .getSummary()
+      .pipe(finalize(() => this.loading.set(false)))
+      .subscribe({
+        next: (summary) => {
+          this.summary.set(summary);
+          this.summaryError.set(null);
+        },
+        error: (error: unknown) => {
+          const message = this.errorMapper.map(error).message;
+          this.summary.set(null);
+          this.summaryError.set(message);
+          this.notifications.error(message);
+        }
+      });
   }
 
   private loadOperationalReadout(): void {
