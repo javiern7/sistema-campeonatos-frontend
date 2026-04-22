@@ -4,11 +4,14 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
+import { MatNativeDateModule } from '@angular/material/core';
 
 import { ErrorMapper } from '../../core/error/error.mapper';
 import { NotificationService } from '../../core/error/notification.service';
+import { parseBackendDate, PICHANGA_DATE_PICKER_PROVIDERS, toBackendDate } from '../../shared/date/date-only.utils';
 import { LoadingStateComponent } from '../../shared/loading-state/loading-state.component';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
 import { VisualIdentityComponent } from '../../shared/visual-identity/visual-identity.component';
@@ -23,12 +26,15 @@ import { PlayersService } from './players.service';
     RouterLink,
     MatButtonModule,
     MatCheckboxModule,
+    MatDatepickerModule,
     MatFormFieldModule,
     MatInputModule,
+    MatNativeDateModule,
     LoadingStateComponent,
     PageHeaderComponent,
     VisualIdentityComponent
   ],
+  providers: PICHANGA_DATE_PICKER_PROVIDERS,
   template: `
     <section class="app-page">
       <app-page-header
@@ -92,7 +98,10 @@ import { PlayersService } from './players.service';
 
               <mat-form-field appearance="outline">
                 <mat-label>Fecha de nacimiento</mat-label>
-                <input matInput type="date" formControlName="birthDate">
+                <input matInput [matDatepicker]="birthDatePicker" formControlName="birthDate" placeholder="dd/mm/aaaa">
+                <mat-datepicker-toggle matIconSuffix [for]="birthDatePicker" />
+                <mat-datepicker #birthDatePicker />
+                <mat-hint>dd/mm/aaaa</mat-hint>
               </mat-form-field>
 
               <mat-form-field appearance="outline">
@@ -164,7 +173,7 @@ export class PlayerFormPageComponent {
     lastName: ['', [Validators.required, Validators.maxLength(100)]],
     documentType: ['', Validators.maxLength(20)],
     documentNumber: ['', Validators.maxLength(30)],
-    birthDate: [''],
+    birthDate: [null as Date | null],
     email: ['', [Validators.email, Validators.maxLength(150)]],
     phone: ['', Validators.maxLength(30)],
     active: [true]
@@ -185,7 +194,7 @@ export class PlayerFormPageComponent {
             lastName: player.lastName,
             documentType: player.documentType ?? '',
             documentNumber: player.documentNumber ?? '',
-            birthDate: player.birthDate ?? '',
+            birthDate: parseBackendDate(player.birthDate),
             email: player.email ?? '',
             phone: player.phone ?? '',
             active: player.active
@@ -199,7 +208,17 @@ export class PlayerFormPageComponent {
       return;
     }
 
-    const payload = this.form.getRawValue() as PlayerFormValue;
+    const value = this.form.getRawValue();
+    const payload: PlayerFormValue = {
+      firstName: value.firstName,
+      lastName: value.lastName,
+      documentType: value.documentType,
+      documentNumber: value.documentNumber,
+      birthDate: toBackendDate(value.birthDate) ?? '',
+      email: value.email,
+      phone: value.phone,
+      active: value.active
+    };
     this.saving.set(true);
 
     const request$ = this.isEditMode()

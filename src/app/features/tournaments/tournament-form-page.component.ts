@@ -3,14 +3,22 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 import { MatButtonModule } from '@angular/material/button';
+import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
+import { MatNativeDateModule } from '@angular/material/core';
 
 import { ErrorMapper } from '../../core/error/error.mapper';
 import { NotificationService } from '../../core/error/notification.service';
 import { LoadingStateComponent } from '../../shared/loading-state/loading-state.component';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
+import {
+  dateRangeValidator,
+  parseBackendDate,
+  PICHANGA_DATE_PICKER_PROVIDERS,
+  toBackendDate
+} from '../../shared/date/date-only.utils';
 import { Sport } from '../sports/sport.models';
 import { SportsService } from '../sports/sports.service';
 import { TournamentFormat, TournamentFormValue, TournamentStatus } from './tournament.models';
@@ -23,12 +31,15 @@ import { TournamentsService } from './tournaments.service';
     ReactiveFormsModule,
     RouterLink,
     MatButtonModule,
+    MatDatepickerModule,
     MatFormFieldModule,
     MatInputModule,
+    MatNativeDateModule,
     MatSelectModule,
     LoadingStateComponent,
     PageHeaderComponent
   ],
+  providers: PICHANGA_DATE_PICKER_PROVIDERS,
   template: `
     <section class="app-page">
       <app-page-header
@@ -89,12 +100,21 @@ import { TournamentsService } from './tournaments.service';
 
               <mat-form-field appearance="outline">
                 <mat-label>Inicio</mat-label>
-                <input matInput type="date" formControlName="startDate">
+                <input matInput [matDatepicker]="startPicker" formControlName="startDate" placeholder="dd/mm/aaaa">
+                <mat-datepicker-toggle matIconSuffix [for]="startPicker" />
+                <mat-datepicker #startPicker />
+                <mat-hint>dd/mm/aaaa</mat-hint>
               </mat-form-field>
 
               <mat-form-field appearance="outline">
                 <mat-label>Fin</mat-label>
-                <input matInput type="date" formControlName="endDate">
+                <input matInput [matDatepicker]="endPicker" formControlName="endDate" placeholder="dd/mm/aaaa">
+                <mat-datepicker-toggle matIconSuffix [for]="endPicker" />
+                <mat-datepicker #endPicker />
+                <mat-hint>dd/mm/aaaa</mat-hint>
+                @if (form.hasError('dateRange')) {
+                  <mat-error>La fecha fin no puede ser menor que la fecha inicio.</mat-error>
+                }
               </mat-form-field>
 
               <mat-form-field appearance="outline">
@@ -161,13 +181,13 @@ export class TournamentFormPageComponent {
     format: ['LEAGUE' as TournamentFormat, Validators.required],
     status: ['DRAFT' as TournamentStatus, Validators.required],
     description: [''],
-    startDate: [''],
-    endDate: [''],
+    startDate: [null as Date | null],
+    endDate: [null as Date | null],
     maxTeams: [''],
     pointsWin: [3],
     pointsDraw: [1],
     pointsLoss: [0]
-  });
+  }, { validators: dateRangeValidator() });
 
   constructor() {
     this.sportsService.list(false).subscribe({
@@ -197,8 +217,8 @@ export class TournamentFormPageComponent {
             format: tournament.format,
             status: tournament.status,
             description: tournament.description ?? '',
-            startDate: tournament.startDate ?? '',
-            endDate: tournament.endDate ?? '',
+            startDate: parseBackendDate(tournament.startDate),
+            endDate: parseBackendDate(tournament.endDate),
             maxTeams: tournament.maxTeams ? String(tournament.maxTeams) : '',
             pointsWin: tournament.pointsWin,
             pointsDraw: tournament.pointsDraw,
@@ -222,8 +242,8 @@ export class TournamentFormPageComponent {
       format: value.format,
       status: this.isEditMode() ? this.currentStatus() : value.status,
       description: value.description || null,
-      startDate: value.startDate || null,
-      endDate: value.endDate || null,
+      startDate: toBackendDate(value.startDate),
+      endDate: toBackendDate(value.endDate),
       registrationOpenAt: null,
       registrationCloseAt: null,
       maxTeams: value.maxTeams ? Number(value.maxTeams) : null,

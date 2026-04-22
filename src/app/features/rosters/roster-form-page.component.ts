@@ -4,13 +4,21 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
+import { MatNativeDateModule } from '@angular/material/core';
 
 import { ErrorMapper } from '../../core/error/error.mapper';
 import { NotificationService } from '../../core/error/notification.service';
 import { CatalogLoaderService } from '../../core/pagination/catalog-loader.service';
+import {
+  dateRangeValidator,
+  parseBackendDate,
+  PICHANGA_DATE_PICKER_PROVIDERS,
+  toBackendDate
+} from '../../shared/date/date-only.utils';
 import { LoadingStateComponent } from '../../shared/loading-state/loading-state.component';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
 import { Player } from '../players/player.models';
@@ -39,17 +47,6 @@ const parseOptionalNumber = (value: string | number | null | undefined): number 
   return Number.isNaN(parsed) ? null : parsed;
 };
 
-const dateRangeValidator: ValidatorFn = (control: AbstractControl): ValidationErrors | null => {
-  const startDate = control.get('startDate')?.value;
-  const endDate = control.get('endDate')?.value;
-
-  if (!startDate || !endDate) {
-    return null;
-  }
-
-  return endDate >= startDate ? null : { invalidDateRange: true };
-};
-
 const rosterOperationalValidator: ValidatorFn = (control: AbstractControl): ValidationErrors | null => {
   const tournamentTeamId = Number(control.get('tournamentTeamId')?.value);
   const registrationStatus = control.get('registrationStatus')?.value;
@@ -70,12 +67,15 @@ const rosterOperationalValidator: ValidatorFn = (control: AbstractControl): Vali
     RouterLink,
     MatButtonModule,
     MatCheckboxModule,
+    MatDatepickerModule,
     MatFormFieldModule,
     MatInputModule,
+    MatNativeDateModule,
     MatSelectModule,
     LoadingStateComponent,
     PageHeaderComponent
   ],
+  providers: PICHANGA_DATE_PICKER_PROVIDERS,
   template: `
     <section class="app-page">
       <app-page-header [title]="isEditMode() ? 'Editar roster' : 'Nuevo roster'" subtitle="Registro de jugador en roster." />
@@ -146,12 +146,18 @@ const rosterOperationalValidator: ValidatorFn = (control: AbstractControl): Vali
 
               <mat-form-field appearance="outline">
                 <mat-label>Fecha inicio</mat-label>
-                <input matInput type="date" formControlName="startDate">
+                <input matInput [matDatepicker]="startDatePicker" formControlName="startDate" placeholder="dd/mm/aaaa">
+                <mat-datepicker-toggle matIconSuffix [for]="startDatePicker" />
+                <mat-datepicker #startDatePicker />
+                <mat-hint>dd/mm/aaaa</mat-hint>
               </mat-form-field>
 
               <mat-form-field appearance="outline">
                 <mat-label>Fecha fin</mat-label>
-                <input matInput type="date" formControlName="endDate">
+                <input matInput [matDatepicker]="endDatePicker" formControlName="endDate" placeholder="dd/mm/aaaa">
+                <mat-datepicker-toggle matIconSuffix [for]="endDatePicker" />
+                <mat-datepicker #endDatePicker />
+                <mat-hint>dd/mm/aaaa</mat-hint>
                 @if (form.hasError('invalidDateRange') && form.controls.endDate.touched) {
                   <mat-error>La fecha fin no puede ser anterior a la fecha inicio.</mat-error>
                 }
@@ -227,10 +233,10 @@ export class RosterFormPageComponent {
       captain: [false],
       positionName: ['', [Validators.maxLength(50)]],
       rosterStatus: ['ACTIVE' as RosterStatus, Validators.required],
-      startDate: ['', Validators.required],
-      endDate: ['']
+      startDate: [null as Date | null, Validators.required],
+      endDate: [null as Date | null]
     },
-    { validators: [dateRangeValidator, rosterOperationalValidator] }
+    { validators: [dateRangeValidator('startDate', 'endDate', 'invalidDateRange'), rosterOperationalValidator] }
   );
 
   constructor() {
@@ -290,8 +296,8 @@ export class RosterFormPageComponent {
             captain: entry.captain,
             positionName: entry.positionName ?? '',
             rosterStatus: entry.rosterStatus,
-            startDate: entry.startDate,
-            endDate: entry.endDate ?? ''
+            startDate: parseBackendDate(entry.startDate),
+            endDate: parseBackendDate(entry.endDate)
           });
           this.selectedTournamentTeamId.set(entry.tournamentTeamId);
           this.selectedRosterStatus.set(entry.rosterStatus);
@@ -315,8 +321,8 @@ export class RosterFormPageComponent {
       captain: value.captain,
       positionName: value.positionName || null,
       rosterStatus: value.rosterStatus,
-      startDate: value.startDate,
-      endDate: value.endDate || null
+      startDate: toBackendDate(value.startDate) ?? '',
+      endDate: toBackendDate(value.endDate)
     };
 
     this.saving.set(true);

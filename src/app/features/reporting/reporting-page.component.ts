@@ -5,13 +5,16 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import { finalize } from 'rxjs/operators';
 import { MatButtonModule } from '@angular/material/button';
+import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
+import { MatNativeDateModule } from '@angular/material/core';
 
 import { ErrorMapper } from '../../core/error/error.mapper';
 import { NotificationService } from '../../core/error/notification.service';
 import { CatalogLoaderService } from '../../core/pagination/catalog-loader.service';
+import { PICHANGA_DATE_PICKER_PROVIDERS, toBackendDate } from '../../shared/date/date-only.utils';
 import { parseBackendDateTime } from '../../shared/date/date-time.utils';
 import { LoadingStateComponent } from '../../shared/loading-state/loading-state.component';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
@@ -58,12 +61,15 @@ const REPORT_OPTIONS: ReportOption[] = [
     ReactiveFormsModule,
     RouterLink,
     MatButtonModule,
+    MatDatepickerModule,
     MatFormFieldModule,
     MatInputModule,
+    MatNativeDateModule,
     MatSelectModule,
     LoadingStateComponent,
     PageHeaderComponent
   ],
+  providers: PICHANGA_DATE_PICKER_PROVIDERS,
   template: `
     <section class="app-page">
       <app-page-header title="Reporteria y exportacion" [subtitle]="headerSubtitle()">
@@ -131,12 +137,18 @@ const REPORT_OPTIONS: ReportOption[] = [
 
             <mat-form-field appearance="outline">
               <mat-label>Desde</mat-label>
-              <input matInput type="date" formControlName="from">
+              <input matInput [matDatepicker]="fromPicker" formControlName="from" placeholder="dd/mm/aaaa">
+              <mat-datepicker-toggle matIconSuffix [for]="fromPicker" />
+              <mat-datepicker #fromPicker />
+              <mat-hint>dd/mm/aaaa</mat-hint>
             </mat-form-field>
 
             <mat-form-field appearance="outline">
               <mat-label>Hasta</mat-label>
-              <input matInput type="date" formControlName="to">
+              <input matInput [matDatepicker]="toPicker" formControlName="to" placeholder="dd/mm/aaaa">
+              <mat-datepicker-toggle matIconSuffix [for]="toPicker" />
+              <mat-datepicker #toPicker />
+              <mat-hint>dd/mm/aaaa</mat-hint>
             </mat-form-field>
           </form>
 
@@ -360,8 +372,8 @@ export class ReportingPageComponent {
     matchId: [0 as number | ''],
     tournamentTeamId: [0 as number | ''],
     playerId: [0 as number | ''],
-    from: [''],
-    to: ['']
+    from: [null as Date | null],
+    to: [null as Date | null]
   });
   protected readonly headerSubtitle = computed(() => {
     const tournament = this.tournament();
@@ -417,7 +429,7 @@ export class ReportingPageComponent {
   }
 
   protected resetFilters(): void {
-    this.filtersForm.setValue({ reportType: 'summary', matchId: '', tournamentTeamId: '', playerId: '', from: '', to: '' });
+    this.filtersForm.setValue({ reportType: 'summary', matchId: '', tournamentTeamId: '', playerId: '', from: null, to: null });
     this.loadReport();
   }
 
@@ -574,13 +586,19 @@ export class ReportingPageComponent {
     });
   }
 
-  private cleanFilters(values: { matchId: number | ''; tournamentTeamId: number | ''; playerId: number | ''; from: string; to: string }): ReportingFilters {
+  private cleanFilters(values: {
+    matchId: number | '';
+    tournamentTeamId: number | '';
+    playerId: number | '';
+    from: Date | null;
+    to: Date | null;
+  }): ReportingFilters {
     return {
       matchId: values.matchId,
       tournamentTeamId: values.tournamentTeamId,
       playerId: values.playerId,
-      from: values.from,
-      to: values.to
+      from: toBackendDate(values.from) ?? '',
+      to: toBackendDate(values.to) ?? ''
     };
   }
 }

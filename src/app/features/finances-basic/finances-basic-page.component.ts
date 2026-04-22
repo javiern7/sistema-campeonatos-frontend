@@ -5,14 +5,17 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import { finalize } from 'rxjs/operators';
 import { MatButtonModule } from '@angular/material/button';
+import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
+import { MatNativeDateModule } from '@angular/material/core';
 
 import { AuthorizationService } from '../../core/auth/authorization.service';
 import { ErrorMapper } from '../../core/error/error.mapper';
 import { NotificationService } from '../../core/error/notification.service';
 import { CatalogLoaderService } from '../../core/pagination/catalog-loader.service';
+import { PICHANGA_DATE_PICKER_PROVIDERS, toBackendDate, todayDateOnly } from '../../shared/date/date-only.utils';
 import { LoadingStateComponent } from '../../shared/loading-state/loading-state.component';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
 import { Team } from '../teams/team.models';
@@ -58,12 +61,15 @@ const expenseCategories: FinancialMovementCategory[] = [
     ReactiveFormsModule,
     RouterLink,
     MatButtonModule,
+    MatDatepickerModule,
     MatFormFieldModule,
     MatInputModule,
+    MatNativeDateModule,
     MatSelectModule,
     LoadingStateComponent,
     PageHeaderComponent
   ],
+  providers: PICHANGA_DATE_PICKER_PROVIDERS,
   template: `
     <section class="app-page">
       <app-page-header title="Finanzas basicas" [subtitle]="headerSubtitle()">
@@ -230,7 +236,10 @@ const expenseCategories: FinancialMovementCategory[] = [
 
                 <mat-form-field appearance="outline">
                   <mat-label>Fecha</mat-label>
-                  <input matInput type="date" formControlName="occurredOn">
+                  <input matInput [matDatepicker]="occurredOnPicker" formControlName="occurredOn" placeholder="dd/mm/aaaa">
+                  <mat-datepicker-toggle matIconSuffix [for]="occurredOnPicker" />
+                  <mat-datepicker #occurredOnPicker />
+                  <mat-hint>dd/mm/aaaa</mat-hint>
                 </mat-form-field>
 
                 <mat-form-field appearance="outline">
@@ -444,7 +453,7 @@ export class FinancesBasicPageComponent {
     category: ['INSCRIPCION_EQUIPO' as FinancialMovementCategory, Validators.required],
     tournamentTeamId: [0 as number | ''],
     amount: [0, [Validators.required, Validators.min(0.01)]],
-    occurredOn: [new Date().toISOString().slice(0, 10), Validators.required],
+    occurredOn: [todayDateOnly(), Validators.required],
     referenceCode: [''],
     description: ['']
   });
@@ -519,7 +528,7 @@ export class FinancesBasicPageComponent {
         movementType: formValue.movementType,
         category: formValue.category,
         amount: Number(formValue.amount),
-        occurredOn: formValue.occurredOn,
+        occurredOn: toBackendDate(formValue.occurredOn) ?? '',
         description: formValue.description.trim() || null,
         referenceCode: formValue.referenceCode.trim() || null
       })

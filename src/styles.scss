@@ -336,6 +336,37 @@ button {
   padding: 0.35rem !important;
 }
 
+.cdk-overlay-pane .mat-datepicker-content {
+  border: 1px solid rgba(15, 23, 42, 0.16);
+  border-radius: 8px !important;
+  background: #ffffff !important;
+  color: var(--text) !important;
+  box-shadow: var(--shadow-strong);
+}
+
+.mat-calendar {
+  background: #ffffff !important;
+  color: var(--text) !important;
+}
+
+.mat-calendar-body-cell-content,
+.mat-calendar-body-label,
+.mat-calendar-table-header,
+.mat-calendar-period-button,
+.mat-calendar-previous-button,
+.mat-calendar-next-button {
+  color: var(--text) !important;
+}
+
+.mat-calendar-body-selected {
+  background: var(--primary) !important;
+  color: #ffffff !important;
+}
+
+.mat-calendar-body-today:not(.mat-calendar-body-selected) {
+  border-color: var(--primary) !important;
+}
+
 .mat-mdc-option {
   min-height: 44px !important;
   border-radius: 6px;

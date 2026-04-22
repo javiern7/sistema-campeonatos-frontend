@@ -5,14 +5,17 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import { finalize } from 'rxjs/operators';
 import { MatButtonModule } from '@angular/material/button';
+import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
+import { MatNativeDateModule } from '@angular/material/core';
 
 import { AuthorizationService } from '../../core/auth/authorization.service';
 import { ErrorMapper } from '../../core/error/error.mapper';
 import { NotificationService } from '../../core/error/notification.service';
 import { CatalogLoaderService } from '../../core/pagination/catalog-loader.service';
+import { PICHANGA_DATE_PICKER_PROVIDERS, toBackendDate } from '../../shared/date/date-only.utils';
 import { parseBackendDateTime } from '../../shared/date/date-time.utils';
 import { LoadingStateComponent } from '../../shared/loading-state/loading-state.component';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
@@ -52,13 +55,16 @@ type GenerationAction = 'progress' | 'generate';
     ReactiveFormsModule,
     RouterLink,
     MatButtonModule,
+    MatDatepickerModule,
     MatFormFieldModule,
     MatInputModule,
+    MatNativeDateModule,
     MatSelectModule,
     LoadingStateComponent,
     PageHeaderComponent,
     VisualIdentityComponent
   ],
+  providers: PICHANGA_DATE_PICKER_PROVIDERS,
   template: `
     <section class="app-page">
       <app-page-header title="Competencia avanzada" [subtitle]="headerSubtitle()">
@@ -125,12 +131,18 @@ type GenerationAction = 'progress' | 'generate';
 
             <mat-form-field appearance="outline">
               <mat-label>Desde</mat-label>
-              <input matInput type="date" formControlName="from">
+              <input matInput [matDatepicker]="fromPicker" formControlName="from" placeholder="dd/mm/aaaa">
+              <mat-datepicker-toggle matIconSuffix [for]="fromPicker" />
+              <mat-datepicker #fromPicker />
+              <mat-hint>dd/mm/aaaa</mat-hint>
             </mat-form-field>
 
             <mat-form-field appearance="outline">
               <mat-label>Hasta</mat-label>
-              <input matInput type="date" formControlName="to">
+              <input matInput [matDatepicker]="toPicker" formControlName="to" placeholder="dd/mm/aaaa">
+              <mat-datepicker-toggle matIconSuffix [for]="toPicker" />
+              <mat-datepicker #toPicker />
+              <mat-hint>dd/mm/aaaa</mat-hint>
             </mat-form-field>
           </form>
 
@@ -498,8 +510,8 @@ export class CompetitionAdvancedPageComponent {
     stageId: [0 as number | ''],
     groupId: [0 as number | ''],
     status: ['' as MatchStatus | ''],
-    from: [''],
-    to: ['']
+    from: [null as Date | null],
+    to: [null as Date | null]
   });
 
   constructor() {
@@ -531,8 +543,8 @@ export class CompetitionAdvancedPageComponent {
         stageId: filters.stageId,
         groupId: filters.groupId,
         status: filters.status,
-        from: filters.from,
-        to: filters.to
+        from: toBackendDate(filters.from) ?? '',
+        to: toBackendDate(filters.to) ?? ''
       }),
       results: this.competitionAdvancedService.getResults(tournamentId, {
         stageId: filters.stageId,
@@ -559,7 +571,7 @@ export class CompetitionAdvancedPageComponent {
   }
 
   protected resetFilters(): void {
-    this.filtersForm.setValue({ stageId: '', groupId: '', status: '', from: '', to: '' });
+    this.filtersForm.setValue({ stageId: '', groupId: '', status: '', from: null, to: null });
     this.load();
   }
 
@@ -769,8 +781,8 @@ export class CompetitionAdvancedPageComponent {
               stageId: firstKnockoutStage?.id ?? '',
               groupId: '',
               status: '',
-              from: '',
-              to: ''
+              from: null,
+              to: null
             },
             { emitEvent: false }
           );
