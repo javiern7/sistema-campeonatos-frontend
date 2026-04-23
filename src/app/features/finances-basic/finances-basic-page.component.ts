@@ -446,12 +446,12 @@ export class FinancesBasicPageComponent {
   protected readonly filtersForm = this.fb.nonNullable.group({
     movementType: ['' as FinancialMovementType | ''],
     category: ['' as FinancialMovementCategory | ''],
-    tournamentTeamId: [0 as number | '']
+    tournamentTeamId: ['' as number | '']
   });
   protected readonly movementForm = this.fb.nonNullable.group({
     movementType: ['INCOME' as FinancialMovementType, Validators.required],
     category: ['INSCRIPCION_EQUIPO' as FinancialMovementCategory, Validators.required],
-    tournamentTeamId: [0 as number | ''],
+    tournamentTeamId: ['' as number | ''],
     amount: [0, [Validators.required, Validators.min(0.01)]],
     occurredOn: [todayDateOnly(), Validators.required],
     referenceCode: [''],
@@ -490,13 +490,8 @@ export class FinancesBasicPageComponent {
     }
 
     this.loading.set(true);
-    const filters = this.filtersForm.getRawValue();
     this.financesService
-      .listMovements(tournamentId, {
-        movementType: filters.movementType,
-        category: filters.category,
-        tournamentTeamId: filters.tournamentTeamId ? Number(filters.tournamentTeamId) : ''
-      })
+      .listMovements(tournamentId, this.cleanMovementFilters())
       .pipe(finalize(() => this.loading.set(false)))
       .subscribe({
         next: (result) => {
@@ -524,7 +519,7 @@ export class FinancesBasicPageComponent {
     this.financesService
       .createMovement(tournamentId, {
         tournamentTeamId:
-          formValue.movementType === 'INCOME' && formValue.tournamentTeamId ? Number(formValue.tournamentTeamId) : null,
+          formValue.movementType === 'INCOME' ? this.cleanTournamentTeamId(formValue.tournamentTeamId) : null,
         movementType: formValue.movementType,
         category: formValue.category,
         amount: Number(formValue.amount),
@@ -616,7 +611,7 @@ export class FinancesBasicPageComponent {
       registrations: this.catalogLoader.loadAll((page, size) => this.tournamentTeamsService.list({ tournamentId, page, size })),
       teams: this.catalogLoader.loadAll((page, size) => this.teamsService.list({ page, size })),
       summary: this.financesService.getSummary(tournamentId),
-      movements: this.financesService.listMovements(tournamentId, this.filtersForm.getRawValue())
+      movements: this.financesService.listMovements(tournamentId, this.cleanMovementFilters())
     })
       .pipe(finalize(() => this.loading.set(false)))
       .subscribe({
@@ -636,5 +631,23 @@ export class FinancesBasicPageComponent {
           this.notifications.error(this.errorMapper.map(error).message);
         }
       });
+  }
+
+  private cleanMovementFilters(): {
+    movementType: FinancialMovementType | '';
+    category: FinancialMovementCategory | '';
+    tournamentTeamId: number | '';
+  } {
+    const filters = this.filtersForm.getRawValue();
+    return {
+      movementType: filters.movementType,
+      category: filters.category,
+      tournamentTeamId: this.cleanTournamentTeamId(filters.tournamentTeamId) ?? ''
+    };
+  }
+
+  private cleanTournamentTeamId(value: number | '' | null | undefined): number | null {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
   }
 }
