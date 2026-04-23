@@ -54,6 +54,16 @@ const expenseCategories: FinancialMovementCategory[] = [
   'OTRO_GASTO_OPERATIVO'
 ];
 
+const categoriesForType = (type: FinancialMovementType | ''): FinancialMovementCategory[] => {
+  if (type === 'INCOME') {
+    return incomeCategories;
+  }
+  if (type === 'EXPENSE') {
+    return expenseCategories;
+  }
+  return [...incomeCategories, ...expenseCategories];
+};
+
 @Component({
   selector: 'app-finances-basic-page',
   standalone: true,
@@ -211,13 +221,20 @@ const expenseCategories: FinancialMovementCategory[] = [
                 <mat-form-field appearance="outline">
                   <mat-label>Categoria</mat-label>
                   <mat-select formControlName="category">
+                    <mat-option value="" disabled>Selecciona una categoria</mat-option>
                     @for (category of formCategories(); track category) {
                       <mat-option [value]="category">{{ categoryLabel(category) }}</mat-option>
                     }
                   </mat-select>
+                  @if (formCategories().length === 0) {
+                    <mat-hint>No hay categorias configuradas para {{ movementTypeLabel(selectedFormMovementType()).toLowerCase() }}.</mat-hint>
+                  }
+                  @if (movementForm.controls.category.hasError('required') && movementForm.controls.category.touched) {
+                    <mat-error>Selecciona una categoria valida.</mat-error>
+                  }
                 </mat-form-field>
 
-                @if (movementForm.controls.movementType.getRawValue() === 'INCOME') {
+                @if (selectedFormMovementType() === 'INCOME') {
                   <mat-form-field appearance="outline">
                     <mat-label>Equipo asociado</mat-label>
                     <mat-select formControlName="tournamentTeamId">
@@ -399,6 +416,8 @@ export class FinancesBasicPageComponent {
   protected readonly totalMovements = signal(0);
   protected readonly registrations = signal<TournamentTeam[]>([]);
   protected readonly teams = signal<Team[]>([]);
+  protected readonly selectedFilterMovementType = signal<FinancialMovementType | ''>('');
+  protected readonly selectedFormMovementType = signal<FinancialMovementType>('INCOME');
   protected readonly movementTypes: FinancialMovementType[] = ['INCOME', 'EXPENSE'];
   protected readonly canManage = computed(() => this.authorization.canManage('tournaments'));
   protected readonly headerSubtitle = computed(() => {
@@ -430,19 +449,8 @@ export class FinancesBasicPageComponent {
       }
     ];
   });
-  protected readonly filterCategories = computed(() => {
-    const type = this.filtersForm.controls.movementType.getRawValue();
-    if (type === 'INCOME') {
-      return incomeCategories;
-    }
-    if (type === 'EXPENSE') {
-      return expenseCategories;
-    }
-    return [...incomeCategories, ...expenseCategories];
-  });
-  protected readonly formCategories = computed(() =>
-    this.movementForm.controls.movementType.getRawValue() === 'INCOME' ? incomeCategories : expenseCategories
-  );
+  protected readonly filterCategories = computed(() => categoriesForType(this.selectedFilterMovementType()));
+  protected readonly formCategories = computed(() => categoriesForType(this.selectedFormMovementType()));
   protected readonly filtersForm = this.fb.nonNullable.group({
     movementType: ['' as FinancialMovementType | ''],
     category: ['' as FinancialMovementCategory | ''],
@@ -450,7 +458,7 @@ export class FinancesBasicPageComponent {
   });
   protected readonly movementForm = this.fb.nonNullable.group({
     movementType: ['INCOME' as FinancialMovementType, Validators.required],
-    category: ['INSCRIPCION_EQUIPO' as FinancialMovementCategory, Validators.required],
+    category: ['' as FinancialMovementCategory | '', Validators.required],
     tournamentTeamId: ['' as number | ''],
     amount: [0, [Validators.required, Validators.min(0.01)]],
     occurredOn: [todayDateOnly(), Validators.required],
@@ -465,17 +473,19 @@ export class FinancesBasicPageComponent {
     });
 
     this.filtersForm.controls.movementType.valueChanges.pipe(takeUntilDestroyed()).subscribe((type) => {
+      this.selectedFilterMovementType.set(type);
       const currentCategory = this.filtersForm.controls.category.getRawValue();
-      const validCategories = type === 'INCOME' ? incomeCategories : type === 'EXPENSE' ? expenseCategories : this.filterCategories();
+      const validCategories = categoriesForType(type);
       if (currentCategory && !validCategories.includes(currentCategory)) {
         this.filtersForm.patchValue({ category: '' }, { emitEvent: false });
       }
     });
 
     this.movementForm.controls.movementType.valueChanges.pipe(takeUntilDestroyed()).subscribe((type) => {
+      this.selectedFormMovementType.set(type);
       this.movementForm.patchValue(
         {
-          category: type === 'INCOME' ? 'INSCRIPCION_EQUIPO' : 'ARBITRAJE',
+          category: '',
           tournamentTeamId: type === 'INCOME' ? this.movementForm.controls.tournamentTeamId.getRawValue() : ''
         },
         { emitEvent: false }
@@ -515,13 +525,21 @@ export class FinancesBasicPageComponent {
     }
 
     const formValue = this.movementForm.getRawValue();
+    if (!this.formCategories().includes(formValue.category as FinancialMovementCategory)) {
+      this.movementForm.controls.category.setErrors({ required: true });
+      this.movementForm.controls.category.markAsTouched();
+      this.notifications.error('Selecciona una categoria compatible con el tipo de movimiento.');
+      return;
+    }
+
+    const category = formValue.category as FinancialMovementCategory;
     this.saving.set(true);
     this.financesService
       .createMovement(tournamentId, {
         tournamentTeamId:
           formValue.movementType === 'INCOME' ? this.cleanTournamentTeamId(formValue.tournamentTeamId) : null,
         movementType: formValue.movementType,
-        category: formValue.category,
+        category,
         amount: Number(formValue.amount),
         occurredOn: toBackendDate(formValue.occurredOn) ?? '',
         description: formValue.description.trim() || null,
