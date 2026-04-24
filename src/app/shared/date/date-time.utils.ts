@@ -39,3 +39,47 @@ export const toDateTimeLocalInputValue = (value: string | null | undefined): str
 
   return `${parsed.getFullYear()}-${pad(parsed.getMonth() + 1)}-${pad(parsed.getDate())}T${pad(parsed.getHours())}:${pad(parsed.getMinutes())}`;
 };
+
+export const toTimeInputValue = (value: string | null | undefined): string => {
+  const parsed = parseBackendDateTime(value);
+  if (!parsed) {
+    return '';
+  }
+
+  return `${pad(parsed.getHours())}:${pad(parsed.getMinutes())}`;
+};
+
+export const toIsoFromDateAndTime = (
+  date: Date | null | undefined,
+  time: string | null | undefined
+): string | null => {
+  if (!date && !time) {
+    return null;
+  }
+
+  if (!date) {
+    return null;
+  }
+
+  const normalizedTime = (time ?? '').trim();
+  if (!normalizedTime) {
+    return null;
+  }
+
+  const [hoursRaw, minutesRaw] = normalizedTime.split(':');
+  const hours = Number(hoursRaw);
+  const minutes = Number(minutesRaw);
+  if (
+    Number.isNaN(hours) ||
+    Number.isNaN(minutes) ||
+    hours < 0 ||
+    hours > 23 ||
+    minutes < 0 ||
+    minutes > 59
+  ) {
+    return null;
+  }
+
+  const localDate = new Date(date.getFullYear(), date.getMonth(), date.getDate(), hours, minutes);
+  return Number.isNaN(localDate.getTime()) ? null : localDate.toISOString();
+};

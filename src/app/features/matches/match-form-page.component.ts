@@ -11,14 +11,17 @@ import {
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 import { MatButtonModule } from '@angular/material/button';
+import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
+import { MatNativeDateModule } from '@angular/material/core';
 
 import { ErrorMapper } from '../../core/error/error.mapper';
 import { NotificationService } from '../../core/error/notification.service';
 import { CatalogLoaderService } from '../../core/pagination/catalog-loader.service';
-import { toDateTimeLocalInputValue, toIsoFromDateTimeLocalInput } from '../../shared/date/date-time.utils';
+import { parseBackendDate, PICHANGA_DATE_PICKER_PROVIDERS } from '../../shared/date/date-only.utils';
+import { toIsoFromDateAndTime, toTimeInputValue } from '../../shared/date/date-time.utils';
 import { LoadingStateComponent } from '../../shared/loading-state/loading-state.component';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
 import { RosterEntry } from '../rosters/roster.models';
@@ -88,6 +91,16 @@ const matchConsistencyValidator: ValidatorFn = (control: AbstractControl): Valid
     return { playedMatchWithoutScore: true };
   }
 
+  if (hasHomeScore && hasAwayScore && Number(homeScoreValue) === Number(awayScoreValue) && winnerTeamId) {
+    return { drawWithWinner: true };
+  }
+
+  const scheduledDate = control.get('scheduledDate')?.value as Date | null;
+  const scheduledTime = String(control.get('scheduledTime')?.value ?? '').trim();
+  if ((scheduledDate && !scheduledTime) || (!scheduledDate && !!scheduledTime)) {
+    return { incompleteScheduledAt: true };
+  }
+
   return null;
 };
 
@@ -98,12 +111,15 @@ const matchConsistencyValidator: ValidatorFn = (control: AbstractControl): Valid
     ReactiveFormsModule,
     RouterLink,
     MatButtonModule,
+    MatDatepickerModule,
     MatFormFieldModule,
     MatInputModule,
+    MatNativeDateModule,
     MatSelectModule,
     LoadingStateComponent,
     PageHeaderComponent
   ],
+  providers: PICHANGA_DATE_PICKER_PROVIDERS,
   template: `
     <section class="app-page">
       <app-page-header
@@ -205,8 +221,22 @@ const matchConsistencyValidator: ValidatorFn = (control: AbstractControl): Valid
               </mat-form-field>
 
               <mat-form-field appearance="outline">
-                <mat-label>Fecha y hora</mat-label>
-                <input matInput type="datetime-local" formControlName="scheduledAt">
+                <mat-label>Fecha</mat-label>
+                <input
+                  matInput
+                  [matDatepicker]="scheduledDatePicker"
+                  formControlName="scheduledDate"
+                  placeholder="dd/mm/aaaa"
+                >
+                <mat-datepicker-toggle matIconSuffix [for]="scheduledDatePicker" />
+                <mat-datepicker #scheduledDatePicker />
+                <mat-hint>dd/mm/aaaa</mat-hint>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Hora</mat-label>
+                <input matInput type="time" formControlName="scheduledTime">
+                <mat-hint>hh:mm</mat-hint>
               </mat-form-field>
 
               <mat-form-field appearance="outline">
@@ -236,11 +266,14 @@ const matchConsistencyValidator: ValidatorFn = (control: AbstractControl): Valid
               <mat-form-field appearance="outline">
                 <mat-label>Ganador</mat-label>
                 <mat-select formControlName="winnerTournamentTeamId">
-                  <mat-option value="">Sin definir</mat-option>
+                  <mat-option value="">{{ winnerEmptyLabel() }}</mat-option>
                   @for (item of winnerOptions(); track item.id) {
                     <mat-option [value]="item.id">{{ tournamentTeamLabel(item) }}</mat-option>
                   }
                 </mat-select>
+                @if (winnerEmptyLabel() === 'Empate') {
+                  <mat-hint>Con marcador igualado, el partido queda sin ganador.</mat-hint>
+                }
               </mat-form-field>
 
               <mat-form-field appearance="outline">
@@ -263,6 +296,12 @@ const matchConsistencyValidator: ValidatorFn = (control: AbstractControl): Valid
             }
             @if (form.hasError('playedMatchWithoutScore')) {
               <p class="muted">Un partido en estado jugado debe tener marcador local y visita.</p>
+            }
+            @if (form.hasError('drawWithWinner')) {
+              <p class="muted">Si el marcador termina empatado, el ganador debe quedar como Empate.</p>
+            }
+            @if (form.hasError('incompleteScheduledAt')) {
+              <p class="muted">Completa fecha y hora juntas para programar el partido.</p>
             }
 
             <div class="form-actions">
@@ -340,6 +379,18 @@ export class MatchFormPageComponent {
 
     return this.tournamentTeams().filter((item) => selectedIds.has(item.id));
   });
+  protected readonly winnerEmptyLabel = computed(() => {
+    const homeScoreValue = this.form.controls.homeScore.getRawValue();
+    const awayScoreValue = this.form.controls.awayScore.getRawValue();
+    const hasHomeScore = homeScoreValue !== '' && homeScoreValue !== null;
+    const hasAwayScore = awayScoreValue !== '' && awayScoreValue !== null;
+
+    if (hasHomeScore && hasAwayScore && Number(homeScoreValue) === Number(awayScoreValue)) {
+      return 'Empate';
+    }
+
+    return 'Sin definir';
+  });
   protected readonly rosterReadyTournamentTeamIds = computed(() => {
     const activeRosterIds = new Set(
       this.allRosters()
@@ -395,7 +446,8 @@ export class MatchFormPageComponent {
       awayTournamentTeamId: [0, [positiveSelectionValidator('awayTournamentTeamId')]],
       homeTeamTournamentId: [0],
       awayTeamTournamentId: [0],
-      scheduledAt: [''],
+      scheduledDate: [null as Date | null],
+      scheduledTime: [''],
       venueName: ['', [Validators.maxLength(150)]],
       status: ['SCHEDULED' as MatchStatus, Validators.required],
       homeScore: ['', [Validators.min(0)]],
@@ -497,6 +549,14 @@ export class MatchFormPageComponent {
       this.syncWinnerSelection();
     });
 
+    this.form.controls.homeScore.valueChanges.pipe(takeUntilDestroyed()).subscribe(() => {
+      this.syncWinnerSelection();
+    });
+
+    this.form.controls.awayScore.valueChanges.pipe(takeUntilDestroyed()).subscribe(() => {
+      this.syncWinnerSelection();
+    });
+
     if (!this.isEditMode()) {
       this.syncSelectedTeamTournamentIds();
       this.pageLoading.set(false);
@@ -517,7 +577,8 @@ export class MatchFormPageComponent {
               matchdayNumber: match.matchdayNumber ? String(match.matchdayNumber) : '',
               homeTournamentTeamId: match.homeTournamentTeamId,
               awayTournamentTeamId: match.awayTournamentTeamId,
-              scheduledAt: toDateTimeLocalInputValue(match.scheduledAt),
+              scheduledDate: parseBackendDate(match.scheduledAt),
+              scheduledTime: toTimeInputValue(match.scheduledAt),
               venueName: match.venueName ?? '',
               status: match.status,
               homeScore: match.homeScore !== null ? String(match.homeScore) : '',
@@ -568,7 +629,7 @@ export class MatchFormPageComponent {
       matchdayNumber: parseOptionalNumber(value.matchdayNumber),
       homeTournamentTeamId: Number(value.homeTournamentTeamId),
       awayTournamentTeamId: Number(value.awayTournamentTeamId),
-      scheduledAt: toIsoFromDateTimeLocalInput(value.scheduledAt),
+      scheduledAt: toIsoFromDateAndTime(value.scheduledDate, value.scheduledTime),
       venueName: value.venueName || null,
       status: value.status,
       homeScore: parseOptionalNumber(value.homeScore),
@@ -723,6 +784,17 @@ export class MatchFormPageComponent {
     const winnerId = Number(this.form.controls.winnerTournamentTeamId.getRawValue());
     const homeId = this.selectedHomeTournamentTeamId();
     const awayId = this.selectedAwayTournamentTeamId();
+    const homeScoreValue = this.form.controls.homeScore.getRawValue();
+    const awayScoreValue = this.form.controls.awayScore.getRawValue();
+    const hasHomeScore = homeScoreValue !== '' && homeScoreValue !== null;
+    const hasAwayScore = awayScoreValue !== '' && awayScoreValue !== null;
+
+    if (hasHomeScore && hasAwayScore && Number(homeScoreValue) === Number(awayScoreValue)) {
+      if (winnerId) {
+        this.form.patchValue({ winnerTournamentTeamId: '' }, { emitEvent: false });
+      }
+      return;
+    }
 
     if (winnerId && winnerId !== homeId && winnerId !== awayId) {
       this.form.patchValue({ winnerTournamentTeamId: '' }, { emitEvent: false });
