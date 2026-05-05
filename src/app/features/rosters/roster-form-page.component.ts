@@ -95,14 +95,29 @@ const rosterOperationalValidator: ValidatorFn = (control: AbstractControl): Vali
             <div class="form-grid">
               @if (!isEditMode()) {
                 <mat-form-field appearance="outline">
+                  <mat-label>Torneo</mat-label>
+                  <mat-select formControlName="tournamentId">
+                    @for (item of tournaments(); track item.id) {
+                      <mat-option [value]="item.id">{{ item.name }}</mat-option>
+                    }
+                  </mat-select>
+                  @if (form.controls.tournamentId.invalid && form.controls.tournamentId.touched) {
+                    <mat-error>Selecciona un torneo valido.</mat-error>
+                  }
+                </mat-form-field>
+
+                <mat-form-field appearance="outline">
                   <mat-label>Inscripcion</mat-label>
                   <mat-select formControlName="tournamentTeamId">
-                    @for (item of tournamentTeams(); track item.id) {
+                    @for (item of filteredTournamentTeams(); track item.id) {
                       <mat-option [value]="item.id">{{ tournamentTeamLabel(item) }}</mat-option>
                     }
                   </mat-select>
                   @if (form.controls.tournamentTeamId.invalid && form.controls.tournamentTeamId.touched) {
                     <mat-error>Selecciona una inscripcion valida.</mat-error>
+                  }
+                  @if (filteredTournamentTeams().length === 0) {
+                    <mat-hint>No hay inscripciones registradas para el torneo seleccionado.</mat-hint>
                   }
                 </mat-form-field>
 
@@ -201,6 +216,7 @@ export class RosterFormPageComponent {
   protected readonly pageLoading = signal(true);
   protected readonly saving = signal(false);
   private readonly preferredTournamentTeamId = Number(this.route.snapshot.queryParamMap.get('tournamentTeamId') ?? 0);
+  private readonly selectedTournamentId = signal(0);
   private readonly selectedTournamentTeamId = signal(0);
   private readonly selectedRosterStatus = signal<RosterStatus>('ACTIVE');
   protected readonly players = signal<Player[]>([]);
@@ -211,6 +227,12 @@ export class RosterFormPageComponent {
   protected readonly selectedTournamentTeam = computed(() =>
     this.tournamentTeams().find((item) => item.id === this.selectedTournamentTeamId()) ?? null
   );
+  protected readonly filteredTournamentTeams = computed(() => {
+    const tournamentId = this.selectedTournamentId();
+    return tournamentId
+      ? this.tournamentTeams().filter((item) => item.tournamentId === tournamentId)
+      : this.tournamentTeams();
+  });
   protected readonly operationalWarning = computed(() => {
     const registration = this.selectedTournamentTeam();
     if (!registration) {
@@ -226,6 +248,7 @@ export class RosterFormPageComponent {
 
   protected readonly form = this.fb.nonNullable.group(
     {
+      tournamentId: [0, [positiveSelectionValidator('tournamentId')]],
       tournamentTeamId: [0, [positiveSelectionValidator('tournamentTeamId')]],
       playerId: [0, [positiveSelectionValidator('playerId')]],
       registrationStatus: [''],
@@ -252,20 +275,34 @@ export class RosterFormPageComponent {
       next: (items) => this.teams.set(items)
     });
     this.catalogLoader.loadAll((page, size) => this.tournamentsService.list({ page, size })).subscribe({
-      next: (items) => this.tournaments.set(items)
+      next: (items) => {
+        this.tournaments.set(items);
+        if (!this.isEditMode() && items.length > 0 && Number(this.form.controls.tournamentId.getRawValue()) === 0) {
+          this.form.patchValue({ tournamentId: items[0].id }, { emitEvent: false });
+          this.selectedTournamentId.set(items[0].id);
+        }
+      }
     });
 
     this.catalogLoader.loadAll((page, size) => this.tournamentTeamsService.list({ page, size })).subscribe({
       next: (items) => {
         this.tournamentTeams.set(items);
         if (!this.isEditMode() && items.length > 0) {
-          const preferredRegistration =
-            items.find((item) => item.id === this.preferredTournamentTeamId) ?? items[0];
-          this.form.patchValue({ tournamentTeamId: preferredRegistration.id });
-          this.selectedTournamentTeamId.set(preferredRegistration.id);
+          const preferredRegistration = items.find((item) => item.id === this.preferredTournamentTeamId) ?? null;
+          const fallbackTournamentId = Number(this.form.controls.tournamentId.getRawValue()) || items[0].tournamentId;
+          const tournamentId = preferredRegistration?.tournamentId ?? fallbackTournamentId;
+          this.form.patchValue({ tournamentId }, { emitEvent: false });
+          this.selectedTournamentId.set(tournamentId);
+          this.applyDefaultTournamentTeamSelection(preferredRegistration?.id ?? 0);
         }
         this.syncRegistrationStatus();
       }
+    });
+
+    this.form.controls.tournamentId.valueChanges.subscribe(() => {
+      const tournamentId = Number(this.form.controls.tournamentId.getRawValue());
+      this.selectedTournamentId.set(tournamentId);
+      this.applyDefaultTournamentTeamSelection();
     });
 
     this.form.controls.tournamentTeamId.valueChanges.subscribe(() => {
@@ -285,9 +322,11 @@ export class RosterFormPageComponent {
     this.rostersService
       .getById(this.rosterId)
       .pipe(finalize(() => this.pageLoading.set(false)))
-      .subscribe({
+        .subscribe({
         next: (entry) => {
+          const tournamentTeam = this.tournamentTeams().find((item) => item.id === entry.tournamentTeamId) ?? null;
           this.form.patchValue({
+            tournamentId: tournamentTeam?.tournamentId ?? 0,
             tournamentTeamId: entry.tournamentTeamId,
             playerId: entry.playerId,
             registrationStatus:
@@ -299,6 +338,7 @@ export class RosterFormPageComponent {
             startDate: parseBackendDate(entry.startDate),
             endDate: parseBackendDate(entry.endDate)
           });
+          this.selectedTournamentId.set(tournamentTeam?.tournamentId ?? 0);
           this.selectedTournamentTeamId.set(entry.tournamentTeamId);
           this.selectedRosterStatus.set(entry.rosterStatus);
         },
@@ -352,6 +392,25 @@ export class RosterFormPageComponent {
     const teamLabel = team?.name ?? `Equipo ${item.teamId}`;
     const tournamentLabel = tournament?.name ?? `Torneo ${item.tournamentId}`;
     return `${teamLabel} / ${tournamentLabel} (#${item.id})`;
+  }
+
+  private applyDefaultTournamentTeamSelection(preferredTournamentTeamId = 0): void {
+    const tournamentId = this.selectedTournamentId();
+    const availableTournamentTeams = this.tournamentTeams().filter((item) => item.tournamentId === tournamentId);
+    const currentTournamentTeamId = Number(this.form.controls.tournamentTeamId.getRawValue());
+
+    if (availableTournamentTeams.some((item) => item.id === currentTournamentTeamId)) {
+      this.selectedTournamentTeamId.set(currentTournamentTeamId);
+      this.syncRegistrationStatus();
+      return;
+    }
+
+    const nextTournamentTeam =
+      availableTournamentTeams.find((item) => item.id === preferredTournamentTeamId) ?? availableTournamentTeams[0] ?? null;
+
+    this.form.patchValue({ tournamentTeamId: nextTournamentTeam?.id ?? 0 }, { emitEvent: false });
+    this.selectedTournamentTeamId.set(nextTournamentTeam?.id ?? 0);
+    this.syncRegistrationStatus();
   }
 
   private syncRegistrationStatus(): void {
