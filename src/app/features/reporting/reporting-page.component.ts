@@ -18,6 +18,7 @@ import { PICHANGA_DATE_PICKER_PROVIDERS, toBackendDate } from '../../shared/date
 import { parseBackendDateTime } from '../../shared/date/date-time.utils';
 import { LoadingStateComponent } from '../../shared/loading-state/loading-state.component';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
+import { SearchSelectComponent } from '../../shared/search-select/search-select.component';
 import { MatchGame } from '../matches/match.models';
 import { MatchesService } from '../matches/matches.service';
 import { Player } from '../players/player.models';
@@ -67,7 +68,8 @@ const REPORT_OPTIONS: ReportOption[] = [
     MatNativeDateModule,
     MatSelectModule,
     LoadingStateComponent,
-    PageHeaderComponent
+    PageHeaderComponent,
+    SearchSelectComponent
   ],
   providers: PICHANGA_DATE_PICKER_PROVIDERS,
   template: `
@@ -105,35 +107,35 @@ const REPORT_OPTIONS: ReportOption[] = [
               </mat-select>
             </mat-form-field>
 
-            <mat-form-field appearance="outline">
-              <mat-label>Partido</mat-label>
-              <mat-select formControlName="matchId">
-                <mat-option value="">Todos</mat-option>
-                @for (match of matches(); track match.id) {
-                  <mat-option [value]="match.id">{{ matchLabel(match) }}</mat-option>
-                }
-              </mat-select>
-            </mat-form-field>
+            <app-search-select
+              formControlName="matchId"
+              label="Partido"
+              placeholder="Busca un partido"
+              [options]="matches()"
+              [labelFn]="matchOptionLabel"
+              [searchTextFn]="matchOptionLabel"
+              emptyOptionLabel="Todos"
+            />
 
-            <mat-form-field appearance="outline">
-              <mat-label>Equipo</mat-label>
-              <mat-select formControlName="tournamentTeamId">
-                <mat-option value="">Todos</mat-option>
-                @for (registration of tournamentTeams(); track registration.id) {
-                  <mat-option [value]="registration.id">{{ tournamentTeamLabel(registration.id) }}</mat-option>
-                }
-              </mat-select>
-            </mat-form-field>
+            <app-search-select
+              formControlName="tournamentTeamId"
+              label="Equipo"
+              placeholder="Busca un equipo"
+              [options]="tournamentTeams()"
+              [labelFn]="tournamentTeamOptionLabel"
+              [searchTextFn]="tournamentTeamOptionLabel"
+              emptyOptionLabel="Todos"
+            />
 
-            <mat-form-field appearance="outline">
-              <mat-label>Jugador</mat-label>
-              <mat-select formControlName="playerId">
-                <mat-option value="">Todos</mat-option>
-                @for (player of players(); track player.id) {
-                  <mat-option [value]="player.id">{{ playerName(player.id) }}</mat-option>
-                }
-              </mat-select>
-            </mat-form-field>
+            <app-search-select
+              formControlName="playerId"
+              label="Jugador"
+              placeholder="Busca un jugador"
+              [options]="players()"
+              [labelFn]="playerOptionLabel"
+              [searchTextFn]="playerOptionLabel"
+              emptyOptionLabel="Todos"
+            />
 
             <mat-form-field appearance="outline">
               <mat-label>Desde</mat-label>
@@ -499,6 +501,12 @@ export class ReportingPageComponent {
 
     return `${player.firstName} ${player.lastName}`.trim();
   }
+
+  protected readonly matchOptionLabel = (match: MatchGame): string => this.matchLabel(match);
+
+  protected readonly tournamentTeamOptionLabel = (registration: TournamentTeam): string => this.tournamentTeamLabel(registration.id);
+
+  protected readonly playerOptionLabel = (player: Player): string => this.playerName(player.id);
 
   protected sourceLabel(): string {
     return this.report()?.metadata?.source || 'backend reports';

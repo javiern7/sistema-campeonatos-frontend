@@ -23,6 +23,7 @@ import { CatalogLoaderService } from '../../core/pagination/catalog-loader.servi
 import { parseBackendDateTime } from '../../shared/date/date-time.utils';
 import { LoadingStateComponent } from '../../shared/loading-state/loading-state.component';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
+import { SearchSelectComponent } from '../../shared/search-select/search-select.component';
 import { Player } from '../players/player.models';
 import { PlayersService } from '../players/players.service';
 import { RosterEntry } from '../rosters/roster.models';
@@ -81,7 +82,8 @@ const eventRulesValidator: ValidatorFn = (control: AbstractControl): ValidationE
     MatSelectModule,
     MatTableModule,
     LoadingStateComponent,
-    PageHeaderComponent
+    PageHeaderComponent,
+    SearchSelectComponent
   ],
   template: `
     <section class="app-page">
@@ -114,35 +116,35 @@ const eventRulesValidator: ValidatorFn = (control: AbstractControl): ValidationE
                 </mat-select>
               </mat-form-field>
 
-              <mat-form-field appearance="outline">
-                <mat-label>Equipo</mat-label>
-                <mat-select formControlName="tournamentTeamId">
-                  <mat-option value="">Sin equipo</mat-option>
-                  @for (item of matchTournamentTeams(); track item.id) {
-                    <mat-option [value]="item.id">{{ tournamentTeamLabel(item.id) }}</mat-option>
-                  }
-                </mat-select>
-              </mat-form-field>
+              <app-search-select
+                formControlName="tournamentTeamId"
+                label="Equipo"
+                placeholder="Busca un equipo"
+                [options]="matchTournamentTeams()"
+                [labelFn]="matchTournamentTeamOptionLabel"
+                [searchTextFn]="matchTournamentTeamOptionLabel"
+                emptyOptionLabel="Sin equipo"
+              />
 
-              <mat-form-field appearance="outline">
-                <mat-label>Jugador</mat-label>
-                <mat-select formControlName="playerId">
-                  <mat-option value="">Sin jugador</mat-option>
-                  @for (item of rosterPlayers(); track item.id) {
-                    <mat-option [value]="item.id">{{ playerLabel(item.id) }}</mat-option>
-                  }
-                </mat-select>
-              </mat-form-field>
+              <app-search-select
+                formControlName="playerId"
+                label="Jugador"
+                placeholder="Busca un jugador"
+                [options]="rosterPlayers()"
+                [labelFn]="playerOptionLabel"
+                [searchTextFn]="playerOptionLabel"
+                emptyOptionLabel="Sin jugador"
+              />
 
-              <mat-form-field appearance="outline">
-                <mat-label>Jugador relacionado</mat-label>
-                <mat-select formControlName="relatedPlayerId">
-                  <mat-option value="">Sin jugador relacionado</mat-option>
-                  @for (item of rosterPlayers(); track item.id) {
-                    <mat-option [value]="item.id">{{ playerLabel(item.id) }}</mat-option>
-                  }
-                </mat-select>
-              </mat-form-field>
+              <app-search-select
+                formControlName="relatedPlayerId"
+                label="Jugador relacionado"
+                placeholder="Busca un jugador relacionado"
+                [options]="rosterPlayers()"
+                [labelFn]="playerOptionLabel"
+                [searchTextFn]="playerOptionLabel"
+                emptyOptionLabel="Sin jugador relacionado"
+              />
 
               <mat-form-field appearance="outline">
                 <mat-label>Periodo</mat-label>
@@ -477,6 +479,10 @@ export class MatchEventsPageComponent {
     const player = this.allPlayers().find((item) => item.id === playerId);
     return player ? `${player.firstName} ${player.lastName}` : `Jugador #${playerId}`;
   }
+
+  protected readonly matchTournamentTeamOptionLabel = (item: TournamentTeam): string => this.tournamentTeamLabel(item.id);
+
+  protected readonly playerOptionLabel = (item: Player): string => this.playerLabel(item.id);
 
   protected eventTypeLabel(type: MatchEventType): string {
     const labels: Record<MatchEventType, string> = {

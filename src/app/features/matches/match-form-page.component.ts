@@ -24,6 +24,7 @@ import { parseBackendDate, PICHANGA_DATE_PICKER_PROVIDERS } from '../../shared/d
 import { toIsoFromDateAndTime, toTimeInputValue } from '../../shared/date/date-time.utils';
 import { LoadingStateComponent } from '../../shared/loading-state/loading-state.component';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
+import { SearchSelectComponent } from '../../shared/search-select/search-select.component';
 import { RosterEntry } from '../rosters/roster.models';
 import { RostersService } from '../rosters/rosters.service';
 import { StageGroup } from '../stage-groups/stage-group.models';
@@ -117,7 +118,8 @@ const matchConsistencyValidator: ValidatorFn = (control: AbstractControl): Valid
     MatNativeDateModule,
     MatSelectModule,
     LoadingStateComponent,
-    PageHeaderComponent
+    PageHeaderComponent,
+    SearchSelectComponent
   ],
   providers: PICHANGA_DATE_PICKER_PROVIDERS,
   template: `
@@ -141,59 +143,57 @@ const matchConsistencyValidator: ValidatorFn = (control: AbstractControl): Valid
 
             <div class="form-grid">
               @if (!isEditMode()) {
-                <mat-form-field appearance="outline">
-                  <mat-label>Torneo</mat-label>
-                  <mat-select formControlName="tournamentId">
-                    @for (item of tournaments(); track item.id) {
-                      <mat-option [value]="item.id">{{ item.name }}</mat-option>
-                    }
-                  </mat-select>
-                </mat-form-field>
+                <app-search-select
+                  formControlName="tournamentId"
+                  label="Torneo"
+                  placeholder="Busca un torneo"
+                  [options]="tournaments()"
+                  [labelFn]="tournamentOptionLabel"
+                  [searchTextFn]="tournamentOptionLabel"
+                />
               }
 
-              <mat-form-field appearance="outline">
-                <mat-label>Etapa</mat-label>
-                <mat-select formControlName="stageId">
-                  <mat-option value="">Sin etapa</mat-option>
-                  @for (item of stages(); track item.id) {
-                    <mat-option [value]="item.id">{{ item.name }}</mat-option>
-                  }
-                </mat-select>
-              </mat-form-field>
+              <app-search-select
+                formControlName="stageId"
+                label="Etapa"
+                placeholder="Busca una etapa"
+                [options]="stages()"
+                [labelFn]="stageOptionLabel"
+                [searchTextFn]="stageOptionLabel"
+                emptyOptionLabel="Sin etapa"
+              />
 
-              <mat-form-field appearance="outline">
-                <mat-label>Grupo</mat-label>
-                <mat-select formControlName="groupId">
-                  <mat-option value="">Sin grupo</mat-option>
-                  @for (item of groups(); track item.id) {
-                    <mat-option [value]="item.id">{{ item.name }}</mat-option>
-                  }
-                </mat-select>
-              </mat-form-field>
+              <app-search-select
+                formControlName="groupId"
+                label="Grupo"
+                placeholder="Busca un grupo"
+                [options]="groups()"
+                [labelFn]="groupOptionLabel"
+                [searchTextFn]="groupOptionLabel"
+                emptyOptionLabel="Sin grupo"
+              />
 
-              <mat-form-field appearance="outline">
-                <mat-label>Equipo local</mat-label>
-                <mat-select formControlName="homeTournamentTeamId">
-                  @for (item of tournamentTeams(); track item.id) {
-                    <mat-option [value]="item.id">{{ tournamentTeamLabel(item) }}</mat-option>
-                  }
-                </mat-select>
-                @if (form.controls.homeTournamentTeamId.invalid && form.controls.homeTournamentTeamId.touched) {
-                  <mat-error>Selecciona un equipo local valido.</mat-error>
-                }
-              </mat-form-field>
+              <app-search-select
+                formControlName="homeTournamentTeamId"
+                label="Equipo local"
+                placeholder="Busca un equipo local"
+                [options]="tournamentTeams()"
+                [labelFn]="tournamentTeamOptionLabel"
+                [searchTextFn]="tournamentTeamOptionLabel"
+                [showError]="form.controls.homeTournamentTeamId.invalid && form.controls.homeTournamentTeamId.touched"
+                errorText="Selecciona un equipo local valido."
+              />
 
-              <mat-form-field appearance="outline">
-                <mat-label>Equipo visita</mat-label>
-                <mat-select formControlName="awayTournamentTeamId">
-                  @for (item of tournamentTeams(); track item.id) {
-                    <mat-option [value]="item.id">{{ tournamentTeamLabel(item) }}</mat-option>
-                  }
-                </mat-select>
-                @if (form.controls.awayTournamentTeamId.invalid && form.controls.awayTournamentTeamId.touched) {
-                  <mat-error>Selecciona un equipo visita valido.</mat-error>
-                }
-              </mat-form-field>
+              <app-search-select
+                formControlName="awayTournamentTeamId"
+                label="Equipo visita"
+                placeholder="Busca un equipo visita"
+                [options]="tournamentTeams()"
+                [labelFn]="tournamentTeamOptionLabel"
+                [searchTextFn]="tournamentTeamOptionLabel"
+                [showError]="form.controls.awayTournamentTeamId.invalid && form.controls.awayTournamentTeamId.touched"
+                errorText="Selecciona un equipo visita valido."
+              />
 
               <mat-form-field appearance="outline">
                 <mat-label>Estado</mat-label>
@@ -263,18 +263,16 @@ const matchConsistencyValidator: ValidatorFn = (control: AbstractControl): Valid
                 }
               </mat-form-field>
 
-              <mat-form-field appearance="outline">
-                <mat-label>Ganador</mat-label>
-                <mat-select formControlName="winnerTournamentTeamId">
-                  <mat-option value="">{{ winnerEmptyLabel() }}</mat-option>
-                  @for (item of winnerOptions(); track item.id) {
-                    <mat-option [value]="item.id">{{ tournamentTeamLabel(item) }}</mat-option>
-                  }
-                </mat-select>
-                @if (winnerEmptyLabel() === 'Empate') {
-                  <mat-hint>Con marcador igualado, el partido queda sin ganador.</mat-hint>
-                }
-              </mat-form-field>
+              <app-search-select
+                formControlName="winnerTournamentTeamId"
+                label="Ganador"
+                placeholder="Busca un ganador"
+                [options]="winnerOptions()"
+                [labelFn]="tournamentTeamOptionLabel"
+                [searchTextFn]="tournamentTeamOptionLabel"
+                [emptyOptionLabel]="winnerEmptyLabel()"
+                [hint]="winnerEmptyLabel() === 'Empate' ? 'Con marcador igualado, el partido queda sin ganador.' : ''"
+              />
 
               <mat-form-field appearance="outline">
                 <mat-label>Notas</mat-label>
@@ -708,6 +706,14 @@ export class MatchFormPageComponent {
 
     return labels[status];
   }
+
+  protected readonly tournamentOptionLabel = (item: Tournament): string => item.name;
+
+  protected readonly stageOptionLabel = (item: TournamentStage): string => item.name;
+
+  protected readonly groupOptionLabel = (item: StageGroup): string => item.name;
+
+  protected readonly tournamentTeamOptionLabel = (item: TournamentTeam): string => this.tournamentTeamLabel(item);
 
   private applyDefaultTeamsForTournament(tournamentId: number): void {
     if (!tournamentId) {

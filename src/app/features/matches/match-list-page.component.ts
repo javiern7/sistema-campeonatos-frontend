@@ -16,6 +16,7 @@ import { CatalogLoaderService } from '../../core/pagination/catalog-loader.servi
 import { parseBackendDateTime } from '../../shared/date/date-time.utils';
 import { LoadingStateComponent } from '../../shared/loading-state/loading-state.component';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
+import { SearchSelectComponent } from '../../shared/search-select/search-select.component';
 import { StageGroup } from '../stage-groups/stage-group.models';
 import { StageGroupsService } from '../stage-groups/stage-groups.service';
 import { Team } from '../teams/team.models';
@@ -57,7 +58,8 @@ const parseQueryNumber = (value: string | null): number | '' => {
     MatSelectModule,
     MatTableModule,
     LoadingStateComponent,
-    PageHeaderComponent
+    PageHeaderComponent,
+    SearchSelectComponent
   ],
   template: `
     <section class="app-page">
@@ -69,35 +71,35 @@ const parseQueryNumber = (value: string | null): number | '' => {
 
       <section class="card page-card app-page">
         <form [formGroup]="filtersForm" class="filter-row">
-          <mat-form-field appearance="outline">
-            <mat-label>Torneo</mat-label>
-            <mat-select formControlName="tournamentId">
-              <mat-option value="">Todos</mat-option>
-              @for (item of tournaments(); track item.id) {
-                <mat-option [value]="item.id">{{ item.name }}</mat-option>
-              }
-            </mat-select>
-          </mat-form-field>
+          <app-search-select
+            formControlName="tournamentId"
+            label="Torneo"
+            placeholder="Busca un torneo"
+            [options]="tournaments()"
+            [labelFn]="tournamentOptionLabel"
+            [searchTextFn]="tournamentOptionLabel"
+            emptyOptionLabel="Todos"
+          />
 
-          <mat-form-field appearance="outline">
-            <mat-label>Etapa</mat-label>
-            <mat-select formControlName="stageId">
-              <mat-option value="">Todas</mat-option>
-              @for (item of stages(); track item.id) {
-                <mat-option [value]="item.id">{{ item.name }}</mat-option>
-              }
-            </mat-select>
-          </mat-form-field>
+          <app-search-select
+            formControlName="stageId"
+            label="Etapa"
+            placeholder="Busca una etapa"
+            [options]="stages()"
+            [labelFn]="stageOptionLabel"
+            [searchTextFn]="stageOptionLabel"
+            emptyOptionLabel="Todas"
+          />
 
-          <mat-form-field appearance="outline">
-            <mat-label>Grupo</mat-label>
-            <mat-select formControlName="groupId">
-              <mat-option value="">Todos</mat-option>
-              @for (item of groups(); track item.id) {
-                <mat-option [value]="item.id">{{ item.name }}</mat-option>
-              }
-            </mat-select>
-          </mat-form-field>
+          <app-search-select
+            formControlName="groupId"
+            label="Grupo"
+            placeholder="Busca un grupo"
+            [options]="groups()"
+            [labelFn]="groupOptionLabel"
+            [searchTextFn]="groupOptionLabel"
+            emptyOptionLabel="Todos"
+          />
 
           <mat-form-field appearance="outline">
             <mat-label>Estado</mat-label>
@@ -531,6 +533,12 @@ export class MatchListPageComponent {
   protected statusClass(status: MatchStatus): string {
     return `status-pill ${status.toLowerCase()}`;
   }
+
+  protected readonly tournamentOptionLabel = (item: Tournament): string => item.name;
+
+  protected readonly stageOptionLabel = (item: TournamentStage): string => item.name;
+
+  protected readonly groupOptionLabel = (item: StageGroup): string => item.name;
 
   private addCatalogError(label: string, error: unknown): void {
     const message = this.errorMapper.map(error).message;

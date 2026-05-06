@@ -12,6 +12,7 @@ import { NotificationService } from '../../core/error/notification.service';
 import { CatalogLoaderService } from '../../core/pagination/catalog-loader.service';
 import { LoadingStateComponent } from '../../shared/loading-state/loading-state.component';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
+import { SearchSelectComponent } from '../../shared/search-select/search-select.component';
 import { Team } from '../teams/team.models';
 import { TeamsService } from '../teams/teams.service';
 import { Tournament } from '../tournaments/tournament.models';
@@ -45,7 +46,8 @@ const parseOptionalNumber = (value: string | number | null | undefined): number 
     MatInputModule,
     MatSelectModule,
     LoadingStateComponent,
-    PageHeaderComponent
+    PageHeaderComponent,
+    SearchSelectComponent
   ],
   template: `
     <section class="app-page">
@@ -68,29 +70,27 @@ const parseOptionalNumber = (value: string | number | null | undefined): number 
 
             <div class="form-grid">
               @if (!isEditMode()) {
-                <mat-form-field appearance="outline">
-                  <mat-label>Torneo</mat-label>
-                  <mat-select formControlName="tournamentId">
-                    @for (item of tournaments(); track item.id) {
-                      <mat-option [value]="item.id">{{ item.name }}</mat-option>
-                    }
-                  </mat-select>
-                  @if (form.controls.tournamentId.invalid && form.controls.tournamentId.touched) {
-                    <mat-error>Selecciona un torneo valido.</mat-error>
-                  }
-                </mat-form-field>
+                <app-search-select
+                  formControlName="tournamentId"
+                  label="Torneo"
+                  placeholder="Busca un torneo"
+                  [options]="tournaments()"
+                  [labelFn]="tournamentOptionLabel"
+                  [searchTextFn]="tournamentOptionLabel"
+                  [showError]="form.controls.tournamentId.invalid && form.controls.tournamentId.touched"
+                  errorText="Selecciona un torneo valido."
+                />
 
-                <mat-form-field appearance="outline">
-                  <mat-label>Equipo</mat-label>
-                  <mat-select formControlName="teamId">
-                    @for (item of teams(); track item.id) {
-                      <mat-option [value]="item.id">{{ item.name }}</mat-option>
-                    }
-                  </mat-select>
-                  @if (form.controls.teamId.invalid && form.controls.teamId.touched) {
-                    <mat-error>Selecciona un equipo valido.</mat-error>
-                  }
-                </mat-form-field>
+                <app-search-select
+                  formControlName="teamId"
+                  label="Equipo"
+                  placeholder="Busca un equipo"
+                  [options]="teams()"
+                  [labelFn]="teamOptionLabel"
+                  [searchTextFn]="teamOptionLabel"
+                  [showError]="form.controls.teamId.invalid && form.controls.teamId.touched"
+                  errorText="Selecciona un equipo valido."
+                />
               }
 
               <mat-form-field appearance="outline">
@@ -275,4 +275,8 @@ export class TournamentTeamFormPageComponent {
 
     return labels[status];
   }
+
+  protected readonly tournamentOptionLabel = (item: Tournament): string => item.name;
+
+  protected readonly teamOptionLabel = (item: Team): string => item.name;
 }

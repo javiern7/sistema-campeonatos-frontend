@@ -14,6 +14,7 @@ import { NotificationService } from '../../core/error/notification.service';
 import { CatalogLoaderService } from '../../core/pagination/catalog-loader.service';
 import { LoadingStateComponent } from '../../shared/loading-state/loading-state.component';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
+import { SearchSelectComponent } from '../../shared/search-select/search-select.component';
 import { Team } from '../teams/team.models';
 import { TeamsService } from '../teams/teams.service';
 import { Tournament } from '../tournaments/tournament.models';
@@ -53,7 +54,8 @@ const parseQueryNumber = (value: string | null): number | '' => {
     MatSelectModule,
     MatTableModule,
     LoadingStateComponent,
-    PageHeaderComponent
+    PageHeaderComponent,
+    SearchSelectComponent
   ],
   template: `
     <section class="app-page">
@@ -65,25 +67,25 @@ const parseQueryNumber = (value: string | null): number | '' => {
 
       <section class="card page-card app-page">
         <form [formGroup]="filtersForm" class="filter-row">
-          <mat-form-field appearance="outline">
-            <mat-label>Torneo</mat-label>
-            <mat-select formControlName="tournamentId">
-              <mat-option value="">Todos</mat-option>
-              @for (item of tournaments(); track item.id) {
-                <mat-option [value]="item.id">{{ item.name }}</mat-option>
-              }
-            </mat-select>
-          </mat-form-field>
+          <app-search-select
+            formControlName="tournamentId"
+            label="Torneo"
+            placeholder="Busca un torneo"
+            [options]="tournaments()"
+            [labelFn]="tournamentOptionLabel"
+            [searchTextFn]="tournamentOptionLabel"
+            emptyOptionLabel="Todos"
+          />
 
-          <mat-form-field appearance="outline">
-            <mat-label>Equipo</mat-label>
-            <mat-select formControlName="teamId">
-              <mat-option value="">Todos</mat-option>
-              @for (item of teams(); track item.id) {
-                <mat-option [value]="item.id">{{ item.name }}</mat-option>
-              }
-            </mat-select>
-          </mat-form-field>
+          <app-search-select
+            formControlName="teamId"
+            label="Equipo"
+            placeholder="Busca un equipo"
+            [options]="teams()"
+            [labelFn]="teamOptionLabel"
+            [searchTextFn]="teamOptionLabel"
+            emptyOptionLabel="Todos"
+          />
 
           <mat-form-field appearance="outline">
             <mat-label>Estado</mat-label>
@@ -320,6 +322,10 @@ export class TournamentTeamListPageComponent {
 
     return this.teams().find((item) => item.id === id)?.name ?? `Equipo ${id}`;
   }
+
+  protected readonly tournamentOptionLabel = (item: Tournament): string => item.name;
+
+  protected readonly teamOptionLabel = (item: Team): string => item.name;
 
   protected statusLabel(status: TournamentTeamRegistrationStatus | ''): string {
     const labels: Record<TournamentTeamRegistrationStatus, string> = {

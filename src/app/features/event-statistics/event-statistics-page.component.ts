@@ -14,6 +14,7 @@ import { CatalogLoaderService } from '../../core/pagination/catalog-loader.servi
 import { parseBackendDateTime } from '../../shared/date/date-time.utils';
 import { LoadingStateComponent } from '../../shared/loading-state/loading-state.component';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
+import { SearchSelectComponent } from '../../shared/search-select/search-select.component';
 import { MatchGame } from '../matches/match.models';
 import { MatchesService } from '../matches/matches.service';
 import { Player } from '../players/player.models';
@@ -49,7 +50,8 @@ type SummaryCard = {
     MatFormFieldModule,
     MatSelectModule,
     LoadingStateComponent,
-    PageHeaderComponent
+    PageHeaderComponent,
+    SearchSelectComponent
   ],
   template: `
     <section class="app-page">
@@ -82,35 +84,35 @@ type SummaryCard = {
           </div>
 
           <form [formGroup]="filtersForm" class="filter-row">
-            <mat-form-field appearance="outline">
-              <mat-label>Partido</mat-label>
-              <mat-select formControlName="matchId">
-                <mat-option value="">Todos</mat-option>
-                @for (match of matches(); track match.id) {
-                  <mat-option [value]="match.id">{{ matchLabel(match) }}</mat-option>
-                }
-              </mat-select>
-            </mat-form-field>
+            <app-search-select
+              formControlName="matchId"
+              label="Partido"
+              placeholder="Busca un partido"
+              [options]="matches()"
+              [labelFn]="matchOptionLabel"
+              [searchTextFn]="matchOptionLabel"
+              emptyOptionLabel="Todos"
+            />
 
-            <mat-form-field appearance="outline">
-              <mat-label>Equipo</mat-label>
-              <mat-select formControlName="tournamentTeamId">
-                <mat-option value="">Todos</mat-option>
-                @for (registration of tournamentTeams(); track registration.id) {
-                  <mat-option [value]="registration.id">{{ tournamentTeamLabel(registration.id) }}</mat-option>
-                }
-              </mat-select>
-            </mat-form-field>
+            <app-search-select
+              formControlName="tournamentTeamId"
+              label="Equipo"
+              placeholder="Busca un equipo"
+              [options]="tournamentTeams()"
+              [labelFn]="tournamentTeamOptionLabel"
+              [searchTextFn]="tournamentTeamOptionLabel"
+              emptyOptionLabel="Todos"
+            />
 
-            <mat-form-field appearance="outline">
-              <mat-label>Jugador</mat-label>
-              <mat-select formControlName="playerId">
-                <mat-option value="">Todos</mat-option>
-                @for (player of players(); track player.id) {
-                  <mat-option [value]="player.id">{{ playerName(player.id) }}</mat-option>
-                }
-              </mat-select>
-            </mat-form-field>
+            <app-search-select
+              formControlName="playerId"
+              label="Jugador"
+              placeholder="Busca un jugador"
+              [options]="players()"
+              [labelFn]="playerOptionLabel"
+              [searchTextFn]="playerOptionLabel"
+              emptyOptionLabel="Todos"
+            />
           </form>
 
           <div class="actions-row">
@@ -558,6 +560,12 @@ export class EventStatisticsPageComponent {
 
     return `${player.firstName} ${player.lastName}`.trim();
   }
+
+  protected readonly matchOptionLabel = (match: MatchGame): string => this.matchLabel(match);
+
+  protected readonly tournamentTeamOptionLabel = (registration: TournamentTeam): string => this.tournamentTeamLabel(registration.id);
+
+  protected readonly playerOptionLabel = (player: Player): string => this.playerName(player.id);
 
   protected playerLabel(player: EventStatisticsPlayer): string {
     return player.displayName || [player.firstName, player.lastName].filter(Boolean).join(' ') || this.playerName(player.playerId);
