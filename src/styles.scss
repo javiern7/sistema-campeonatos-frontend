@@ -334,6 +334,16 @@ button {
   background: #ffffff !important;
   box-shadow: var(--shadow-strong);
   padding: 0.35rem !important;
+  opacity: 1 !important;
+}
+
+.cdk-overlay-pane .search-select-panel {
+  background: #ffffff !important;
+  opacity: 1 !important;
+}
+
+.cdk-overlay-pane .search-select-panel .mat-mdc-option {
+  background: #ffffff !important;
 }
 
 .cdk-overlay-pane .mat-datepicker-content {
