@@ -12,12 +12,12 @@ import { PageHeaderComponent } from '../../shared/page-header/page-header.compon
     <section class="app-page">
       <app-page-header
         [title]="featureName"
-        subtitle="Feature reservada y alineada con el backend. Queda lista para el siguiente corte de implementación."
+        subtitle="Modulo reservado para una proxima mejora del producto."
       />
 
       <div class="card placeholder-box">
-        <p>Esta pantalla todavía está simplificada para avanzar más rápido en el MVP.</p>
-        <a mat-flat-button color="primary" routerLink="/dashboard">Volver al dashboard</a>
+        <p>Esta pantalla todavia esta simplificada y se completara en una siguiente fase.</p>
+        <a mat-flat-button color="primary" routerLink="/dashboard">Volver al inicio</a>
       </div>
     </section>
   `,
@@ -25,5 +25,5 @@ import { PageHeaderComponent } from '../../shared/page-header/page-header.compon
 })
 export class FeaturePlaceholderPageComponent {
   private readonly route = inject(ActivatedRoute);
-  protected readonly featureName = String(this.route.snapshot.data['featureName'] ?? 'Feature');
+  protected readonly featureName = String(this.route.snapshot.data['featureName'] ?? 'Modulo');
 }

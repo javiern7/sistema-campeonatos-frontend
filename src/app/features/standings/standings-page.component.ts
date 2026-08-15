@@ -142,7 +142,7 @@ const parseQueryNumber = (value: string | null): number | '' => {
 
         @if (standingsAuditMessage()) {
           <div class="context-banner">
-            <strong>Lectura operativa backend</strong>
+            <strong>Seguimiento de tabla</strong>
             <span class="muted">{{ standingsAuditMessage() }}</span>
           </div>
         }
@@ -536,22 +536,22 @@ export class StandingsPageComponent {
     const operationalSummary = this.operationalSummaries().find((item) => item.tournamentId === tournamentId);
     if (operationalSummary) {
       if (!operationalSummary.executiveReportingEligible) {
-        return 'Este torneo no pertenece al foco ejecutivo principal segun la categoria operativa definida en backend.';
+        return 'Este campeonato no pertenece al foco principal por su estado actual.';
       }
 
       if (operationalSummary.integrityAlerts.includes('CLOSED_MATCHES_WITHOUT_STANDINGS')) {
-        return 'Backend reporta resultados cerrados sin standings visibles. Conviene revisar el contexto filtrado o recalcular la tabla.';
+        return 'Hay resultados cerrados sin tabla visible. Conviene revisar el contexto filtrado o recalcular la tabla.';
       }
 
       if (
         operationalSummary.integrityAlerts.includes('CLOSED_MATCHES_WITHOUT_FULL_ACTIVE_ROSTER_SUPPORT') ||
         operationalSummary.integrityAlerts.includes('APPROVED_TEAMS_MISSING_ACTIVE_ROSTER_SUPPORT')
       ) {
-        return 'Backend reporta brechas de soporte roster para este torneo. Conviene corregir la base antes de confiar plenamente en la tabla.';
+        return 'Hay pendientes de plantel para este campeonato. Conviene corregir la base antes de confiar plenamente en la tabla.';
       }
 
       if (operationalSummary.integrityAlerts.includes('CLOSED_MATCHES_WITHOUT_APPROVED_TEAMS')) {
-        return 'Backend detecta partidos cerrados sin base aprobada suficiente. Conviene auditar inscripciones y resultados.';
+        return 'Hay partidos cerrados sin base aprobada suficiente. Conviene revisar inscripciones y resultados.';
       }
     }
 
@@ -571,7 +571,7 @@ export class StandingsPageComponent {
     }
 
     if (playedMatches > 0 && rosterReadyCount === 0) {
-      return 'Se detectan partidos jugados sin soporte visible de roster activo. Conviene corregir la trazabilidad antes de confiar en la tabla.';
+      return 'Se detectan partidos jugados sin plantel activo visible. Conviene corregir la base antes de confiar en la tabla.';
     }
 
     if (playedMatches > 0 && standingsCount === 0) {
@@ -579,7 +579,7 @@ export class StandingsPageComponent {
     }
 
     if (rosterReadyCount < approvedRegistrations.length) {
-      return `Solo ${rosterReadyCount} de ${approvedRegistrations.length} inscripciones aprobadas tienen roster activo. La tabla puede no reflejar una base operativa completa.`;
+      return `Solo ${rosterReadyCount} de ${approvedRegistrations.length} inscripciones aprobadas tienen plantel activo. La tabla puede no reflejar una base completa.`;
     }
 
     return '';
@@ -724,7 +724,7 @@ export class StandingsPageComponent {
 
     if (this.hasPlayedMatchesWithoutRosterSupport()) {
       this.notifications.error(
-        'No conviene recalcular standings mientras existan partidos cerrados sin roster activo para todos los participantes.'
+        'No conviene recalcular la tabla mientras existan partidos cerrados sin plantel activo para todos los participantes.'
       );
       return;
     }
@@ -740,7 +740,7 @@ export class StandingsPageComponent {
       .subscribe({
         next: (result: StandingRecalculationResponse) => {
           this.message.set(
-            `Recalculo completado. Partidos procesados: ${result.matchesProcessed}. Standings generados: ${result.standingsGenerated}.`
+            `Recalculo completado. Partidos procesados: ${result.matchesProcessed}. Registros generados: ${result.standingsGenerated}.`
           );
           this.pageIndex.set(0);
           this.load();
@@ -849,7 +849,7 @@ export class StandingsPageComponent {
       .pipe(finalize(() => this.loading.set(false)))
       .subscribe({
         next: () => {
-          this.notifications.success('Standing eliminado correctamente');
+          this.notifications.success('Registro de tabla eliminado correctamente');
           this.load();
         },
         error: (error: unknown) => this.notifications.error(this.errorMapper.map(error).message)

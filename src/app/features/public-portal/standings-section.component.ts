@@ -62,8 +62,8 @@ import { PublicTournamentStandings } from './public-portal.models';
         </div>
       } @else {
         <div class="empty-state">
-          <strong>No hay standings publicados aun.</strong>
-          <p class="muted">El backend devolvio una lectura valida, pero sin entradas visibles para este contexto.</p>
+          <strong>No hay tabla publicada aun.</strong>
+          <p class="muted">No hay posiciones visibles para este contexto.</p>
         </div>
       }
     </section>
@@ -150,7 +150,7 @@ export class StandingsSectionComponent {
 
   protected standingsContextLabel(): string {
     if (!this.standings) {
-      return 'Cargando contexto de standings...';
+      return 'Cargando contexto de tabla...';
     }
 
     const context = [this.standings.stageName, this.standings.groupName].filter(Boolean).join(' / ');

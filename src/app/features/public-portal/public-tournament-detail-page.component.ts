@@ -72,13 +72,13 @@ type DetailMetric = {
             <span class="meta-chip">{{ formatLabel(tournament()!.format) }}</span>
             <span class="meta-chip">Actualizado {{ dateTimeLabel(tournament()!.updatedAt) }}</span>
             <span class="meta-chip" [class.enabled]="tournament()!.modules.standingsEnabled">
-              Standings {{ tournament()!.modules.standingsEnabled ? 'activos' : 'ocultos' }}
+              Tablas {{ tournament()!.modules.standingsEnabled ? 'activas' : 'ocultas' }}
             </span>
             <span class="meta-chip" [class.enabled]="tournament()!.modules.resultsEnabled">
               Resultados {{ tournament()!.modules.resultsEnabled ? 'activos' : 'ocultos' }}
             </span>
             <span class="meta-chip muted-chip">
-              Piezas aprobadas {{ tournament()!.modules.approvedPiecesEnabled ? 'activas' : 'deshabilitadas' }}
+              Publicaciones {{ tournament()!.modules.approvedPiecesEnabled ? 'activas' : 'deshabilitadas' }}
             </span>
           </div>
         </section>
@@ -100,9 +100,9 @@ type DetailMetric = {
         @if (!tournament()!.modules.approvedPiecesEnabled) {
           <section class="card public-card">
             <div class="context-banner">
-              <strong>Piezas aprobadas fuera de alcance</strong>
+            <strong>Publicaciones adicionales no disponibles</strong>
               <p class="muted">
-                Este bloque no abre feed editorial ni seccion de piezas publicas.
+                Este campeonato no tiene publicaciones adicionales habilitadas.
               </p>
             </div>
           </section>
@@ -350,7 +350,7 @@ export class TournamentDetailComponent {
     return [
       { label: 'Formato', value: this.formatLabel(tournament.format), detail: tournament.seasonName },
       { label: 'Fechas', value: this.dateRangeLabel(tournament.startDate, tournament.endDate), detail: 'Ventana publica visible' },
-      { label: 'Entradas tabla', value: standings?.totalEntries ?? 0, detail: 'Equipos con standings visibles' },
+      { label: 'Entradas tabla', value: standings?.totalEntries ?? 0, detail: 'Equipos con tabla visible' },
       { label: 'Resultados cerrados', value: results?.totalClosedMatches ?? 0, detail: 'Partidos publicados' }
     ];
   });
@@ -359,7 +359,7 @@ export class TournamentDetailComponent {
     this.route.paramMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
       const slug = params.get('slug');
       if (!slug) {
-        this.errorMessage.set('No se encontro el slug publico del torneo.');
+        this.errorMessage.set('No se encontro el identificador publico del campeonato.');
         this.loading.set(false);
         return;
       }
@@ -370,7 +370,7 @@ export class TournamentDetailComponent {
 
   protected statusLabel(status: string): string {
     const labels: Record<string, string> = {
-      OPEN: 'Abierto',
+      OPEN: 'Inscripciones abiertas',
       IN_PROGRESS: 'En curso',
       FINISHED: 'Finalizado'
     };
@@ -385,8 +385,8 @@ export class TournamentDetailComponent {
   protected formatLabel(format: string): string {
     const labels: Record<string, string> = {
       LEAGUE: 'Liga',
-      GROUPS_THEN_KNOCKOUT: 'Grupos + eliminacion',
-      KNOCKOUT: 'Eliminacion'
+      GROUPS_THEN_KNOCKOUT: 'Grupos + eliminatoria',
+      KNOCKOUT: 'Eliminatoria'
     };
 
     return labels[format] ?? format;

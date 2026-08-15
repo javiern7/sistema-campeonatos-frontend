@@ -119,7 +119,7 @@ const categoriesForType = (type: FinancialMovementType | ''): FinancialMovementC
 
           <div class="context-banner neutral-banner">
             <strong>Guardrail operativo</strong>
-            <span class="muted">El resumen sale de backend; esta pantalla no recalcula contabilidad ni crea semantica financiera paralela.</span>
+            <span class="muted">El resumen muestra ingresos y gastos registrados; esta pantalla no reemplaza la contabilidad formal.</span>
           </div>
         </section>
 
@@ -198,7 +198,7 @@ const categoriesForType = (type: FinancialMovementType | ''): FinancialMovementC
             <div class="section-heading">
               <div>
                 <h2>Nuevo movimiento</h2>
-                <p class="muted">Alta acotada segun el contrato vigente de finanzas basicas.</p>
+                <p class="muted">Registra ingresos y gastos simples asociados al campeonato.</p>
               </div>
             </div>
 
@@ -282,14 +282,14 @@ const categoriesForType = (type: FinancialMovementType | ''): FinancialMovementC
             <div class="section-heading">
               <div>
                 <h2>Desglose</h2>
-                <p class="muted">Categorias e ingresos por equipo entregados por el resumen backend.</p>
+                <p class="muted">Categorias e ingresos por equipo para el campeonato seleccionado.</p>
               </div>
             </div>
 
             @if (!summary()) {
               <div class="empty-state">
                 <strong>Sin resumen disponible.</strong>
-                <p class="muted">Actualiza la lectura cuando el backend este disponible.</p>
+                <p class="muted">Actualiza la lectura cuando la informacion este disponible.</p>
               </div>
             } @else {
               <div class="split-grid">

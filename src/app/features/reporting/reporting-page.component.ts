@@ -87,14 +87,14 @@ const REPORT_OPTIONS: ReportOption[] = [
         <section class="card page-card app-page">
           <div class="empty-state">
             <strong>No se encontro el torneo solicitado.</strong>
-            <p class="muted">Abre nuevamente la reporteria desde el hub operativo.</p>
+            <p class="muted">Abre nuevamente los reportes desde el panel principal.</p>
           </div>
         </section>
       } @else {
         <section class="card page-card app-page">
           <div class="context-banner">
             <strong>{{ tournament()!.name }}</strong>
-            <span class="muted">Reportes read-only desde contrato backend estable. No recalcula standings ni resultados.</span>
+            <span class="muted">Reportes de consulta. No recalculan tabla ni modifican resultados.</span>
           </div>
 
           <form [formGroup]="filtersForm" class="filter-row">
@@ -180,7 +180,7 @@ const REPORT_OPTIONS: ReportOption[] = [
             <div class="context-banner neutral-banner">
               <strong>Trazabilidad</strong>
               <span class="muted">
-                Fuente {{ sourceLabel() }}. Generado {{ generatedAtLabel() }}. Contrato {{ currentReport().source }}.
+                Fuente {{ sourceLabel() }}. Generado {{ generatedAtLabel() }}.
               </span>
             </div>
           }
@@ -190,7 +190,7 @@ const REPORT_OPTIONS: ReportOption[] = [
           <div class="section-heading">
             <div>
               <h2>Reportes disponibles</h2>
-              <p class="muted">Descargas simples cuando el backend lo soporte.</p>
+              <p class="muted">Descargas simples cuando esten disponibles.</p>
             </div>
             <span class="muted">{{ currentScopeLabel() }}</span>
           </div>
@@ -200,7 +200,7 @@ const REPORT_OPTIONS: ReportOption[] = [
               <thead>
                 <tr>
                   <th>Reporte</th>
-                  <th>Fuente</th>
+                  <th>Area</th>
                   <th>Alcance</th>
                   <th>Descarga</th>
                 </tr>
@@ -212,7 +212,7 @@ const REPORT_OPTIONS: ReportOption[] = [
                       <strong>{{ option.label }}</strong>
                       <span class="muted table-note">{{ option.description }}</span>
                     </td>
-                    <td>{{ option.source }}</td>
+                    <td>{{ reportAreaLabel(option.type) }}</td>
                     <td>{{ option.type === selectedReportType() ? 'Vista actual' : 'Disponible' }}</td>
                     <td>
                       <div class="download-actions">
@@ -239,14 +239,14 @@ const REPORT_OPTIONS: ReportOption[] = [
             <div class="section-heading">
               <div>
                 <h2>{{ currentReport().label }}</h2>
-                <p class="muted">Resumen descargable segun contrato backend.</p>
+                <p class="muted">Resumen descargable del campeonato.</p>
               </div>
             </div>
 
             @if (visibleRows().length === 0) {
               <div class="empty-state">
                 <strong>Sin filas para este filtro.</strong>
-                <p class="muted">El backend respondio correctamente, pero no hay registros para mostrar.</p>
+                <p class="muted">No hay registros para mostrar con los filtros actuales.</p>
               </div>
             } @else {
               <div class="table-wrapper">
@@ -379,7 +379,7 @@ export class ReportingPageComponent {
   });
   protected readonly headerSubtitle = computed(() => {
     const tournament = this.tournament();
-    return tournament ? `${tournament.name} - reportes operativos read-only` : 'Reportes simples y descargas por torneo.';
+    return tournament ? `${tournament.name} - reportes de consulta` : 'Reportes simples y descargas por campeonato.';
   });
   protected readonly visibleRows = computed(() => this.report()?.rows ?? []);
   protected readonly visibleColumns = computed(() => {
@@ -509,7 +509,20 @@ export class ReportingPageComponent {
   protected readonly playerOptionLabel = (player: Player): string => this.playerName(player.id);
 
   protected sourceLabel(): string {
-    return this.report()?.metadata?.source || 'backend reports';
+    return this.report()?.metadata?.source || 'Reportes del sistema';
+  }
+
+  protected reportAreaLabel(type: ReportType): string {
+    const labels: Record<ReportType, string> = {
+      summary: 'Campeonato',
+      matches: 'Partidos',
+      standings: 'Tabla de posiciones',
+      events: 'Eventos',
+      scorers: 'Goleadores',
+      cards: 'Tarjetas'
+    };
+
+    return labels[type];
   }
 
   protected generatedAtLabel(): string {

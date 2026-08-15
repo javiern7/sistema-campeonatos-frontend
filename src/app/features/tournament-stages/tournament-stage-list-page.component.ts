@@ -37,7 +37,7 @@ import { TournamentStagesService } from './tournament-stages.service';
   ],
   template: `
     <section class="app-page">
-      <app-page-header title="Tournament Stages" subtitle="Etapas conectadas a /tournament-stages.">
+      <app-page-header title="Etapas" subtitle="Organiza las fases de cada campeonato.">
         @if (canManage()) {
           <a mat-flat-button color="primary" routerLink="/tournament-stages/new">Nueva etapa</a>
         }
@@ -60,7 +60,7 @@ import { TournamentStagesService } from './tournament-stages.service';
             <mat-select formControlName="stageType">
               <mat-option value="">Todos</mat-option>
               @for (type of types; track type) {
-                <mat-option [value]="type">{{ type }}</mat-option>
+                <mat-option [value]="type">{{ typeLabel(type) }}</mat-option>
               }
             </mat-select>
           </mat-form-field>
@@ -94,7 +94,7 @@ import { TournamentStagesService } from './tournament-stages.service';
               </ng-container>
               <ng-container matColumnDef="type">
                 <th mat-header-cell *matHeaderCellDef>Tipo</th>
-                <td mat-cell *matCellDef="let row">{{ row.stageType }}</td>
+                <td mat-cell *matCellDef="let row">{{ typeLabel(row.stageType) }}</td>
               </ng-container>
               <ng-container matColumnDef="actions">
                 <th mat-header-cell *matHeaderCellDef>Acciones</th>
@@ -200,6 +200,16 @@ export class TournamentStageListPageComponent {
 
   protected tournamentName(id: number): string {
     return this.tournaments().find((item) => item.id === id)?.name ?? `#${id}`;
+  }
+
+  protected typeLabel(type: TournamentStageType): string {
+    const labels: Record<TournamentStageType, string> = {
+      LEAGUE: 'Liga',
+      GROUP_STAGE: 'Fase de grupos',
+      KNOCKOUT: 'Eliminatoria'
+    };
+
+    return labels[type];
   }
 
   protected remove(row: TournamentStage): void {

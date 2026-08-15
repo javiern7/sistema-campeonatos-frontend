@@ -80,7 +80,10 @@ const rosterOperationalValidator: ValidatorFn = (control: AbstractControl): Vali
   providers: PICHANGA_DATE_PICKER_PROVIDERS,
   template: `
     <section class="app-page">
-      <app-page-header [title]="isEditMode() ? 'Editar roster' : 'Nuevo roster'" subtitle="Registro de jugador en roster." />
+      <app-page-header
+        [title]="isEditMode() ? 'Editar integrante de plantel' : 'Nuevo integrante de plantel'"
+        subtitle="Registra jugadores en el plantel del campeonato."
+      />
 
       <section class="card page-card">
         @if (pageLoading()) {
@@ -89,7 +92,7 @@ const rosterOperationalValidator: ValidatorFn = (control: AbstractControl): Vali
           <form [formGroup]="form" (ngSubmit)="save()" class="app-page">
             @if (operationalWarning()) {
               <div class="context-banner">
-                <strong>Auditoria Sprint 7</strong>
+                <strong>Validacion del plantel</strong>
                 <span class="muted">{{ operationalWarning() }}</span>
               </div>
             }
@@ -148,10 +151,10 @@ const rosterOperationalValidator: ValidatorFn = (control: AbstractControl): Vali
               </mat-form-field>
 
               <mat-form-field appearance="outline">
-                <mat-label>Status</mat-label>
+                <mat-label>Estado</mat-label>
                 <mat-select formControlName="rosterStatus">
                   @for (status of statuses; track status) {
-                    <mat-option [value]="status">{{ status }}</mat-option>
+                    <mat-option [value]="status">{{ statusLabel(status) }}</mat-option>
                   }
                 </mat-select>
               </mat-form-field>
@@ -179,7 +182,7 @@ const rosterOperationalValidator: ValidatorFn = (control: AbstractControl): Vali
             <mat-checkbox formControlName="captain">Capitan</mat-checkbox>
 
             @if (form.hasError('activeRosterWithoutApprovedRegistration')) {
-              <p class="muted">Un roster activo requiere una inscripcion aprobada en el torneo.</p>
+              <p class="muted">Un plantel activo requiere una inscripcion aprobada en el campeonato.</p>
             }
 
             <div class="form-actions">
@@ -237,7 +240,7 @@ export class RosterFormPageComponent {
     }
 
     if (registration.registrationStatus !== 'APPROVED' && this.selectedRosterStatus() === 'ACTIVE') {
-      return 'La inscripcion seleccionada aun no esta aprobada. No conviene habilitar un roster activo hasta cerrar ese paso.';
+      return 'La inscripcion seleccionada aun no esta aprobada. No conviene habilitar un plantel activo hasta cerrar ese paso.';
     }
 
     return '';
@@ -376,7 +379,7 @@ export class RosterFormPageComponent {
 
     request$.pipe(finalize(() => this.saving.set(false))).subscribe({
       next: () => {
-        this.notifications.success('Roster guardado correctamente');
+        this.notifications.success('Registro de plantel guardado correctamente');
         void this.router.navigateByUrl('/rosters');
       },
       error: (error: unknown) => this.notifications.error(this.errorMapper.map(error).message)
@@ -396,6 +399,16 @@ export class RosterFormPageComponent {
   protected readonly playerOptionLabel = (item: Player): string => `${item.firstName} ${item.lastName}`;
 
   protected readonly tournamentTeamOptionLabel = (item: TournamentTeam): string => this.tournamentTeamLabel(item);
+
+  protected statusLabel(status: RosterStatus): string {
+    const labels: Record<RosterStatus, string> = {
+      ACTIVE: 'Activo',
+      INACTIVE: 'Inactivo',
+      SUSPENDED: 'Suspendido'
+    };
+
+    return labels[status];
+  }
 
   private applyDefaultTournamentTeamSelection(preferredTournamentTeamId = 0): void {
     const tournamentId = this.selectedTournamentId();

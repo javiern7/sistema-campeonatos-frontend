@@ -43,8 +43,8 @@ type DashboardCard = {
   template: `
     <section class="app-page">
       <app-page-header
-        title="Dashboard Ejecutivo"
-        subtitle="Reporting transversal del estado multideporte, la cobertura operativa y la auditoria de trazabilidad por torneo."
+        title="Inicio"
+        subtitle="Resumen general de campeonatos, participantes, partidos y alertas importantes."
       />
 
       @if (loading()) {
@@ -75,25 +75,25 @@ type DashboardCard = {
           <section class="card page-card app-page">
             <div class="section-heading">
               <div>
-                <h2>Actividad operativa reciente</h2>
-                <p class="muted">Lectura breve de auditoria y observabilidad operativa sobre contrato backend real.</p>
+              <h2>Actividad reciente</h2>
+                <p class="muted">Resumen de acciones recientes y seguimiento administrativo.</p>
               </div>
-              <span class="section-badge">Permiso operations:audit:read</span>
+              <span class="section-badge">Administracion</span>
             </div>
 
             @if (operationsLoading()) {
-              <app-loading-state label="Cargando actividad operativa..." />
+          <app-loading-state label="Cargando actividad reciente..." />
             } @else {
               <div class="operations-grid">
                 <article class="operations-panel card">
                   <div class="panel-heading">
                     <h3>Resumen de actividad</h3>
-                    <span class="muted">Backend / activity-summary</span>
+                    <span class="muted">Ultimos movimientos</span>
                   </div>
 
                   @if (activitySummaryError()) {
                     <div class="empty-state compact">
-                      <strong>No se pudo cargar el resumen operativo.</strong>
+                      <strong>No se pudo cargar el resumen de actividad.</strong>
                       <p class="muted">{{ activitySummaryError() }}</p>
                     </div>
                   } @else {
@@ -112,18 +112,18 @@ type DashboardCard = {
                 <article class="operations-panel card">
                   <div class="panel-heading">
                     <h3>Ultimos eventos</h3>
-                    <span class="muted">Backend / audit-events/recent</span>
+                    <span class="muted">Eventos recientes</span>
                   </div>
 
                   @if (recentAuditEventsError()) {
                     <div class="empty-state compact">
-                      <strong>No se pudo cargar la actividad operativa reciente.</strong>
+                      <strong>No se pudo cargar la actividad reciente.</strong>
                       <p class="muted">{{ recentAuditEventsError() }}</p>
                     </div>
                   } @else if (recentAuditEvents().length === 0) {
                     <div class="empty-state compact">
-                      <strong>No hay actividad operativa reciente.</strong>
-                      <p class="muted">Backend no reporta eventos recientes dentro de la ventana actual.</p>
+                      <strong>No hay actividad reciente.</strong>
+                      <p class="muted">No hay eventos recientes dentro de la ventana actual.</p>
                     </div>
                   } @else {
                     <div class="event-list">
@@ -162,7 +162,7 @@ type DashboardCard = {
                   } @else if (topActions().length === 0) {
                     <div class="empty-state compact">
                       <strong>No hay acciones frecuentes para resumir.</strong>
-                      <p class="muted">El summary operativo actual no registra volumen suficiente para ranking.</p>
+                      <p class="muted">No hay suficiente actividad para mostrar un ranking.</p>
                     </div>
                   } @else {
                     <div class="top-actions">
@@ -183,25 +183,25 @@ type DashboardCard = {
               <div class="governance-shell">
                 <div class="section-heading">
                   <div>
-                    <h2>Gobierno operativo de permisos</h2>
+                    <h2>Administracion de permisos</h2>
                     <p class="muted">
-                      Adopcion minima del contrato backend real para lectura auditada y actualizacion controlada por rol.
+                      Control de acceso para usuarios y roles administrativos.
                     </p>
                   </div>
                   <span class="section-badge">
-                    {{ canManageGovernance() ? 'permissions:govern:manage' : 'Lectura auditada' }}
+                    {{ canManageGovernance() ? 'Edicion habilitada' : 'Solo lectura' }}
                   </span>
                 </div>
 
                 @if (governanceError()) {
                   <div class="empty-state compact">
-                    <strong>No se pudo cargar el resumen de gobierno operativo.</strong>
+                    <strong>No se pudo cargar el resumen de permisos.</strong>
                     <p class="muted">{{ governanceError() }}</p>
                   </div>
                 } @else if (!governanceSummary()) {
                   <div class="empty-state compact">
-                    <strong>No hay resumen de gobierno operativo disponible.</strong>
-                    <p class="muted">Backend no devolvio datos para el contrato de roles y permisos.</p>
+                    <strong>No hay resumen de permisos disponible.</strong>
+                    <p class="muted">No hay informacion de roles y permisos disponible.</p>
                   </div>
                 } @else {
                   <div class="summary-grid">
@@ -265,23 +265,23 @@ type DashboardCard = {
                     <article class="operations-panel card">
                       <div class="panel-heading">
                         <h3>Editor controlado</h3>
-                        <span class="muted">PUT /operations/permission-governance/roles/&lt;roleCode&gt;</span>
+                      <span class="muted">Actualizacion de roles</span>
                       </div>
 
                       @if (!canManageGovernance()) {
                         <div class="empty-state compact">
                           <strong>La sesion actual no puede editar asignaciones.</strong>
-                          <p class="muted">El backend requiere el permiso permissions:govern:manage para actualizar permisos por rol.</p>
+                          <p class="muted">Tu usuario no tiene acceso para actualizar permisos por rol.</p>
                         </div>
                       } @else if (!governanceWriteEnabled()) {
                         <div class="empty-state compact">
                           <strong>La escritura esta cerrada en este ambiente.</strong>
-                          <p class="muted">La UI refleja writeEnabled = false y no intenta abrir una consola operativa paralela.</p>
+                          <p class="muted">La edicion de permisos no esta disponible en este ambiente.</p>
                         </div>
                       } @else if (!editingRole()) {
                         <div class="empty-state compact">
                           <strong>Seleccionar un rol mutable.</strong>
-                          <p class="muted">El editor queda acotado a los roles que backend habilito para esta etapa.</p>
+                          <p class="muted">Selecciona un rol disponible para actualizar sus permisos.</p>
                         </div>
                       } @else {
                         <div class="editor-shell">
@@ -291,12 +291,12 @@ type DashboardCard = {
                           </div>
 
                           <label class="reason-field">
-                            <span>Razon operativa</span>
+                            <span>Motivo del cambio</span>
                             <textarea
                               rows="3"
                               [value]="governanceReason()"
                               (input)="updateGovernanceReason($event)"
-                              placeholder="Ejemplo: ajustar alcance operativo del rol OPERATOR para ventana controlada"
+                              placeholder="Ejemplo: ajustar el alcance del rol para el equipo administrativo"
                             ></textarea>
                           </label>
 
@@ -349,7 +349,7 @@ type DashboardCard = {
             <div class="section-heading">
               <div>
                 <h2>Prioridad inmediata</h2>
-                <p class="muted">Lectura corta de los frentes que mas impactan continuidad y confianza operativa.</p>
+                <p class="muted">Resumen de los puntos que requieren atencion para mantener la competencia al dia.</p>
               </div>
               <span class="section-badge">{{ priorityAlerts().length }} en foco</span>
             </div>
@@ -409,16 +409,16 @@ type DashboardCard = {
         <section class="card page-card app-page">
           <div class="section-heading">
             <div>
-              <h2>Auditoria operativa</h2>
-              <p class="muted">Lectura del flujo inscripciones -> roster -> partidos -> standings sobre torneos con actividad real.</p>
+              <h2>Seguimiento de campeonatos</h2>
+              <p class="muted">Lectura del flujo inscripciones -> planteles -> partidos -> tabla en campeonatos con actividad.</p>
             </div>
             <span class="section-badge">{{ operationalSummaries().length }} en foco</span>
           </div>
 
           @if (operationalSummaries().length === 0) {
             <div class="empty-state">
-              <strong>No hay torneos operativos para auditar.</strong>
-              <p class="muted">El foco actual esta en configurar la base o depurar registros QA fuera del radar principal.</p>
+              <strong>No hay campeonatos activos para revisar.</strong>
+              <p class="muted">El foco actual esta en configurar la base o revisar borradores.</p>
             </div>
           } @else {
             <div class="tournament-grid">
@@ -434,24 +434,24 @@ type DashboardCard = {
 
                   <div class="progress-metrics">
                     <div>
-                      <span class="progress-label">Madurez operativa</span>
+                      <span class="progress-label">Avance del campeonato</span>
                       <strong>{{ tournament.readinessScore }}%</strong>
                     </div>
                     <div>
-                      <span class="progress-label">Cobertura roster</span>
+                      <span class="progress-label">Cobertura de plantel</span>
                       <strong>{{ tournament.registrationsWithActiveRosterCount }}/{{ tournament.approvedRegistrationCount }}</strong>
                     </div>
                     <div>
-                      <span class="progress-label">Cobertura standings</span>
+                      <span class="progress-label">Cobertura de tabla</span>
                       <strong>{{ tournament.standingsCoverageCount }}/{{ tournament.approvedRegistrationCount }}</strong>
                     </div>
                   </div>
 
                   <div class="mini-metrics">
                     <span>Inscripciones aprobadas: {{ tournament.approvedRegistrationCount }}</span>
-                    <span>Sin roster activo: {{ tournament.rosterGapCount }}</span>
+                    <span>Sin plantel activo: {{ tournament.rosterGapCount }}</span>
                     <span>Partidos jugados: {{ tournament.playedMatchCount }}/{{ tournament.matchCount }}</span>
-                    <span>Standings: {{ tournament.standingsCount }}</span>
+                    <span>Tabla: {{ tournament.standingsCount }}</span>
                   </div>
 
                   <p class="muted">{{ tournament.auditMessage }}</p>
@@ -479,14 +479,14 @@ type DashboardCard = {
           <div class="section-heading">
             <div>
               <h2>Alertas prioritarias</h2>
-              <p class="muted">Torneos que conviene atender primero para no perder continuidad operativa.</p>
+              <p class="muted">Campeonatos que conviene atender primero para no perder continuidad.</p>
             </div>
             <span class="section-badge">{{ alerts().length }} abiertas</span>
           </div>
 
           @if (alerts().length === 0) {
             <div class="empty-state">
-              <strong>No hay alertas operativas prioritarias.</strong>
+              <strong>No hay alertas prioritarias.</strong>
               <p class="muted">La cartera actual mantiene trazabilidad visible en los torneos cargados.</p>
             </div>
           } @else {
@@ -530,9 +530,9 @@ type DashboardCard = {
                   <span>Torneos: {{ sport.tournamentCount }}</span>
                   <span>En curso: {{ sport.liveTournamentCount }}</span>
                   <span>Inscripciones aprobadas: {{ sport.approvedRegistrationCount }}</span>
-                  <span>Rosters activos: {{ sport.activeRosterCount }}</span>
+                  <span>Planteles activos: {{ sport.activeRosterCount }}</span>
                   <span>Partidos jugados: {{ sport.playedMatchCount }}/{{ sport.matchCount }}</span>
-                  <span>Standings: {{ sport.standingsCount }}</span>
+                  <span>Tablas: {{ sport.standingsCount }}</span>
                 </div>
               </article>
             }
@@ -543,7 +543,7 @@ type DashboardCard = {
           <div class="section-heading">
             <div>
               <h2>Seguimiento por torneo</h2>
-              <p class="muted">Backlog operativo visible para decidir el siguiente bloque funcional con bajo riesgo.</p>
+              <p class="muted">Pendientes visibles para decidir el siguiente bloque de trabajo.</p>
             </div>
             <span class="section-badge">{{ tournamentSummaries().length }} torneos</span>
           </div>
@@ -569,11 +569,11 @@ type DashboardCard = {
                     <span>Etapas: {{ tournament.stageCount }}</span>
                     <span>Grupos: {{ tournament.groupCount }}</span>
                     <span>Inscripciones: {{ tournament.registrationCount }}</span>
-                    <span>Con roster: {{ tournament.registrationsWithActiveRosterCount }}/{{ tournament.approvedRegistrationCount }}</span>
-                    <span>Rosters activos: {{ tournament.activeRosterCount }}</span>
+                    <span>Con plantel: {{ tournament.registrationsWithActiveRosterCount }}/{{ tournament.approvedRegistrationCount }}</span>
+                    <span>Planteles activos: {{ tournament.activeRosterCount }}</span>
                     <span>Partidos: {{ tournament.playedMatchCount }}/{{ tournament.matchCount }} jugados</span>
                     <span>Incidencias: {{ tournament.incidentMatchCount }}</span>
-                    <span>Standings: {{ tournament.standingsCount }}</span>
+                    <span>Tabla: {{ tournament.standingsCount }}</span>
                     <span>Lider: {{ leaderLabel(tournament) }}</span>
                   </div>
 
@@ -591,16 +591,16 @@ type DashboardCard = {
         <section class="card page-card app-page">
           <div class="section-heading">
             <div>
-              <h2>QA y borradores</h2>
+              <h2>Borradores y pruebas</h2>
               <p class="muted">Torneos que hoy conviene mantener fuera del reporting ejecutivo principal para reducir ruido.</p>
             </div>
-            <span class="section-badge">{{ sandboxSummaries().length }} aislados</span>
+            <span class="section-badge">{{ sandboxSummaries().length }} separados</span>
           </div>
 
           @if (sandboxSummaries().length === 0) {
             <div class="empty-state">
-              <strong>No hay torneos QA o borrador fuera del foco principal.</strong>
-              <p class="muted">La lectura ejecutiva actual ya se apoya solo en torneos con valor operativo.</p>
+              <strong>No hay campeonatos de prueba o borrador fuera del foco principal.</strong>
+              <p class="muted">El resumen actual se apoya solo en campeonatos activos.</p>
             </div>
           } @else {
             <div class="alert-grid">
@@ -1052,12 +1052,12 @@ export class DashboardPageComponent {
       {
         label: 'Permisos',
         value: summary?.availablePermissions.length ?? 0,
-        meta: 'Catalogo backend disponible'
+        meta: 'Catalogo disponible'
       },
       {
         label: 'Escritura',
         value: summary?.writeEnabled ? 1 : 0,
-        meta: summary?.writeEnabled ? 'Ambiente editable' : 'Ambiente protegido',
+        meta: summary?.writeEnabled ? 'Edicion disponible' : 'Edicion protegida',
         accent: summary?.writeEnabled ?? false
       }
     ];
@@ -1069,7 +1069,7 @@ export class DashboardPageComponent {
       {
         label: 'Deportes',
         value: summary?.sportCount ?? 0,
-        meta: 'Catalogo base activo'
+        meta: 'Catalogo activo'
       },
       {
         label: 'Torneos',
@@ -1078,9 +1078,9 @@ export class DashboardPageComponent {
         accent: true
       },
       {
-        label: 'QA / borrador',
+        label: 'Borradores',
         value: summary?.sandboxTournamentCount ?? 0,
-        meta: 'Fuera del radar principal'
+        meta: 'En preparacion o pruebas'
       },
       {
         label: 'Jugadores',
@@ -1099,9 +1099,9 @@ export class DashboardPageComponent {
         meta: `${summary?.approvedRegistrationCount ?? 0} aprobadas`
       },
       {
-        label: 'Brecha de roster',
+        label: 'Planteles pendientes',
         value: summary?.rosterGapTournamentCount ?? 0,
-        meta: 'Torneos con aprobadas sin roster activo'
+        meta: 'Campeonatos con equipos sin plantel activo'
       },
       {
         label: 'Partidos jugados',
@@ -1109,9 +1109,9 @@ export class DashboardPageComponent {
         meta: `${summary?.scheduledMatchCount ?? 0} programados por disputar`
       },
       {
-        label: 'Brecha de standings',
+        label: 'Tablas pendientes',
         value: summary?.standingsGapTournamentCount ?? 0,
-        meta: 'Torneos con resultados sin tabla'
+        meta: 'Campeonatos con resultados sin tabla'
       },
       {
         label: 'Torneos listos',
@@ -1141,9 +1141,9 @@ export class DashboardPageComponent {
         meta: 'Base competitiva aun en armado'
       },
       {
-        label: 'QA aislado',
+        label: 'Borradores',
         value: summary?.sandboxTournamentCount ?? 0,
-        meta: 'Fuera del radar ejecutivo principal'
+        meta: 'En preparacion o pruebas'
       }
     ];
   });
@@ -1160,18 +1160,18 @@ export class DashboardPageComponent {
         meta: 'Brechas de alta de equipos'
       },
       {
-        label: 'Rosters',
+        label: 'Planteles',
         value: countByType('rosters'),
         meta: 'Aprobadas sin soporte activo'
       },
       {
-        label: 'Fixture / tabla',
+        label: 'Partidos / tabla',
         value: countByType('matches') + countByType('standings'),
-        meta: 'Partidos o standings pendientes',
+        meta: 'Partidos o tablas pendientes',
         accent: countByType('matches') + countByType('standings') > 0
       },
       {
-        label: 'Estado / QA',
+        label: 'Estado / borrador',
         value: countByType('state') + countByType('sandbox'),
         meta: 'Seguimiento de estado y aislamiento'
       }
@@ -1228,11 +1228,11 @@ export class DashboardPageComponent {
     }
 
     if (summary.tournamentCount === 0) {
-      return 'No hay torneos cargados. El siguiente paso operativo es crear una competencia para activar el flujo multideporte.';
+      return 'No hay campeonatos cargados. El siguiente paso es crear una competencia para activar el flujo multideporte.';
     }
 
     if (summary.attentionTournamentCount > 0) {
-      return `Hay ${summary.attentionTournamentCount} torneos con alertas operativas reportadas por backend. Esta fase debe enfocarse en adoptar ese resumen sin reabrir el baseline estable.`;
+      return `Hay ${summary.attentionTournamentCount} campeonatos con alertas que requieren seguimiento.`;
     }
 
     if (summary.registrationCount === 0) {
@@ -1240,10 +1240,10 @@ export class DashboardPageComponent {
     }
 
     if (summary.matchCount === 0) {
-      return 'La base competitiva ya existe, pero falta programar partidos para comenzar a generar resultados y standings.';
+      return 'La base competitiva ya existe, pero falta programar partidos para comenzar a generar resultados y tabla.';
     }
 
-    return 'El frontend ya puede apoyarse en una vista ejecutiva transversal con salud operativa respaldada progresivamente por backend.';
+    return 'La plataforma ya muestra una vista general de la salud de los campeonatos.';
   });
 
   constructor() {
@@ -1335,7 +1335,7 @@ export class DashboardPageComponent {
   protected statusLabel(status: TournamentStatus): string {
     const labels: Record<TournamentStatus, string> = {
       DRAFT: 'Borrador',
-      OPEN: 'Abierto',
+      OPEN: 'Inscripciones abiertas',
       IN_PROGRESS: 'En curso',
       FINISHED: 'Finalizado',
       CANCELLED: 'Cancelado'
@@ -1348,7 +1348,7 @@ export class DashboardPageComponent {
     const labels: Record<DashboardTournamentSummary['reportingSegment'], string> = {
       operational: 'Operativo',
       setup: 'Preparacion',
-      sandbox: 'QA / borrador'
+      sandbox: 'Borrador'
     };
 
     return labels[segment];
@@ -1365,11 +1365,11 @@ export class DashboardPageComponent {
   protected alertTypeLabel(type: DashboardAlert['type']): string {
     const labels: Record<DashboardAlert['type'], string> = {
       registrations: 'Inscripciones',
-      rosters: 'Rosters',
+      rosters: 'Planteles',
       matches: 'Partidos',
-      standings: 'Standings',
+      standings: 'Tabla',
       state: 'Estado',
-      sandbox: 'QA / borrador'
+      sandbox: 'Borrador'
     };
 
     return labels[type];
@@ -1493,14 +1493,14 @@ export class DashboardPageComponent {
 
   protected eventDetail(event: OperationalAuditEvent): string {
     if (event.result === 'DENIED') {
-      return 'El backend registro un acceso o accion bloqueada por permisos o politica operativa.';
+      return 'Se registro un acceso o accion bloqueada por permisos.';
     }
 
     if (event.result === 'FAILED') {
-      return 'El backend registro una operacion que no pudo completarse correctamente.';
+      return 'Se registro una accion que no pudo completarse correctamente.';
     }
 
-    return 'El backend confirmo una operacion reciente dentro de la trazabilidad operativa visible.';
+    return 'Se registro una accion reciente en la actividad del sistema.';
   }
 
   protected contextLine(event: OperationalAuditEvent): string {

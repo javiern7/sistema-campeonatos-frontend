@@ -78,7 +78,7 @@ type RosterOption = {
         <section class="card page-card app-page">
           <div class="context-banner">
             <strong>{{ fixtureLabel() }}</strong>
-            <span class="muted">Registro acotado por partido, separado de notas, roster y resultados.</span>
+            <span class="muted">Registro por partido, separado de notas, planteles y resultados.</span>
           </div>
 
           <div class="summary-grid">
@@ -93,7 +93,7 @@ type RosterOption = {
               <span class="summary-meta">{{ activeSanctionsCount() }} activas</span>
             </article>
             <article class="summary-card card">
-              <span class="summary-label">Validacion roster</span>
+              <span class="summary-label">Validacion de plantel</span>
               <span class="summary-value">{{ traceabilityValue('rosterValidationMode') }}</span>
               <span class="summary-meta">Validacion declarada</span>
             </article>
@@ -106,7 +106,7 @@ type RosterOption = {
               <div class="section-heading">
                 <div>
                   <h2>Registrar incidencia</h2>
-                  <p class="muted">Una incidencia pertenece a un jugador del roster de uno de los equipos del partido.</p>
+                  <p class="muted">Una incidencia pertenece a un jugador del plantel de uno de los equipos del partido.</p>
                 </div>
               </div>
 
@@ -564,7 +564,7 @@ export class DisciplineMatchPageComponent {
     const labels: Record<MatchGame['status'], string> = {
       SCHEDULED: 'Programado',
       PLAYED: 'Jugado',
-      FORFEIT: 'Forfeit',
+      FORFEIT: 'Resultado por ausencia',
       CANCELLED: 'Cancelado'
     };
 
@@ -576,7 +576,7 @@ export class DisciplineMatchPageComponent {
   }
 
   protected traceabilityValue(key: keyof NonNullable<DisciplineMatchResponse['traceability']>): string {
-    return this.discipline()?.traceability?.[key] ?? 'Backend';
+    return this.discipline()?.traceability?.[key] ?? 'Sistema';
   }
 
   protected formatDate(value: string | null): string {

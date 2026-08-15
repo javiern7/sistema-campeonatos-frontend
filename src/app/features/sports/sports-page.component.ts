@@ -37,9 +37,9 @@ import { SportsService } from './sports.service';
 
       <section class="card page-card app-page">
         <div class="context-banner">
-          <strong>Alcance V4</strong>
+          <strong>Configuracion del producto</strong>
           <span class="muted">
-            Configuracion maestra interna. No incluye eventos de partido, estadisticas derivadas ni reporterias.
+            Configuracion maestra para adaptar campeonatos a distintos deportes y formatos de competencia.
           </span>
         </div>
 
@@ -108,7 +108,7 @@ import { SportsService } from './sports.service';
             } @else if (competitionFormats().length === 0) {
               <div class="empty-state">
                 <strong>Sin formatos disponibles</strong>
-                <p>El backend no devolvio formatos de competencia.</p>
+                <p>No hay formatos de competencia disponibles.</p>
               </div>
             } @else {
               <div class="format-list">

@@ -280,12 +280,12 @@ export class DashboardService {
       health: attentionCount > 0 ? 'attention' : warningCount > 0 ? 'warning' : 'healthy',
       healthMessage:
         summaries.length === 0
-          ? 'Aun no tiene torneos operativos en frontend.'
+          ? 'Aun no tiene campeonatos activos.'
           : attentionCount > 0
             ? 'Tiene torneos con alertas de integridad o continuidad que requieren accion inmediata.'
             : warningCount > 0
               ? 'Ya tiene base competitiva, pero aun faltan cierres para una lectura ejecutiva estable.'
-              : 'Muestra continuidad visible respaldada por el resumen operativo del backend.'
+              : 'Muestra continuidad visible en el resumen general.'
     };
   }
 
@@ -343,12 +343,12 @@ export class DashboardService {
 
     const auditMessage =
       auditStatus === 'ready'
-        ? 'El backend confirma una lectura operativa consistente para este torneo.'
+        ? 'El campeonato muestra una lectura consistente.'
         : auditStatus === 'blocked'
-          ? 'El backend reporta alertas de integridad. Conviene corregir la base antes de escalar la operacion.'
+          ? 'Hay alertas de integridad. Conviene corregir la base antes de continuar.'
           : summary.reportingSegment === 'sandbox'
-            ? 'Este torneo queda fuera del foco ejecutivo principal por su categoria operativa.'
-            : 'El torneo aun esta en adopcion progresiva y necesita uno o mas cierres para consolidar su lectura operativa.';
+            ? 'Este campeonato queda fuera del foco principal por su estado actual.'
+            : 'El campeonato aun necesita uno o mas cierres para consolidar su seguimiento.';
 
     if (summary.reportingSegment === 'sandbox') {
       return {
@@ -380,7 +380,7 @@ export class DashboardService {
         auditStatus,
         auditMessage,
         blockers,
-        nextAction: 'Aun no tiene inscripciones. El siguiente paso operativo es vincular equipos al torneo.'
+        nextAction: 'Aun no tiene inscripciones. El siguiente paso es vincular equipos al campeonato.'
       };
     }
 
@@ -391,7 +391,7 @@ export class DashboardService {
         auditStatus,
         auditMessage,
         blockers,
-        nextAction: 'Ya hay equipos aprobados, pero falta soporte de roster activo para habilitar una lectura operativa confiable.'
+        nextAction: 'Ya hay equipos aprobados, pero falta plantel activo para habilitar un seguimiento confiable.'
       };
     }
 
@@ -402,7 +402,7 @@ export class DashboardService {
         auditStatus,
         auditMessage,
         blockers,
-        nextAction: 'La base competitiva ya existe. Conviene programar partidos para activar resultados y standings.'
+        nextAction: 'La base competitiva ya existe. Conviene programar partidos para activar resultados y tabla.'
       };
     }
 
@@ -464,10 +464,10 @@ export class DashboardService {
     summary: Pick<DashboardTournamentSummary, 'rosterGapCount'>
   ): string {
     const labels: Record<TournamentIntegrityAlertCode, string> = {
-      APPROVED_TEAMS_MISSING_ACTIVE_ROSTER_SUPPORT: `${summary.rosterGapCount} inscripciones aprobadas sin soporte de roster activo`,
-      CLOSED_MATCHES_WITHOUT_FULL_ACTIVE_ROSTER_SUPPORT: 'Partidos cerrados sin soporte completo de roster activo',
-      CLOSED_MATCHES_WITHOUT_STANDINGS: 'Resultados cerrados sin standings visibles',
-      STANDINGS_WITHOUT_CLOSED_MATCHES: 'Standings visibles sin partidos cerrados',
+      APPROVED_TEAMS_MISSING_ACTIVE_ROSTER_SUPPORT: `${summary.rosterGapCount} inscripciones aprobadas sin plantel activo`,
+      CLOSED_MATCHES_WITHOUT_FULL_ACTIVE_ROSTER_SUPPORT: 'Partidos cerrados sin plantel activo completo',
+      CLOSED_MATCHES_WITHOUT_STANDINGS: 'Resultados cerrados sin tabla visible',
+      STANDINGS_WITHOUT_CLOSED_MATCHES: 'Tabla visible sin partidos cerrados',
       CLOSED_MATCHES_WITHOUT_APPROVED_TEAMS: 'Partidos cerrados sin equipos aprobados'
     };
 
@@ -497,17 +497,17 @@ export class DashboardService {
   ): string {
     switch (code) {
       case 'APPROVED_TEAMS_MISSING_ACTIVE_ROSTER_SUPPORT':
-        return `${summary.rosterGapCount} inscripciones aprobadas aun no tienen soporte de roster activo. Conviene corregir esa base antes de confiar en el fixture.`;
+        return `${summary.rosterGapCount} inscripciones aprobadas aun no tienen plantel activo. Conviene corregir esa base antes de confiar en el calendario.`;
       case 'CLOSED_MATCHES_WITHOUT_FULL_ACTIVE_ROSTER_SUPPORT':
-        return 'Ya existen partidos cerrados sin soporte completo de roster activo. Conviene auditar la trazabilidad competitiva de punta a punta.';
+        return 'Ya existen partidos cerrados sin plantel activo completo. Conviene revisar el flujo competitivo de punta a punta.';
       case 'CLOSED_MATCHES_WITHOUT_STANDINGS':
-        return 'Ya existen resultados cerrados, pero la tabla aun no refleja esa operacion. Conviene revisar standings para este torneo.';
+        return 'Ya existen resultados cerrados, pero la tabla aun no refleja esa actividad. Conviene revisar la tabla de este campeonato.';
       case 'STANDINGS_WITHOUT_CLOSED_MATCHES':
-        return 'La tabla visible no tiene respaldo suficiente en partidos cerrados. Conviene revisar la consistencia operativa del torneo.';
+        return 'La tabla visible no tiene respaldo suficiente en partidos cerrados. Conviene revisar la consistencia del campeonato.';
       case 'CLOSED_MATCHES_WITHOUT_APPROVED_TEAMS':
         return 'Se detecto competencia cerrada sin base aprobada suficiente. Conviene revisar inscripciones y resultados antes de continuar.';
       default:
-        return 'Conviene revisar el detalle del torneo y cerrar las brechas operativas visibles antes de seguir escalando.';
+        return 'Conviene revisar el detalle del campeonato y cerrar las brechas visibles antes de continuar.';
     }
   }
 
@@ -569,7 +569,7 @@ export class DashboardService {
         };
       case 'rosters':
         return {
-          label: 'Abrir rosters',
+          label: 'Abrir planteles',
           path: '/rosters',
           queryParams: { rosterStatus: 'ACTIVE' }
         };
@@ -581,7 +581,7 @@ export class DashboardService {
         };
       case 'standings':
         return {
-          label: 'Abrir standings',
+          label: 'Abrir tabla',
           path: '/standings',
           queryParams: { tournamentId: summary.tournamentId }
         };

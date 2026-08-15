@@ -11,7 +11,7 @@ import { PublicMatchSummary, PublicTournamentCalendar } from './public-portal.mo
       <div class="section-heading">
         <div>
           <h2>Calendario</h2>
-          <p class="muted">Partidos programados y cerrados devueltos por el contrato publico.</p>
+          <p class="muted">Partidos programados y resultados publicados.</p>
         </div>
         @if (calendar) {
           <span class="meta-chip">{{ calendar.totalMatches }} partidos</span>
@@ -37,7 +37,7 @@ import { PublicMatchSummary, PublicTournamentCalendar } from './public-portal.mo
       } @else {
         <div class="empty-state">
           <strong>No hay partidos en calendario.</strong>
-          <p class="muted">El backend respondio correctamente, pero no hay partidos visibles para este torneo.</p>
+          <p class="muted">No hay partidos visibles para este campeonato.</p>
         </div>
       }
     </section>

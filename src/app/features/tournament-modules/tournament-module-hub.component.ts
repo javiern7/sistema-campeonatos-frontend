@@ -48,7 +48,7 @@ const MODULE_CONFIGS: Record<TournamentModuleKey, TournamentModuleConfig> = {
   },
   eventStatistics: {
     title: 'Estadisticas por eventos',
-    subtitle: 'Goleadores, tarjetas y resumenes read-only desde eventos.',
+    subtitle: 'Goleadores, tarjetas y resumenes derivados de los eventos registrados.',
     banner: 'Selecciona un torneo para revisar sus estadisticas derivadas de eventos activos.',
     actionLabel: 'Abrir estadisticas',
     path: (tournamentId) => `/tournaments/${tournamentId}/statistics/events`
@@ -62,7 +62,7 @@ const MODULE_CONFIGS: Record<TournamentModuleKey, TournamentModuleConfig> = {
   },
   financesBasic: {
     title: 'Finanzas basicas',
-    subtitle: 'Ingresos, gastos y balance operativo simple por torneo.',
+    subtitle: 'Ingresos, gastos y balance simple por campeonato.',
     banner: 'Selecciona un torneo para revisar su lectura financiera acotada.',
     actionLabel: 'Abrir finanzas',
     path: (tournamentId) => `/tournaments/${tournamentId}/finances/basic`
@@ -142,7 +142,7 @@ const MODULE_CONFIGS: Record<TournamentModuleKey, TournamentModuleConfig> = {
                   <span [class]="statusClass(tournament.status)">{{ statusLabel(tournament.status) }}</span>
                 </div>
                 <span class="muted">{{ tournament.seasonName || 'Temporada sin etiqueta' }}</span>
-                <p class="muted">{{ tournament.description || 'Sin descripcion operativa cargada.' }}</p>
+                <p class="muted">{{ tournament.description || 'Sin descripcion cargada.' }}</p>
                 <div class="module-actions">
                   <a mat-flat-button color="primary" [routerLink]="modulePath(tournament.id)">{{ moduleConfig().actionLabel }}</a>
                   <a mat-button [routerLink]="['/tournaments', tournament.id]">Detalle</a>
@@ -268,7 +268,7 @@ export class TournamentModuleHubComponent {
   protected statusLabel(status: TournamentStatus): string {
     const labels: Record<TournamentStatus, string> = {
       DRAFT: 'Borrador',
-      OPEN: 'Abierto',
+      OPEN: 'Inscripciones abiertas',
       IN_PROGRESS: 'En curso',
       FINISHED: 'Finalizado',
       CANCELLED: 'Cancelado'

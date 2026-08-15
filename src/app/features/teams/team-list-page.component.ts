@@ -43,7 +43,7 @@ type TeamVisualMetric = {
   ],
   template: `
     <section class="app-page">
-      <app-page-header title="Equipos" subtitle="Listado operativo conectado a /teams con filtros base del catalogo deportivo.">
+      <app-page-header title="Equipos" subtitle="Administra los equipos disponibles para tus campeonatos.">
         @if (canManage()) {
           <a mat-flat-button color="primary" routerLink="/teams/new">Nuevo equipo</a>
         }
@@ -70,7 +70,7 @@ type TeamVisualMetric = {
         </div>
 
         @if (loading()) {
-          <app-loading-state label="Cargando equipos y colores operativos..." />
+          <app-loading-state label="Cargando equipos..." />
         } @else {
           <div class="summary-grid">
             @for (metric of visualMetrics(); track metric.label) {
@@ -110,11 +110,11 @@ type TeamVisualMetric = {
                     <div class="color-stack">
                       <span class="color-line">
                         <span class="color-dot" [style.background]="colorValue(team.primaryColor)"></span>
-                        Primario {{ team.primaryColor || 'deterministico' }}
+                        Primario {{ team.primaryColor || 'por defecto' }}
                       </span>
                       <span class="color-line muted">
                         <span class="color-dot" [style.background]="colorValue(team.secondaryColor)"></span>
-                        Secundario {{ team.secondaryColor || 'deterministico' }}
+                        Secundario {{ team.secondaryColor || 'por defecto' }}
                       </span>
                     </div>
                   </td>
@@ -220,12 +220,12 @@ export class TeamListPageComponent {
       {
         label: 'Activos visibles',
         value: activeCount,
-        meta: 'Listos para operar'
+        meta: 'Disponibles para competir'
       },
       {
         label: 'Con color maestro',
         value: colorReadyCount,
-        meta: 'El resto usa iniciales deterministicas'
+        meta: 'El resto usa iniciales y colores por defecto'
       }
     ];
   });

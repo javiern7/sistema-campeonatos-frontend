@@ -43,8 +43,8 @@ import { TournamentsService } from './tournaments.service';
   template: `
     <section class="app-page">
       <app-page-header
-        [title]="isEditMode() ? 'Editar Tournament' : 'Nuevo Tournament'"
-        subtitle="Formulario principal del torneo para el MVP."
+        [title]="isEditMode() ? 'Editar campeonato' : 'Nuevo campeonato'"
+        subtitle="Configura los datos principales del campeonato."
       />
 
       <section class="card page-card">
@@ -68,7 +68,7 @@ import { TournamentsService } from './tournaments.service';
               </mat-form-field>
 
               <mat-form-field appearance="outline">
-                <mat-label>Season</mat-label>
+                <mat-label>Temporada</mat-label>
                 <input matInput formControlName="seasonName">
               </mat-form-field>
 
@@ -76,7 +76,7 @@ import { TournamentsService } from './tournaments.service';
                 <mat-label>Formato</mat-label>
                 <mat-select formControlName="format">
                   @for (format of formats; track format) {
-                    <mat-option [value]="format">{{ format }}</mat-option>
+                    <mat-option [value]="format">{{ formatLabel(format) }}</mat-option>
                   }
                 </mat-select>
               </mat-form-field>
@@ -86,15 +86,15 @@ import { TournamentsService } from './tournaments.service';
                   <mat-label>Estado</mat-label>
                   <mat-select formControlName="status">
                     @for (status of statuses; track status) {
-                      <mat-option [value]="status">{{ status }}</mat-option>
+                      <mat-option [value]="status">{{ statusLabel(status) }}</mat-option>
                     }
                   </mat-select>
                 </mat-form-field>
               } @else {
                 <mat-form-field appearance="outline">
                   <mat-label>Estado actual</mat-label>
-                  <input matInput [value]="currentStatus()" readonly>
-                  <mat-hint>Los cambios de estado se gestionan por la transicion operativa del torneo.</mat-hint>
+                  <input matInput [value]="statusLabel(currentStatus())" readonly>
+                  <mat-hint>Los cambios de estado se gestionan desde el listado de campeonatos.</mat-hint>
                 </mat-form-field>
               }
 
@@ -264,5 +264,27 @@ export class TournamentFormPageComponent {
       },
       error: (error: unknown) => this.notifications.error(this.errorMapper.map(error).message)
     });
+  }
+
+  protected formatLabel(format: TournamentFormat): string {
+    const labels: Record<TournamentFormat, string> = {
+      LEAGUE: 'Liga',
+      GROUPS_THEN_KNOCKOUT: 'Grupos + eliminatoria',
+      KNOCKOUT: 'Eliminatoria'
+    };
+
+    return labels[format];
+  }
+
+  protected statusLabel(status: TournamentStatus): string {
+    const labels: Record<TournamentStatus, string> = {
+      DRAFT: 'Borrador',
+      OPEN: 'Inscripciones abiertas',
+      IN_PROGRESS: 'En curso',
+      FINISHED: 'Finalizado',
+      CANCELLED: 'Cancelado'
+    };
+
+    return labels[status];
   }
 }

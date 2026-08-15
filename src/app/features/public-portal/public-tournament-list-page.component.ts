@@ -38,7 +38,7 @@ type FilterState = {
           <div>
             <span class="hero-kicker">Listado publico</span>
             <h1>Torneos visibles</h1>
-            <p class="muted">Consulta publica de torneos disponibles sin ingresar al shell interno.</p>
+            <p class="muted">Consulta publica de campeonatos disponibles.</p>
           </div>
           <a mat-stroked-button routerLink="/portal">Volver al inicio</a>
         </div>
@@ -82,7 +82,7 @@ type FilterState = {
           <div class="section-heading">
             <div>
               <h2>{{ totalLabel() }}</h2>
-              <p class="muted">Solo se muestran torneos habilitados por el contrato publico vigente.</p>
+              <p class="muted">Solo se muestran campeonatos disponibles para consulta publica.</p>
             </div>
           </div>
 
@@ -103,7 +103,7 @@ type FilterState = {
                     <span>{{ formatLabel(tournament.format) }}</span>
                     <span>{{ dateRangeLabel(tournament.startDate, tournament.endDate) }}</span>
                   </div>
-                  <a class="text-link" [routerLink]="['/portal/tournaments', tournament.slug]">Abrir detalle publico</a>
+                  <a class="text-link" [routerLink]="['/portal/tournaments', tournament.slug]">Abrir detalle</a>
                 </article>
               }
             </div>
@@ -266,7 +266,7 @@ export class TournamentListComponent {
 
   protected statusLabel(status: string): string {
     const labels: Record<string, string> = {
-      OPEN: 'Abierto',
+      OPEN: 'Inscripciones abiertas',
       IN_PROGRESS: 'En curso',
       FINISHED: 'Finalizado'
     };
@@ -281,8 +281,8 @@ export class TournamentListComponent {
   protected formatLabel(format: string): string {
     const labels: Record<string, string> = {
       LEAGUE: 'Liga',
-      GROUPS_THEN_KNOCKOUT: 'Grupos + eliminacion',
-      KNOCKOUT: 'Eliminacion'
+      GROUPS_THEN_KNOCKOUT: 'Grupos + eliminatoria',
+      KNOCKOUT: 'Eliminatoria'
     };
 
     return labels[format] ?? format;

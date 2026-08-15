@@ -30,14 +30,14 @@ import { TournamentsService } from '../tournaments/tournaments.service';
   ],
   template: `
     <section class="app-page">
-      <app-page-header title="Reportes" subtitle="Reporteria operativa y exportacion simple desde datos consolidados.">
+      <app-page-header title="Reportes" subtitle="Reportes y exportacion simple desde datos consolidados.">
         <a mat-stroked-button routerLink="/tournaments">Ver torneos</a>
       </app-page-header>
 
       <section class="card page-card app-page">
         <div class="context-banner">
-          <strong>Lectura operativa</strong>
-          <span class="muted">Selecciona un torneo para consultar reportes sin recalcular standings ni modificar resultados.</span>
+          <strong>Consulta de reportes</strong>
+          <span class="muted">Selecciona un campeonato para consultar reportes sin modificar resultados ni tabla.</span>
         </div>
 
         <form [formGroup]="filtersForm" class="filter-row">
@@ -77,7 +77,7 @@ import { TournamentsService } from '../tournaments/tournaments.service';
         } @else if (tournaments().length === 0) {
           <div class="empty-state">
             <strong>No hay torneos para este filtro.</strong>
-            <p class="muted">Ajusta la busqueda para abrir reportes operativos.</p>
+            <p class="muted">Ajusta la busqueda para abrir reportes.</p>
           </div>
         } @else {
           <div class="module-grid">
@@ -88,7 +88,7 @@ import { TournamentsService } from '../tournaments/tournaments.service';
                   <span [class]="statusClass(tournament.status)">{{ statusLabel(tournament.status) }}</span>
                 </div>
                 <span class="muted">{{ tournament.seasonName || 'Temporada sin etiqueta' }}</span>
-                <p class="muted">{{ tournament.description || 'Sin descripcion operativa cargada.' }}</p>
+                <p class="muted">{{ tournament.description || 'Sin descripcion cargada.' }}</p>
                 <div class="module-actions">
                   <a mat-flat-button color="primary" [routerLink]="['/tournaments', tournament.id, 'reports']">
                     Abrir reportes
@@ -105,7 +105,7 @@ import { TournamentsService } from '../tournaments/tournaments.service';
         <div class="section-heading">
           <div>
             <h2>Entradas disponibles</h2>
-            <p class="muted">Pantallas actuales que alimentan reportes por contrato backend.</p>
+            <p class="muted">Pantallas actuales que alimentan los reportes del campeonato.</p>
           </div>
         </div>
         <div class="entry-grid">
@@ -178,7 +178,7 @@ export class ReportingHubComponent {
   protected readonly statuses: TournamentStatus[] = ['DRAFT', 'OPEN', 'IN_PROGRESS', 'FINISHED', 'CANCELLED'];
   protected readonly entries = computed(() => [
     { label: 'Torneos', scope: 'Resumen, fuente y fecha de generacion.' },
-    { label: 'Partidos', scope: 'Listado por torneo y rango operativo.' },
+    { label: 'Partidos', scope: 'Listado por campeonato y rango de fechas.' },
     { label: 'Tabla de posiciones', scope: 'Lectura oficial existente, sin recalculo.' },
     { label: 'Eventos', scope: 'Eventos de partido filtrables por equipo, jugador o partido.' },
     { label: 'Goleadores y tarjetas', scope: 'Estadisticas derivadas ya cerradas.' }
@@ -228,7 +228,7 @@ export class ReportingHubComponent {
   protected statusLabel(status: TournamentStatus): string {
     const labels: Record<TournamentStatus, string> = {
       DRAFT: 'Borrador',
-      OPEN: 'Abierto',
+      OPEN: 'Inscripciones abiertas',
       IN_PROGRESS: 'En curso',
       FINISHED: 'Finalizado',
       CANCELLED: 'Cancelado'

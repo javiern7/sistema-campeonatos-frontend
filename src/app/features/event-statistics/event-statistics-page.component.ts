@@ -139,7 +139,7 @@ type SummaryCard = {
             </div>
 
             <div class="context-banner neutral-banner">
-              <strong>Lectura read-only</strong>
+              <strong>Consulta de estadisticas</strong>
               <span class="muted">
                 Fuente {{ traceabilitySource() }}. Excluye {{ excludedStatusesLabel() }} y no modifica resultados ni tabla.
               </span>
@@ -153,7 +153,7 @@ type SummaryCard = {
               <div class="section-heading">
                 <div>
                   <h2>Goleadores</h2>
-                  <p class="muted">Ranking simple desde eventos SCORE activos.</p>
+                  <p class="muted">Ranking simple desde anotaciones activas.</p>
                 </div>
                 <span class="muted">{{ filterScopeLabel() }}</span>
               </div>
@@ -161,7 +161,7 @@ type SummaryCard = {
               @if (topScorers().length === 0) {
                 <div class="empty-state">
                   <strong>Sin goles activos para este filtro.</strong>
-                  <p class="muted">Cuando el backend reporte eventos SCORE activos, apareceran aqui.</p>
+                  <p class="muted">Cuando existan goles o puntos registrados, apareceran aqui.</p>
                 </div>
               } @else {
                 <div class="table-wrapper">
@@ -200,7 +200,7 @@ type SummaryCard = {
               @if (disciplinePlayers().length === 0) {
                 <div class="empty-state">
                   <strong>Sin tarjetas activas para este filtro.</strong>
-                  <p class="muted">El contrato no reporta YELLOW_CARD ni RED_CARD activos en este alcance.</p>
+                  <p class="muted">No hay tarjetas activas en este alcance.</p>
                 </div>
               } @else {
                 <div class="table-wrapper">
@@ -232,7 +232,7 @@ type SummaryCard = {
               <div class="section-heading">
                 <div>
                   <h2>Resumen por equipo</h2>
-                  <p class="muted">Totales operativos por equipo inscrito.</p>
+                  <p class="muted">Totales por equipo inscrito.</p>
                 </div>
               </div>
 
@@ -258,14 +258,14 @@ type SummaryCard = {
               <div class="section-heading">
                 <div>
                   <h2>Resumen por partido</h2>
-                  <p class="muted">Lectura simple del agregado por partido cuando el contrato lo permite.</p>
+                  <p class="muted">Resumen simple por partido cuando hay eventos registrados.</p>
                 </div>
               </div>
 
               @if (statistics()!.matches.length === 0) {
                 <div class="empty-state">
                   <strong>Sin resumen por partido.</strong>
-                  <p class="muted">El backend no reporta partidos con eventos activos para este filtro.</p>
+                  <p class="muted">No hay partidos con eventos activos para este filtro.</p>
                 </div>
               } @else {
                 <div class="list-stack">
@@ -285,7 +285,7 @@ type SummaryCard = {
             <div class="section-heading">
               <div>
                 <h2>Trazabilidad</h2>
-                <p class="muted">Pistas del contrato para confirmar origen y exclusiones.</p>
+                <p class="muted">Referencias para confirmar origen y exclusiones de la estadistica.</p>
               </div>
             </div>
 
@@ -422,7 +422,7 @@ export class EventStatisticsPageComponent {
   protected readonly headerSubtitle = computed(() => {
     const tournament = this.tournament();
     return tournament
-      ? `${tournament.name} · lectura read-only desde eventos activos`
+      ? `${tournament.name} · estadisticas desde eventos activos`
       : 'Rankings y resumenes derivados de eventos de partido.';
   });
   protected readonly summaryCards = computed<SummaryCard[]>(() => {
@@ -588,7 +588,13 @@ export class EventStatisticsPageComponent {
   }
 
   protected excludedStatusesLabel(): string {
-    return this.statistics()?.traceability.excludedStatuses.join(', ') || 'ANNULLED';
+    const labels: Record<string, string> = {
+      ANNULLED: 'Anulados',
+      ACTIVE: 'Activos'
+    };
+
+    const statuses = this.statistics()?.traceability.excludedStatuses ?? ['ANNULLED'];
+    return statuses.map((status) => labels[status] ?? status).join(', ');
   }
 
   protected formatDate(value: string | null): string {

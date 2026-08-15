@@ -55,8 +55,8 @@ type StatusAction = {
   template: `
     <section class="app-page">
       <app-page-header
-        title="Usuarios operativos"
-        subtitle="Lectura administrativa de usuarios existentes con catalogos y gestionabilidad provistos por backend."
+        title="Usuarios"
+        subtitle="Lectura administrativa de usuarios existentes, roles y estados de acceso."
       />
 
       <section class="card page-card app-page">
@@ -98,10 +98,10 @@ type StatusAction = {
         </div>
 
         @if (loading()) {
-          <app-loading-state label="Cargando usuarios operativos..." />
+          <app-loading-state label="Cargando usuarios..." />
         } @else if (pageError()) {
           <div class="empty-state error-state" role="alert">
-            <strong>No se pudo cargar usuarios operativos.</strong>
+            <strong>No se pudo cargar usuarios.</strong>
             <p class="muted">{{ pageError() }}</p>
             <button mat-stroked-button type="button" (click)="retry()">Reintentar</button>
           </div>
@@ -346,11 +346,11 @@ export class OperationalUsersPageComponent {
       .open<ActionReasonDialogComponent, unknown, ActionReasonDialogResult>(ActionReasonDialogComponent, {
         width: 'min(520px, 92vw)',
         data: {
-          title: 'Cambiar estado operativo',
-          description: `Se cambiara el estado de ${user.fullName || user.username} a "${statusLabel}". El backend validara permisos y reglas finales.`,
-          reasonLabel: 'Motivo operativo',
+          title: 'Cambiar estado de usuario',
+          description: `Se cambiara el estado de ${user.fullName || user.username} a "${statusLabel}". El sistema validara permisos y reglas finales.`,
+          reasonLabel: 'Motivo del cambio',
           confirmLabel: 'Cambiar estado',
-          defaultReason: `Ajuste operativo de estado a ${statusLabel.toLowerCase()}`
+          defaultReason: `Ajuste de estado a ${statusLabel.toLowerCase()}`
         }
       })
       .afterClosed()

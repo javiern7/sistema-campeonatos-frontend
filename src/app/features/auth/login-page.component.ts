@@ -22,8 +22,8 @@ import { NotificationService } from '../../core/error/notification.service';
         <div class="login-visual" aria-hidden="true">
           <div class="visual-copy">
             <span class="login-kicker">Sistema multideporte</span>
-            <strong>Operacion lista para demo</strong>
-            <p>Gestiona torneos, partidos, standings y reportes desde una vista clara y segura.</p>
+            <strong>Gestiona tus campeonatos con claridad</strong>
+            <p>Organiza equipos, partidos, tablas de posiciones y reportes desde una plataforma segura.</p>
           </div>
         </div>
 
@@ -31,7 +31,7 @@ import { NotificationService } from '../../core/error/notification.service';
           <span class="login-kicker">Acceso privado</span>
           <h1>Ingreso operativo</h1>
           <p class="muted">
-            Usa tus credenciales reales. La identidad, roles y permisos se cargan desde el backend.
+            Usa tus credenciales para acceder al panel de administracion de campeonatos.
           </p>
 
           <form [formGroup]="form" (ngSubmit)="submit()" class="login-form">
@@ -46,8 +46,8 @@ import { NotificationService } from '../../core/error/notification.service';
             </mat-form-field>
 
             <div class="login-support">
-              <span>Token Bearer y permisos efectivos</span>
-              <span>Sesion auditada</span>
+              <span>Acceso seguro</span>
+              <span>Roles de usuario</span>
             </div>
 
             <div class="form-actions">

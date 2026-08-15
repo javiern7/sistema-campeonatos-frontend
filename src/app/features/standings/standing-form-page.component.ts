@@ -94,9 +94,9 @@ const parseOptionalNumber = (value: string | number | null | undefined): number 
         } @else {
           <form [formGroup]="form" (ngSubmit)="save()" class="app-page">
             <div class="context-banner">
-              <strong>Contrato operativo</strong>
+              <strong>Registro de tabla</strong>
               <span class="muted">
-                El recalculo automatico sigue disponible en la tabla. Este formulario cubre el CRUD directo de /standings.
+                El recalculo automatico sigue disponible en la tabla. Usa este formulario solo para ajustes puntuales.
               </span>
             </div>
 
@@ -245,7 +245,7 @@ export class StandingFormPageComponent {
       this.groupName(Number(this.form.controls.groupId.getRawValue()))
     ].filter((item) => Boolean(item));
 
-    return labels.length > 0 ? labels.join(' / ') : 'Registro operativo de tabla contra /standings.';
+    return labels.length > 0 ? labels.join(' / ') : 'Registro de tabla de posiciones.';
   });
   protected readonly stages = computed(() => {
     const tournamentId = this.selectedTournamentId();
@@ -423,7 +423,7 @@ export class StandingFormPageComponent {
 
     request$.pipe(finalize(() => this.saving.set(false))).subscribe({
       next: () => {
-        this.notifications.success('Standing guardado correctamente');
+        this.notifications.success('Registro de tabla guardado correctamente');
         void this.router.navigateByUrl('/standings');
       },
       error: (error: unknown) => this.notifications.error(this.errorMapper.map(error).message)

@@ -43,7 +43,7 @@ type PlayerVisualMetric = {
   ],
   template: `
     <section class="app-page">
-      <app-page-header title="Jugadores" subtitle="Listado operativo conectado a /players con busqueda y filtros base del padron.">
+      <app-page-header title="Jugadores" subtitle="Administra el padron de jugadores para inscripciones y planteles.">
         @if (canManage()) {
           <a mat-flat-button color="primary" routerLink="/players/new">Nuevo jugador</a>
         }
@@ -205,7 +205,7 @@ export class PlayerListPageComponent {
       {
         label: 'Activos visibles',
         value: activeCount,
-        meta: 'Disponibles para operacion'
+        meta: 'Disponibles para competir'
       },
       {
         label: 'Con documento',

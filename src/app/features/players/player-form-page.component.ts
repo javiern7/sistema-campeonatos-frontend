@@ -54,7 +54,7 @@ import { PlayersService } from './players.service';
                 [shortLabel]="playerInitialSource()"
                 meta="Vista previa operativa"
               />
-              <p class="muted">El avatar usa iniciales; no requiere foto ni campo adicional en backend.</p>
+              <p class="muted">El avatar usa iniciales; no requiere foto adicional.</p>
             </div>
 
             <div class="form-grid">

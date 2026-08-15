@@ -48,18 +48,18 @@ import { UsersBasicService } from './users-basic.service';
   template: `
     <section class="app-page">
       <app-page-header
-        title="Detalle operativo de usuario"
-        subtitle="Lectura administrativa, permisos efectivos y cambios controlados por banderas backend."
+        title="Detalle de usuario"
+        subtitle="Lectura administrativa, permisos y cambios controlados por el sistema."
       >
         <a mat-stroked-button routerLink="/operations/users">Volver al listado</a>
       </app-page-header>
 
       <section class="card page-card app-page">
         @if (loading()) {
-          <app-loading-state label="Cargando detalle operativo..." />
+          <app-loading-state label="Cargando detalle de usuario..." />
         } @else if (pageError()) {
           <div class="empty-state error-state" role="alert">
-            <strong>No se pudo cargar el detalle operativo.</strong>
+            <strong>No se pudo cargar el detalle de usuario.</strong>
             <p class="muted">{{ pageError() }}</p>
             <button mat-stroked-button type="button" (click)="load()">Reintentar</button>
           </div>
@@ -83,15 +83,15 @@ import { UsersBasicService } from './users-basic.service';
             </article>
 
             <article class="summary-card card">
-              <span class="summary-label">Permisos efectivos</span>
+              <span class="summary-label">Permisos de usuario</span>
               <span class="summary-value">{{ permissions().length }}</span>
-              <span class="summary-meta">Calculados por backend desde roles y fallback vigente</span>
+              <span class="summary-meta">Calculados desde roles y configuracion vigente</span>
             </article>
           </div>
 
           <section class="detail-grid">
             <article class="detail-panel">
-              <h2>Datos operativos</h2>
+              <h2>Datos de usuario</h2>
               <dl class="data-list">
                 <div>
                   <dt>ID</dt>
@@ -140,7 +140,7 @@ import { UsersBasicService } from './users-basic.service';
             <div class="section-heading">
               <div>
                 <h2>Roles</h2>
-                <p class="muted">El backend define asignabilidad, mutabilidad y motivos de bloqueo.</p>
+                <p class="muted">El sistema define asignabilidad, mutabilidad y motivos de bloqueo.</p>
               </div>
               @if (canManageUsers() && user()!.rolesManageable) {
                 <button mat-flat-button color="primary" type="button" [disabled]="savingRoles()" (click)="changeRoles()">
@@ -171,11 +171,11 @@ import { UsersBasicService } from './users-basic.service';
           </section>
 
           <section class="detail-panel">
-            <h2>Permisos efectivos</h2>
+            <h2>Permisos de usuario</h2>
             @if (permissions().length === 0) {
               <div class="empty-state">
                 <strong>Sin permisos visibles.</strong>
-                <p class="muted">El backend no devolvio permisos efectivos para este usuario.</p>
+                <p class="muted">No hay permisos disponibles para este usuario.</p>
               </div>
             } @else {
               <div class="table-wrapper">
@@ -420,11 +420,11 @@ export class OperationalUserDetailPageComponent {
       .open<ActionReasonDialogComponent, unknown, ActionReasonDialogResult>(ActionReasonDialogComponent, {
         width: 'min(520px, 92vw)',
         data: {
-          title: 'Cambiar estado operativo',
-          description: `Se cambiara el estado de ${user.fullName || user.username} a "${statusLabel}". El backend validara permisos y reglas finales.`,
-          reasonLabel: 'Motivo operativo',
+          title: 'Cambiar estado de usuario',
+          description: `Se cambiara el estado de ${user.fullName || user.username} a "${statusLabel}". El sistema validara permisos y reglas finales.`,
+          reasonLabel: 'Motivo del cambio',
           confirmLabel: 'Cambiar estado',
-          defaultReason: `Ajuste operativo de estado a ${statusLabel.toLowerCase()}`
+          defaultReason: `Ajuste de estado a ${statusLabel.toLowerCase()}`
         }
       })
       .afterClosed()
@@ -464,10 +464,10 @@ export class OperationalUserDetailPageComponent {
         width: 'min(520px, 92vw)',
         data: {
           title: 'Guardar cambios de roles',
-          description: `Se reemplazara el conjunto completo de roles de ${user.fullName || user.username}. El backend conserva la autoridad final sobre roles asignables.`,
+          description: `Se reemplazara el conjunto completo de roles de ${user.fullName || user.username}. El sistema conserva la autoridad final sobre roles asignables.`,
           reasonLabel: 'Motivo del cambio de roles',
           confirmLabel: 'Guardar roles',
-          defaultReason: 'Ajuste operativo de roles'
+          defaultReason: 'Ajuste de roles'
         }
       })
       .afterClosed()

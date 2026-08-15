@@ -16,7 +16,7 @@ export const appRoutes: Routes = [
       },
       {
         path: 'tournaments',
-        title: 'Torneos publicos',
+        title: 'Campeonatos publicos',
         loadComponent: () =>
           import('./features/public-portal/public-tournament-list-page.component').then(
             (m) => m.TournamentListComponent
@@ -24,7 +24,7 @@ export const appRoutes: Routes = [
       },
       {
         path: 'tournaments/:slug',
-        title: 'Detalle publico de torneo',
+        title: 'Detalle publico de campeonato',
         loadComponent: () =>
           import('./features/public-portal/public-tournament-detail-page.component').then(
             (m) => m.TournamentDetailComponent
@@ -34,7 +34,7 @@ export const appRoutes: Routes = [
   },
   {
     path: 'login',
-    title: 'Login',
+    title: 'Ingreso',
     loadComponent: () =>
       import('./features/auth/login-page.component').then((m) => m.LoginPageComponent)
   },
@@ -46,7 +46,7 @@ export const appRoutes: Routes = [
       { path: '', pathMatch: 'full', redirectTo: 'dashboard' },
       {
         path: 'dashboard',
-        title: 'Dashboard',
+        title: 'Inicio',
         canActivate: [authorizationGuard],
         data: { resource: 'dashboard', action: 'read' },
         loadComponent: () =>
@@ -100,7 +100,7 @@ export const appRoutes: Routes = [
       },
       {
         path: 'teams',
-        title: 'Teams',
+        title: 'Equipos',
         canActivate: [authorizationGuard],
         data: { resource: 'teams', action: 'read' },
         loadComponent: () =>
@@ -108,7 +108,7 @@ export const appRoutes: Routes = [
       },
       {
         path: 'teams/new',
-        title: 'Create Team',
+        title: 'Crear equipo',
         canActivate: [authorizationGuard],
         data: { resource: 'teams', action: 'manage' },
         loadComponent: () =>
@@ -116,7 +116,7 @@ export const appRoutes: Routes = [
       },
       {
         path: 'teams/:id/edit',
-        title: 'Edit Team',
+        title: 'Editar equipo',
         canActivate: [authorizationGuard],
         data: { resource: 'teams', action: 'manage' },
         loadComponent: () =>
@@ -124,7 +124,7 @@ export const appRoutes: Routes = [
       },
       {
         path: 'players',
-        title: 'Players',
+        title: 'Jugadores',
         canActivate: [authorizationGuard],
         data: { resource: 'players', action: 'read' },
         loadComponent: () =>
@@ -132,7 +132,7 @@ export const appRoutes: Routes = [
       },
       {
         path: 'players/new',
-        title: 'Create Player',
+        title: 'Crear jugador',
         canActivate: [authorizationGuard],
         data: { resource: 'players', action: 'manage' },
         loadComponent: () =>
@@ -140,7 +140,7 @@ export const appRoutes: Routes = [
       },
       {
         path: 'players/:id/edit',
-        title: 'Edit Player',
+        title: 'Editar jugador',
         canActivate: [authorizationGuard],
         data: { resource: 'players', action: 'manage' },
         loadComponent: () =>
@@ -148,7 +148,7 @@ export const appRoutes: Routes = [
       },
       {
         path: 'tournaments',
-        title: 'Tournaments',
+        title: 'Campeonatos',
         canActivate: [authorizationGuard],
         data: { resource: 'tournaments', action: 'read' },
         loadComponent: () =>
@@ -158,7 +158,7 @@ export const appRoutes: Routes = [
       },
       {
         path: 'tournaments/new',
-        title: 'Create Tournament',
+        title: 'Crear campeonato',
         canActivate: [authorizationGuard],
         data: { resource: 'tournaments', action: 'manage' },
         loadComponent: () =>
@@ -168,7 +168,7 @@ export const appRoutes: Routes = [
       },
       {
         path: 'tournaments/:id/edit',
-        title: 'Edit Tournament',
+        title: 'Editar campeonato',
         canActivate: [authorizationGuard],
         data: { resource: 'tournaments', action: 'manage' },
         loadComponent: () =>
@@ -178,7 +178,7 @@ export const appRoutes: Routes = [
       },
       {
         path: 'tournaments/:id',
-        title: 'Tournament Detail',
+        title: 'Detalle de campeonato',
         canActivate: [authorizationGuard],
         data: { resource: 'tournaments', action: 'read' },
         loadComponent: () =>
@@ -188,7 +188,7 @@ export const appRoutes: Routes = [
       },
       {
         path: 'tournaments/:id/competition-advanced',
-        title: 'Competition Advanced',
+        title: 'Competencia avanzada',
         canActivate: [authorizationGuard],
         data: { resource: 'tournaments', action: 'read' },
         loadComponent: () =>
@@ -198,7 +198,7 @@ export const appRoutes: Routes = [
       },
       {
         path: 'tournaments/:id/statistics/basic',
-        title: 'Basic Statistics',
+        title: 'Estadisticas basicas',
         canActivate: [authorizationGuard],
         data: { resource: 'tournaments', action: 'read' },
         loadComponent: () =>
@@ -218,7 +218,7 @@ export const appRoutes: Routes = [
       },
       {
         path: 'tournaments/:id/discipline',
-        title: 'Discipline Sanctions',
+        title: 'Disciplina',
         canActivate: [authorizationGuard],
         data: { resource: 'tournaments', action: 'read' },
         loadComponent: () =>
@@ -296,7 +296,7 @@ export const appRoutes: Routes = [
       },
       {
         path: 'tournaments/:id/reports',
-        title: 'Reporteria y exportacion',
+        title: 'Reportes y exportacion',
         canActivate: [authorizationGuard],
         data: { resource: 'tournaments', action: 'read' },
         loadComponent: () =>
@@ -304,7 +304,7 @@ export const appRoutes: Routes = [
       },
       {
         path: 'tournament-teams',
-        title: 'Tournament Teams',
+        title: 'Inscripciones',
         canActivate: [authorizationGuard],
         data: { resource: 'tournamentTeams', action: 'read' },
         loadComponent: () =>
@@ -314,7 +314,7 @@ export const appRoutes: Routes = [
       },
       {
         path: 'tournament-teams/new',
-        title: 'Create Tournament Team',
+        title: 'Crear inscripcion',
         canActivate: [authorizationGuard],
         data: { resource: 'tournamentTeams', action: 'manage' },
         loadComponent: () =>
@@ -324,7 +324,7 @@ export const appRoutes: Routes = [
       },
       {
         path: 'tournament-teams/:id/edit',
-        title: 'Edit Tournament Team',
+        title: 'Editar inscripcion',
         canActivate: [authorizationGuard],
         data: { resource: 'tournamentTeams', action: 'manage' },
         loadComponent: () =>
@@ -344,7 +344,7 @@ export const appRoutes: Routes = [
       },
       {
         path: 'rosters/new',
-        title: 'Create Roster Entry',
+        title: 'Crear integrante de plantel',
         canActivate: [authorizationGuard],
         data: { resource: 'rosters', action: 'manage' },
         loadComponent: () =>
@@ -354,7 +354,7 @@ export const appRoutes: Routes = [
       },
       {
         path: 'rosters/:id/edit',
-        title: 'Edit Roster Entry',
+        title: 'Editar integrante de plantel',
         canActivate: [authorizationGuard],
         data: { resource: 'rosters', action: 'manage' },
         loadComponent: () =>
@@ -364,7 +364,7 @@ export const appRoutes: Routes = [
       },
       {
         path: 'tournament-stages',
-        title: 'Tournament Stages',
+        title: 'Etapas',
         canActivate: [authorizationGuard],
         data: { resource: 'tournamentStages', action: 'read' },
         loadComponent: () =>
@@ -374,7 +374,7 @@ export const appRoutes: Routes = [
       },
       {
         path: 'tournament-stages/new',
-        title: 'Create Tournament Stage',
+        title: 'Crear etapa',
         canActivate: [authorizationGuard],
         data: { resource: 'tournamentStages', action: 'manage' },
         loadComponent: () =>
@@ -384,7 +384,7 @@ export const appRoutes: Routes = [
       },
       {
         path: 'tournament-stages/:id/edit',
-        title: 'Edit Tournament Stage',
+        title: 'Editar etapa',
         canActivate: [authorizationGuard],
         data: { resource: 'tournamentStages', action: 'manage' },
         loadComponent: () =>
@@ -394,7 +394,7 @@ export const appRoutes: Routes = [
       },
       {
         path: 'stage-groups',
-        title: 'Stage Groups',
+        title: 'Grupos',
         canActivate: [authorizationGuard],
         data: { resource: 'stageGroups', action: 'read' },
         loadComponent: () =>
@@ -404,7 +404,7 @@ export const appRoutes: Routes = [
       },
       {
         path: 'stage-groups/new',
-        title: 'Create Stage Group',
+        title: 'Crear grupo',
         canActivate: [authorizationGuard],
         data: { resource: 'stageGroups', action: 'manage' },
         loadComponent: () =>
@@ -414,7 +414,7 @@ export const appRoutes: Routes = [
       },
       {
         path: 'stage-groups/:id/edit',
-        title: 'Edit Stage Group',
+        title: 'Editar grupo',
         canActivate: [authorizationGuard],
         data: { resource: 'stageGroups', action: 'manage' },
         loadComponent: () =>
@@ -424,7 +424,7 @@ export const appRoutes: Routes = [
       },
       {
         path: 'matches',
-        title: 'Matches',
+        title: 'Partidos',
         canActivate: [authorizationGuard],
         data: { resource: 'matches', action: 'read' },
         loadComponent: () =>
@@ -432,7 +432,7 @@ export const appRoutes: Routes = [
       },
       {
         path: 'matches/new',
-        title: 'Create Match',
+        title: 'Crear partido',
         canActivate: [authorizationGuard],
         data: { resource: 'matches', action: 'manage' },
         loadComponent: () =>
@@ -440,7 +440,7 @@ export const appRoutes: Routes = [
       },
       {
         path: 'matches/:id/edit',
-        title: 'Edit Match',
+        title: 'Editar partido',
         canActivate: [authorizationGuard],
         data: { resource: 'matches', action: 'manage' },
         loadComponent: () =>
@@ -456,7 +456,7 @@ export const appRoutes: Routes = [
       },
       {
         path: 'matches/:id/discipline',
-        title: 'Match Discipline',
+        title: 'Disciplina del partido',
         canActivate: [authorizationGuard],
         data: { resource: 'matches', action: 'read' },
         loadComponent: () =>
@@ -474,7 +474,7 @@ export const appRoutes: Routes = [
       },
       {
         path: 'standings/new',
-        title: 'Crear standing',
+        title: 'Crear registro de tabla',
         canActivate: [authorizationGuard],
         data: { resource: 'standings', action: 'manage' },
         loadComponent: () =>
@@ -482,7 +482,7 @@ export const appRoutes: Routes = [
       },
       {
         path: 'standings/:id/edit',
-        title: 'Editar standing',
+        title: 'Editar registro de tabla',
         canActivate: [authorizationGuard],
         data: { resource: 'standings', action: 'manage' },
         loadComponent: () =>

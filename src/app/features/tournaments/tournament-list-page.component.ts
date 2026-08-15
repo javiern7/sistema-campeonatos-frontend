@@ -43,7 +43,7 @@ type SummaryCard = {
   ],
   template: `
     <section class="app-page">
-      <app-page-header title="Torneos" subtitle="Operacion de torneos conectada a /tournaments con lectura multideporte.">
+      <app-page-header title="Campeonatos" subtitle="Gestiona campeonatos, estados y avance de cada competencia.">
         @if (canManage()) {
           <a mat-flat-button color="primary" routerLink="/tournaments/new">Nuevo torneo</a>
         }
@@ -87,7 +87,7 @@ type SummaryCard = {
         } @else {
           <div class="context-banner">
             <strong>{{ rows().length === 0 ? 'Sin resultados para el filtro actual' : 'Lectura operativa del listado actual' }}</strong>
-            <span class="muted">Total: {{ page()?.totalElements ?? 0 }} torneos. QA / borrador separados del flujo principal.</span>
+            <span class="muted">Total: {{ page()?.totalElements ?? 0 }} campeonatos. Los borradores se muestran separados de los campeonatos activos.</span>
           </div>
 
           <div class="summary-grid">
@@ -218,9 +218,9 @@ export class TournamentListPageComponent {
         meta: 'Torneos visibles para operacion'
       },
       {
-        label: 'QA / borrador',
+        label: 'Borradores',
         value: sandboxCount,
-        meta: 'Separados del radar principal'
+        meta: 'En preparacion o pruebas'
       },
       {
         label: 'En curso',
@@ -296,7 +296,7 @@ export class TournamentListPageComponent {
   protected statusLabel(status: TournamentStatus): string {
     const labels: Record<TournamentStatus, string> = {
       DRAFT: 'Borrador',
-      OPEN: 'Abierto',
+      OPEN: 'Inscripciones abiertas',
       IN_PROGRESS: 'En curso',
       FINISHED: 'Finalizado',
       CANCELLED: 'Cancelado'
@@ -379,9 +379,9 @@ export class TournamentListPageComponent {
   private operationalCategoryLabel(category: TournamentOperationalCategory): string {
     const labels: Record<TournamentOperationalCategory, string> = {
       PRODUCTION: 'Flujo principal',
-      QA: 'QA',
-      DEMO: 'Demo',
-      SANDBOX: 'Sandbox',
+      QA: 'Pruebas',
+      DEMO: 'Demostracion',
+      SANDBOX: 'Pruebas',
       ARCHIVED: 'Archivado'
     };
 

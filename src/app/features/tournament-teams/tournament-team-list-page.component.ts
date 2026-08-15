@@ -124,7 +124,7 @@ const parseQueryNumber = (value: string | null): number | '' => {
           @if (rows().length === 0) {
             <div class="empty-state">
               <strong>No hay inscripciones para este filtro.</strong>
-              <p class="muted">Ajusta el contexto o registra una nueva inscripcion para habilitar rosters, partidos y standings.</p>
+              <p class="muted">Ajusta el contexto o registra una nueva inscripcion para habilitar planteles, partidos y tabla.</p>
             </div>
           } @else {
             <div class="table-wrapper">

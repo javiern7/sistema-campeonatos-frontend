@@ -15,8 +15,8 @@ import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 
         <nav class="public-nav" aria-label="Navegacion publica">
           <a routerLink="/portal" [routerLinkActive]="'active'" [routerLinkActiveOptions]="{ exact: true }">Inicio</a>
-          <a routerLink="/portal/tournaments" routerLinkActive="active">Torneos</a>
-          <a routerLink="/login">Acceso interno</a>
+          <a routerLink="/portal/tournaments" routerLinkActive="active">Campeonatos</a>
+          <a routerLink="/login">Ingreso administradores</a>
         </nav>
       </header>
 

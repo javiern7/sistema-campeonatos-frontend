@@ -100,7 +100,7 @@ type GenerationAction = 'progress' | 'generate';
 
           <form [formGroup]="filtersForm" class="filter-row">
             <mat-form-field appearance="outline">
-              <mat-label>Etapa knockout</mat-label>
+              <mat-label>Etapa eliminatoria</mat-label>
               <mat-select formControlName="stageId">
                 <mat-option value="">Todas</mat-option>
                 @for (stage of knockoutStages(); track stage.id) {
@@ -157,7 +157,7 @@ type GenerationAction = 'progress' | 'generate';
                 [disabled]="runningAction() === 'progress'"
                 (click)="runGeneration('progress')"
               >
-                {{ runningAction() === 'progress' ? 'Progresando...' : 'Progress to knockout' }}
+                {{ runningAction() === 'progress' ? 'Avanzando...' : 'Avanzar a eliminatoria' }}
               </button>
               }
               @if (canGenerateKnockoutBracket()) {
@@ -185,9 +185,9 @@ type GenerationAction = 'progress' | 'generate';
           </div>
 
           <div class="context-banner neutral-banner">
-            <strong>Guardrail operativo</strong>
+            <strong>Criterio de lectura</strong>
             <span class="muted">
-              Resultados es lectura de partidos cerrados; la tabla solo se invoca donde el contrato lo declara aplicable.
+              Resultados muestra partidos cerrados; la tabla solo aparece cuando corresponde al formato del campeonato.
             </span>
           </div>
         </section>
@@ -197,7 +197,7 @@ type GenerationAction = 'progress' | 'generate';
             <div class="section-heading">
               <div>
                 <h2>Brackets / llaves</h2>
-                <p class="muted">Lectura por ronda de la etapa knockout sin persistencia ni arbol paralelo.</p>
+                <p class="muted">Lectura por ronda de la etapa eliminatoria.</p>
               </div>
               <span class="muted">{{ bracketStageLabel() }}</span>
             </div>
@@ -205,7 +205,7 @@ type GenerationAction = 'progress' | 'generate';
             @if (!bracket() || bracket()!.rounds.length === 0) {
               <div class="empty-state">
                 <strong>No hay llaves visibles para este contexto.</strong>
-                <p class="muted">Confirma que exista etapa knockout activa y que el torneo ya tenga cruces generados.</p>
+                <p class="muted">Confirma que exista una etapa eliminatoria activa y que el campeonato ya tenga cruces generados.</p>
               </div>
             } @else {
               <div class="rounds-grid">
@@ -245,7 +245,7 @@ type GenerationAction = 'progress' | 'generate';
             <div class="section-heading">
               <div>
                 <h2>Calendario</h2>
-                <p class="muted">Programacion operativa filtrable por etapa, grupo, estado y ventana temporal.</p>
+                <p class="muted">Programacion filtrable por etapa, grupo, estado y ventana temporal.</p>
               </div>
               <a mat-button routerLink="/matches" [queryParams]="calendarQueryParams()">Abrir partidos</a>
             </div>
@@ -253,7 +253,7 @@ type GenerationAction = 'progress' | 'generate';
             @if (!calendar() || calendar()!.matches.length === 0) {
               <div class="empty-state">
                 <strong>No hay partidos en el calendario filtrado.</strong>
-                <p class="muted">Ajusta filtros o genera cruces si el torneo ya esta listo para knockout.</p>
+                <p class="muted">Ajusta filtros o genera cruces si el campeonato ya esta listo para eliminatoria.</p>
               </div>
             } @else {
               <div class="list-stack">
@@ -282,7 +282,7 @@ type GenerationAction = 'progress' | 'generate';
             <div class="section-heading">
               <div>
                 <h2>Resultados</h2>
-                <p class="muted">Lectura cerrada de partidos jugados o resueltos, con amarre explicito hacia tabla.</p>
+                <p class="muted">Partidos jugados o resueltos y su impacto en la tabla.</p>
               </div>
               <span class="muted">{{ resultsSummaryLabel() }}</span>
             </div>
@@ -290,7 +290,7 @@ type GenerationAction = 'progress' | 'generate';
             @if (!results() || results()!.matches.length === 0) {
               <div class="empty-state">
                 <strong>No hay resultados cerrados para este filtro.</strong>
-                <p class="muted">Cuando existan partidos jugados o resueltos por forfeit, apareceran aqui con su impacto competitivo.</p>
+                <p class="muted">Cuando existan partidos jugados o resueltos por ausencia, apareceran aqui con su impacto competitivo.</p>
               </div>
             } @else {
               <div class="list-stack">
@@ -593,7 +593,7 @@ export class CompetitionAdvancedPageComponent {
         next: () => {
           this.notifications.success(
             action === 'progress'
-              ? 'Se ejecuto progress-to-knockout y se refresco la lectura.'
+              ? 'Se avanzo a eliminatoria y se actualizo la lectura.'
               : 'Se genero la llave inicial y se refresco la lectura.'
           );
           this.load();
@@ -606,7 +606,7 @@ export class CompetitionAdvancedPageComponent {
     const labels: Record<MatchStatus, string> = {
       SCHEDULED: 'Programado',
       PLAYED: 'Jugado',
-      FORFEIT: 'Forfeit',
+      FORFEIT: 'Resultado por ausencia',
       CANCELLED: 'Cancelado'
     };
 
@@ -620,7 +620,7 @@ export class CompetitionAdvancedPageComponent {
   protected bracketStageLabel(): string {
     const bracket = this.bracket();
     if (!bracket?.stageName) {
-      return 'Sin etapa knockout visible';
+      return 'Sin etapa eliminatoria visible';
     }
 
     return `${bracket.stageName} · ${bracket.totalMatches} cruce(s)`;
@@ -653,7 +653,7 @@ export class CompetitionAdvancedPageComponent {
 
   protected winnerLabel(match: CompetitionAdvancedMatch): string {
     if (!match.winnerTournamentTeamId && !match.winnerTeam?.label && !match.winnerTeam?.teamName) {
-      return match.status === 'PLAYED' ? 'Sin ganador visible en contrato' : 'Ganador pendiente';
+      return match.status === 'PLAYED' ? 'Sin ganador visible' : 'Ganador pendiente';
     }
 
     if (match.winnerTeam?.label || match.winnerTeam?.teamName) {
@@ -813,8 +813,8 @@ export class CompetitionAdvancedPageComponent {
   private formatLabel(format: Tournament['format']): string {
     const labels: Record<Tournament['format'], string> = {
       LEAGUE: 'Liga',
-      GROUPS_THEN_KNOCKOUT: 'Grupos + eliminacion',
-      KNOCKOUT: 'Eliminacion'
+      GROUPS_THEN_KNOCKOUT: 'Grupos + eliminatoria',
+      KNOCKOUT: 'Eliminatoria'
     };
 
     return labels[format];
@@ -823,7 +823,7 @@ export class CompetitionAdvancedPageComponent {
   private statusTournamentLabel(status: Tournament['status']): string {
     const labels: Record<Tournament['status'], string> = {
       DRAFT: 'Borrador',
-      OPEN: 'Abierto',
+      OPEN: 'Inscripciones abiertas',
       IN_PROGRESS: 'En curso',
       FINISHED: 'Finalizado',
       CANCELLED: 'Cancelado'

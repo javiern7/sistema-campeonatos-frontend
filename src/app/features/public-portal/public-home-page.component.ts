@@ -44,20 +44,20 @@ type PublicMetric = {
             <span class="hero-kicker">Web publica</span>
             <h1>{{ home()!.portalName }}</h1>
             <p class="hero-summary">
-              Torneos, tablas y resultados visibles desde el contrato publico vigente.
+              Campeonatos, tablas y resultados disponibles para consulta publica.
             </p>
             <div class="hero-actions">
               <a class="primary-link" routerLink="/portal/tournaments">Explorar torneos</a>
-              <a class="ghost-link" routerLink="/login">Acceso interno</a>
+              <a class="ghost-link" routerLink="/login">Ingreso administradores</a>
             </div>
           </div>
 
           <div class="hero-aside">
             <span class="meta-chip">Actualizado {{ generatedAtLabel() }}</span>
-            <span class="meta-chip" [class.enabled]="home()!.modules.standingsEnabled">Standings visibles</span>
+            <span class="meta-chip" [class.enabled]="home()!.modules.standingsEnabled">Tablas visibles</span>
             <span class="meta-chip" [class.enabled]="home()!.modules.resultsEnabled">Resultados visibles</span>
             <span class="meta-chip muted-chip">
-              Piezas aprobadas: {{ home()!.modules.approvedPiecesEnabled ? 'activas' : 'ocultas' }}
+              Publicaciones: {{ home()!.modules.approvedPiecesEnabled ? 'activas' : 'ocultas' }}
             </span>
           </div>
         </section>
@@ -326,7 +326,7 @@ export class PublicHomePageComponent {
     }
 
     return [
-      { label: 'Torneos visibles', value: home.visibleTournamentCount, detail: 'Base publica disponible', accent: true },
+      { label: 'Campeonatos visibles', value: home.visibleTournamentCount, detail: 'Base publica disponible', accent: true },
       { label: 'En curso', value: home.liveTournamentCount, detail: 'Actividad en vivo o activa' },
       { label: 'Proximos', value: home.upcomingTournamentCount, detail: 'Listos para abrir' },
       { label: 'Finalizados', value: home.completedTournamentCount, detail: 'Con lectura historica' }
@@ -356,7 +356,7 @@ export class PublicHomePageComponent {
 
   protected statusLabel(status: string): string {
     const labels: Record<string, string> = {
-      OPEN: 'Abierto',
+      OPEN: 'Inscripciones abiertas',
       IN_PROGRESS: 'En curso',
       FINISHED: 'Finalizado'
     };
@@ -371,8 +371,8 @@ export class PublicHomePageComponent {
   protected formatLabel(format: string): string {
     const labels: Record<string, string> = {
       LEAGUE: 'Liga',
-      GROUPS_THEN_KNOCKOUT: 'Grupos + eliminacion',
-      KNOCKOUT: 'Eliminacion'
+      GROUPS_THEN_KNOCKOUT: 'Grupos + eliminatoria',
+      KNOCKOUT: 'Eliminatoria'
     };
 
     return labels[format] ?? format;
@@ -395,7 +395,7 @@ export class PublicHomePageComponent {
     this.title.setTitle(`${home.portalName} | Torneos publicos`);
     this.meta.updateTag({
       name: 'description',
-      content: 'Torneos, tablas y resultados visibles desde el contrato publico vigente de Sistema Campeonatos.'
+      content: 'Campeonatos, tablas y resultados visibles en Sistema Campeonatos.'
     });
   }
 }

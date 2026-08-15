@@ -136,7 +136,7 @@ const matchConsistencyValidator: ValidatorFn = (control: AbstractControl): Valid
           <form [formGroup]="form" (ngSubmit)="save()" class="app-page">
             @if (readinessWarning()) {
               <div class="context-banner">
-                <strong>Auditoria Sprint 7</strong>
+                <strong>Validacion del campeonato</strong>
                 <span class="muted">{{ readinessWarning() }}</span>
               </div>
             }
@@ -606,14 +606,14 @@ export class MatchFormPageComponent {
     const status = this.form.controls.status.getRawValue();
     if ((status === 'SCHEDULED' || status === 'PLAYED' || status === 'FORFEIT') && this.rosterReadyTournamentTeamIds().size < 2) {
       this.notifications.error(
-        'El torneo no tiene base suficiente de roster activo para avanzar a competencia. Revisa inscripciones aprobadas y rosters antes de guardar.'
+        'El campeonato no tiene suficientes planteles activos para avanzar a competencia. Revisa inscripciones aprobadas y planteles antes de guardar.'
       );
       return;
     }
 
     if ((status === 'SCHEDULED' || status === 'PLAYED' || status === 'FORFEIT') && !this.selectedTeamsRosterReady()) {
       this.notifications.error(
-        'Los equipos seleccionados deben tener roster activo para avanzar a competencia. Revisa las inscripciones elegidas antes de guardar.'
+        'Los equipos seleccionados deben tener plantel activo para avanzar a competencia. Revisa las inscripciones elegidas antes de guardar.'
       );
       return;
     }
@@ -700,7 +700,7 @@ export class MatchFormPageComponent {
     const labels: Record<MatchStatus, string> = {
       SCHEDULED: 'Programado',
       PLAYED: 'Jugado',
-      FORFEIT: 'Forfeit',
+      FORFEIT: 'Resultado por ausencia',
       CANCELLED: 'Cancelado'
     };
 

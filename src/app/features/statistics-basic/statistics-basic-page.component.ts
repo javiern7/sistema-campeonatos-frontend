@@ -123,7 +123,7 @@ type LeaderCard = {
             </div>
 
             <div class="context-banner neutral-banner">
-              <strong>Guardrail operativo</strong>
+              <strong>Criterio de lectura</strong>
               <span class="muted">
                 La pantalla solo lee el agregado de estadisticas basicas; no recompone metricas desde partidos, resultados o tabla.
               </span>
@@ -137,7 +137,7 @@ type LeaderCard = {
               <div class="section-heading">
                 <div>
                   <h2>Lideres simples</h2>
-                  <p class="muted">Lectura visible acotada del liderazgo por equipo, respetando el estado entregado por backend.</p>
+                  <p class="muted">Lectura acotada del liderazgo por equipo segun el contexto seleccionado.</p>
                 </div>
                 <span class="muted">{{ scopeLabel() }}</span>
               </div>
@@ -170,9 +170,9 @@ type LeaderCard = {
 
               <div class="traceability-grid">
                 <article class="trace-card">
-                  <span class="summary-label">Fuente de partidos</span>
+                  <span class="summary-label">Partidos considerados</span>
                   <strong>{{ statistics()!.traceability.derivedFromMatches ? 'Activa' : 'No declarada' }}</strong>
-                  <span class="muted">El resumen se apoya en match_game segun el contrato backend.</span>
+                  <span class="muted">El resumen considera los partidos disponibles para el alcance elegido.</span>
                 </article>
 
                 <article class="trace-card">
@@ -182,7 +182,7 @@ type LeaderCard = {
                 </article>
 
                 <article class="trace-card">
-                  <span class="summary-label">Classification source</span>
+                  <span class="summary-label">Origen de clasificacion</span>
                   <strong>{{ classificationSourceLabel() }}</strong>
                   <span class="muted">Ayuda a confirmar si la lectura viene de torneo, etapa, grupo o un contexto especial.</span>
                 </article>
@@ -191,7 +191,7 @@ type LeaderCard = {
               @if (statistics()!.traceability.notes.length === 0) {
                 <div class="empty-state">
                   <strong>Sin notas adicionales.</strong>
-                  <p class="muted">El backend no reporto observaciones extra para este contexto.</p>
+                  <p class="muted">No hay observaciones extra para este contexto.</p>
                 </div>
               } @else {
                 <div class="list-stack">
@@ -337,7 +337,7 @@ export class StatisticsBasicPageComponent {
         meta: `${summary.playedMatches} jugados / ${summary.scheduledMatches} pendientes`
       },
       {
-        label: 'Forfeit y cancelados',
+        label: 'Ausencias y cancelados',
         value: `${summary.forfeitMatches} / ${summary.cancelledMatches}`,
         meta: 'Incidencias cerradas del bloque'
       },
@@ -349,7 +349,7 @@ export class StatisticsBasicPageComponent {
       {
         label: 'Promedio por jugado',
         value: this.decimalLabel(summary.averagePointsPerPlayedMatch),
-        meta: 'Promedio simple del contrato'
+        meta: 'Promedio simple del alcance actual'
       },
       {
         label: 'Ultimo cierre',
@@ -489,7 +489,7 @@ export class StatisticsBasicPageComponent {
 
   protected leaderMeta(leader: StatisticsBasicLeader | null): string {
     if (!leader) {
-      return 'Sin dato visible en el contrato.';
+      return 'Sin dato visible para este contexto.';
     }
 
     const parts = [leader.scope, leader.tieCount > 1 ? `Empate con ${leader.tieCount} equipos` : 'Sin empate visible']
@@ -512,9 +512,9 @@ export class StatisticsBasicPageComponent {
       TOURNAMENT: 'Torneo',
       STAGE: 'Etapa',
       GROUP: 'Grupo',
-      LEAGUE: 'League',
-      GROUP_STAGE: 'Group stage',
-      KNOCKOUT: 'Knockout'
+      LEAGUE: 'Liga',
+      GROUP_STAGE: 'Fase de grupos',
+      KNOCKOUT: 'Eliminatoria'
     };
 
     return labels[source] ?? source;
@@ -607,8 +607,8 @@ export class StatisticsBasicPageComponent {
   private formatLabel(format: Tournament['format']): string {
     const labels: Record<Tournament['format'], string> = {
       LEAGUE: 'Liga',
-      GROUPS_THEN_KNOCKOUT: 'Grupos + eliminacion',
-      KNOCKOUT: 'Eliminacion'
+      GROUPS_THEN_KNOCKOUT: 'Grupos + eliminatoria',
+      KNOCKOUT: 'Eliminatoria'
     };
 
     return labels[format];
@@ -617,7 +617,7 @@ export class StatisticsBasicPageComponent {
   private statusTournamentLabel(status: Tournament['status']): string {
     const labels: Record<Tournament['status'], string> = {
       DRAFT: 'Borrador',
-      OPEN: 'Abierto',
+      OPEN: 'Inscripciones abiertas',
       IN_PROGRESS: 'En curso',
       FINISHED: 'Finalizado',
       CANCELLED: 'Cancelado'

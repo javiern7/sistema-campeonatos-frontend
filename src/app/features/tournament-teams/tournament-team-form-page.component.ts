@@ -152,7 +152,7 @@ export class TournamentTeamFormPageComponent {
     const status = this.selectedRegistrationStatus();
 
     if (status === 'APPROVED') {
-      return 'Al aprobar esta inscripcion, el siguiente paso operativo esperado es poblar roster activo antes de avanzar a partidos.';
+      return 'Al aprobar esta inscripcion, el siguiente paso esperado es cargar el plantel activo antes de avanzar a partidos.';
     }
 
     return '';

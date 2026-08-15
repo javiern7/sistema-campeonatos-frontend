@@ -111,7 +111,7 @@ const qp = (params: Record<string, string | number>): Record<string, string | nu
                 <span class="hero-kicker">{{ sportName() }}</span>
                 <span class="status-pill" [class]="statusClass(tournament()!.status)">{{ statusLabel(tournament()!.status) }}</span>
                 @if (isSandboxTournament()) {
-                  <span class="segment-pill sandbox">QA / borrador</span>
+                  <span class="segment-pill sandbox">Borrador o pruebas</span>
                 } @else {
                   <span class="segment-pill operational">Flujo principal</span>
                 }
@@ -284,7 +284,7 @@ const qp = (params: Record<string, string | number>): Record<string, string | nu
         <section class="card page-card app-page">
           <div class="section-heading">
             <div>
-              <h2>Inscripciones aprobadas y roster</h2>
+              <h2>Inscripciones aprobadas y planteles</h2>
               <p class="muted">Base operativa del torneo para sostener fixture y tabla.</p>
             </div>
             <a
@@ -318,7 +318,7 @@ const qp = (params: Record<string, string | number>): Record<string, string | nu
                   <tr>
                     <th>Equipo</th>
                     <th>Inscripcion</th>
-                    <th>Roster activo</th>
+                    <th>Plantel activo</th>
                     <th>Estado</th>
                     <th>Accion</th>
                   </tr>
@@ -340,7 +340,7 @@ const qp = (params: Record<string, string | number>): Record<string, string | nu
                           [routerLink]="row.activeRosterCount > 0 ? '/rosters' : '/rosters/new'"
                           [queryParams]="{ tournamentTeamId: row.registration.id, rosterStatus: 'ACTIVE' }"
                         >
-                          {{ row.activeRosterCount > 0 ? 'Ver roster' : 'Cargar roster' }}
+                          {{ row.activeRosterCount > 0 ? 'Ver plantel' : 'Cargar plantel' }}
                         </a>
                       </td>
                     </tr>
@@ -710,7 +710,7 @@ export class TournamentDetailPageComponent {
         meta: `${summary?.approvedRegistrationCount ?? 0} aprobadas`
       },
       {
-        label: 'Soporte roster',
+        label: 'Planteles activos',
         value: summary?.registrationsWithActiveRosterCount ?? 0,
         meta: `${summary?.rosterGapCount ?? 0} brechas activas`
       },
@@ -787,12 +787,12 @@ export class TournamentDetailPageComponent {
         accent: summary?.auditStatus === 'ready'
       },
       {
-        label: 'Cobertura de roster',
+        label: 'Cobertura de plantel',
         headline: `${summary?.registrationsWithActiveRosterCount ?? 0}/${summary?.approvedRegistrationCount ?? 0} aprobadas cubiertas`,
         detail:
           (summary?.approvedRegistrationCount ?? 0) > 0
-            ? `${summary?.rosterGapCount ?? 0} brechas pendientes en la base operativa`
-            : 'Todavia no hay base aprobada para exigir roster activo'
+            ? `${summary?.rosterGapCount ?? 0} pendientes en la base de jugadores`
+            : 'Todavia no hay base aprobada para exigir plantel activo'
       },
       {
         label: 'Ritmo competitivo',
@@ -832,11 +832,11 @@ export class TournamentDetailPageComponent {
             : 'Aun no hay inscripciones aprobadas para competir'
       },
       {
-        label: 'Cobertura roster',
+        label: 'Cobertura plantel',
         value: `${coveredCount}/${approvedCount}`,
         detail:
           approvedCount > 0
-            ? `${summary?.rosterGapCount ?? 0} brechas activas antes de confiar en el fixture`
+            ? `${summary?.rosterGapCount ?? 0} pendientes antes de confiar en el calendario`
             : 'Sin base aprobada aun'
       },
       {
@@ -872,22 +872,22 @@ export class TournamentDetailPageComponent {
       case 'DRAFT':
         return {
           title: 'Borrador de preparacion',
-          summary: 'El torneo aun esta en configuracion. Conviene cerrar base competitiva y separar claramente cualquier QA.',
+          summary: 'El campeonato aun esta en configuracion. Conviene cerrar la base competitiva antes de publicarlo.',
           readiness:
             (summary?.approvedRegistrationCount ?? 0) > 0
               ? 'Ya tiene base para abrir inscripciones al flujo operativo'
               : 'Todavia falta poblar inscripciones para salir del borrador',
-          caution: 'No conviene mezclar carga de partidos o tabla mientras la base siga incompleta o en modo QA.'
+          caution: 'No conviene mezclar carga de partidos o tabla mientras la base siga incompleta.'
         };
       case 'OPEN':
         return {
           title: 'Abierto para consolidar base',
-          summary: 'El torneo ya puede recibir y aprobar inscripciones. El foco deberia estar en dejar roster y fixture listos.',
+          summary: 'El campeonato ya puede recibir y aprobar inscripciones. El foco deberia estar en dejar planteles y calendario listos.',
           readiness:
             (summary?.rosterGapCount ?? 0) === 0 && (summary?.approvedRegistrationCount ?? 0) > 1
-              ? 'La base parece lista para empujar programacion de partidos'
-              : 'Aun conviene cerrar inscripciones aprobadas y roster activo',
-          caution: 'Iniciar competencia sin roster o sin participantes aprobados vuelve opaca la trazabilidad posterior.'
+              ? 'La base parece lista para programar partidos'
+              : 'Aun conviene cerrar inscripciones aprobadas y plantel activo',
+          caution: 'Iniciar competencia sin planteles o sin participantes aprobados reduce la confianza posterior.'
         };
       case 'IN_PROGRESS':
         return {
@@ -897,7 +897,7 @@ export class TournamentDetailPageComponent {
             (summary?.playedMatchCount ?? 0) > 0
               ? 'Ya hay actividad real para auditar en tabla y continuidad operativa'
               : 'El estado indica competencia activa, pero todavia falta evidencia visible de partidos jugados',
-          caution: 'Resultados sin tabla o sin soporte de roster generan la mayor perdida de confianza operativa.'
+          caution: 'Resultados sin tabla o sin planteles generan la mayor perdida de confianza.'
         };
       case 'FINISHED':
         return {
@@ -958,7 +958,7 @@ export class TournamentDetailPageComponent {
       },
       {
         label: 'Planteles',
-        description: 'Completar o auditar jugadores activos por inscripcion.',
+        description: 'Completar o revisar jugadores activos por inscripcion.',
         cta: 'Abrir planteles',
         path: '/rosters',
         queryParams: firstRegistration
@@ -1017,9 +1017,9 @@ export class TournamentDetailPageComponent {
     );
     if (firstApprovedWithoutRoster) {
       actions[1] = {
-        label: 'Completar roster',
-        description: 'Existe al menos una inscripcion aprobada sin soporte de roster activo.',
-        cta: 'Cargar roster',
+        label: 'Completar plantel',
+        description: 'Existe al menos una inscripcion aprobada sin plantel activo.',
+        cta: 'Cargar plantel',
         path: '/rosters/new',
         queryParams: qp({ tournamentTeamId: firstApprovedWithoutRoster.registration.id })
       };
@@ -1213,8 +1213,8 @@ export class TournamentDetailPageComponent {
   protected formatLabel(format: Tournament['format']): string {
     const labels: Record<Tournament['format'], string> = {
       LEAGUE: 'Liga',
-      GROUPS_THEN_KNOCKOUT: 'Grupos + eliminacion',
-      KNOCKOUT: 'Eliminacion'
+      GROUPS_THEN_KNOCKOUT: 'Grupos + eliminatoria',
+      KNOCKOUT: 'Eliminatoria'
     };
 
     return labels[format];
@@ -1223,7 +1223,7 @@ export class TournamentDetailPageComponent {
   protected statusLabel(status: Tournament['status']): string {
     const labels: Record<Tournament['status'], string> = {
       DRAFT: 'Borrador',
-      OPEN: 'Abierto',
+      OPEN: 'Inscripciones abiertas',
       IN_PROGRESS: 'En curso',
       FINISHED: 'Finalizado',
       CANCELLED: 'Cancelado'
@@ -1270,7 +1270,7 @@ export class TournamentDetailPageComponent {
     const labels: Record<MatchGame['status'], string> = {
       SCHEDULED: 'Programado',
       PLAYED: 'Jugado',
-      FORFEIT: 'Forfeit',
+      FORFEIT: 'Resultado por ausencia',
       CANCELLED: 'Cancelado'
     };
 

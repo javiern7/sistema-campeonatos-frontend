@@ -24,7 +24,7 @@ import { NotificationService } from '../../core/error/notification.service';
 
       <div class="topbar-user">
         <div>{{ fullName() }}</div>
-        <div class="topbar-roles">{{ roles().join(' | ') || 'AUTHENTICATED' }}</div>
+        <div class="topbar-roles">{{ roles().join(' | ') || 'Usuario autenticado' }}</div>
         <div class="topbar-expiry">{{ accessExpiryLabel() }}</div>
       </div>
       <a mat-stroked-button routerLink="/portal">Portal publico</a>
@@ -127,22 +127,20 @@ export class TopbarComponent {
   protected readonly fullName = computed(() => this.authStore.fullName());
   protected readonly roles = computed(() => this.authorization.roleLabels());
   protected readonly sessionSummary = computed(() => {
-    const sessionId = this.authStore.sessionId();
-    const scheme = this.authStore.authenticationScheme();
-    return `Sesion backend ${sessionId ?? '-'} / ${scheme} / permisos efectivos cargados`;
+    return 'Gestion centralizada de campeonatos y participantes';
   });
   protected readonly accessExpiryLabel = computed(() => {
     const value = this.authStore.accessTokenExpiresAt();
     if (!value) {
-      return 'Vencimiento no informado';
+      return 'Sesion activa';
     }
 
     const parsed = new Date(value);
     if (Number.isNaN(parsed.getTime())) {
-      return 'Vencimiento no disponible';
+      return 'Sesion activa';
     }
 
-    return `Access token vigente hasta ${new Intl.DateTimeFormat('es-PE', {
+    return `Sesion activa hasta ${new Intl.DateTimeFormat('es-PE', {
       dateStyle: 'short',
       timeStyle: 'short'
     }).format(parsed)}`;

@@ -303,7 +303,7 @@ export class MatchListPageComponent {
       {
         label: 'Con novedad',
         value: unresolved,
-        meta: 'Forfeit o cancelados'
+        meta: 'Ausencias o cancelaciones'
       }
     ];
   });
@@ -523,7 +523,7 @@ export class MatchListPageComponent {
     const labels: Record<MatchStatus, string> = {
       SCHEDULED: 'Programado',
       PLAYED: 'Jugado',
-      FORFEIT: 'Forfeit',
+      FORFEIT: 'Resultado por ausencia',
       CANCELLED: 'Cancelado'
     };
 

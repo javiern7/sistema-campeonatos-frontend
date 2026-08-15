@@ -11,8 +11,8 @@ import { APP_NAV_ITEMS } from '../app-nav';
   imports: [RouterLink, RouterLinkActive, MatListModule],
   template: `
     <div class="sidebar-brand">
-      <span class="sidebar-kicker">MVP Interno</span>
-      <strong>Championships</strong>
+      <span class="sidebar-kicker">Plataforma deportiva</span>
+      <strong>Sistema Campeonatos</strong>
     </div>
 
     <mat-nav-list>

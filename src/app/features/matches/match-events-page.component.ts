@@ -220,7 +220,7 @@ const eventRulesValidator: ValidatorFn = (control: AbstractControl): ValidationE
           } @else if (events().length === 0) {
             <div class="empty-state">
               <strong>Este partido aun no tiene eventos.</strong>
-              <p class="muted">Registra solo hechos operativos trazables permitidos por el contrato backend.</p>
+              <p class="muted">Registra hechos relevantes del partido para mantener el historial actualizado.</p>
             </div>
           } @else {
             <div class="table-wrapper">
@@ -341,7 +341,7 @@ export class MatchEventsPageComponent {
   protected readonly pageSubtitle = computed(() => {
     const current = this.match();
     if (!current) {
-      return 'Captura acotada de eventos trazables por partido.';
+      return 'Registro de eventos relevantes por partido.';
     }
 
     return `Partido #${current.id} / ${this.matchStatusLabel()}`;
@@ -443,7 +443,7 @@ export class MatchEventsPageComponent {
   }
 
   protected annul(event: MatchEvent): void {
-    const notes = window.prompt('Motivo de anulacion', 'Correccion operativa');
+    const notes = window.prompt('Motivo de anulacion', 'Correccion de registro');
     if (notes === null) {
       return;
     }
@@ -533,7 +533,7 @@ export class MatchEventsPageComponent {
     const labels: Record<MatchGame['status'], string> = {
       SCHEDULED: 'Programado',
       PLAYED: 'Jugado',
-      FORFEIT: 'Forfeit',
+      FORFEIT: 'Resultado por ausencia',
       CANCELLED: 'Cancelado'
     };
 

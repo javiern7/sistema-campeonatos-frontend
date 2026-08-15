@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
 
 import { parseBackendDateTime } from '../../shared/date/date-time.utils';
 import { VisualIdentityComponent } from '../../shared/visual-identity/visual-identity.component';
-import { PublicTournamentResultEntry, PublicTournamentResults } from './public-portal.models';
+import { PublicMatchStatus, PublicTournamentResultEntry, PublicTournamentResults } from './public-portal.models';
 
 @Component({
   selector: 'app-results-section',
@@ -13,7 +13,7 @@ import { PublicTournamentResultEntry, PublicTournamentResults } from './public-p
       <div class="section-heading">
         <div>
           <h2>Resultados publicados</h2>
-          <p class="muted">Partidos cerrados publicados por el backend.</p>
+          <p class="muted">Partidos cerrados disponibles para consulta publica.</p>
         </div>
         @if (results) {
           <span class="meta-chip">{{ results.totalClosedMatches }} cerrados</span>
@@ -26,7 +26,7 @@ import { PublicTournamentResultEntry, PublicTournamentResults } from './public-p
             <article class="result-card">
               <div class="card-head">
                 <span class="meta-chip">{{ entry.match.stageName || 'Sin etapa visible' }}</span>
-                <span class="meta-chip">{{ entry.match.status }}</span>
+                <span class="meta-chip">{{ matchStatusLabel(entry.match.status) }}</span>
               </div>
               <div class="scoreboard">
                 <app-visual-identity
@@ -51,7 +51,7 @@ import { PublicTournamentResultEntry, PublicTournamentResults } from './public-p
       } @else {
         <div class="empty-state">
           <strong>No hay resultados publicos.</strong>
-          <p class="muted">Solo se exponen partidos cerrados que el backend considera publicables.</p>
+          <p class="muted">Solo se muestran partidos cerrados y listos para consulta publica.</p>
         </div>
       }
     </section>
@@ -150,7 +150,35 @@ export class ResultsSectionComponent {
   }
 
   protected scopeLabel(entry: PublicTournamentResultEntry): string {
-    return entry.affectsStandings ? `Impacta standings (${entry.standingScope || 'sin alcance'})` : 'Sin impacto visible en tabla';
+    return entry.affectsStandings ? `Impacta tabla (${this.standingScopeLabel(entry.standingScope)})` : 'Sin impacto visible en tabla';
+  }
+
+  protected matchStatusLabel(status: PublicMatchStatus | null): string {
+    if (!status) {
+      return 'Estado no disponible';
+    }
+
+    const labels: Partial<Record<PublicMatchStatus, string>> = {
+      SCHEDULED: 'Programado',
+      IN_PROGRESS: 'En curso',
+      PLAYED: 'Jugado',
+      FORFEIT: 'Resultado por ausencia',
+      CANCELLED: 'Cancelado',
+      POSTPONED: 'Reprogramado'
+    };
+
+    return labels[status] ?? status;
+  }
+
+  private standingScopeLabel(scope: string | null): string {
+    const labels: Record<string, string> = {
+      LEAGUE: 'liga',
+      STAGE: 'etapa',
+      GROUP: 'grupo',
+      TOURNAMENT: 'campeonato'
+    };
+
+    return scope ? (labels[scope] ?? scope.toLowerCase()) : 'sin alcance';
   }
 
   protected scheduleLabel(entry: PublicTournamentResultEntry): string {

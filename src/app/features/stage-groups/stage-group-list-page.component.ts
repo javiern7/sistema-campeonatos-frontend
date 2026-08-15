@@ -37,7 +37,7 @@ import { StageGroupsService } from './stage-groups.service';
   ],
   template: `
     <section class="app-page">
-      <app-page-header title="Stage Groups" subtitle="Grupos conectados a /stage-groups.">
+      <app-page-header title="Grupos" subtitle="Administra los grupos de cada etapa.">
         @if (canManage()) {
           <a mat-flat-button color="primary" routerLink="/stage-groups/new">Nuevo grupo</a>
         }
