@@ -37,7 +37,7 @@ import { APP_NAV_GROUPS, type AppNavGroup } from '../app-nav';
     `
       :host {
         display: block;
-        height: 100%;
+        min-height: 100%;
         padding: 1rem 0.8rem;
         background:
           linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0) 34%),
@@ -68,6 +68,7 @@ import { APP_NAV_GROUPS, type AppNavGroup } from '../app-nav';
 
       .nav-list {
         padding-top: 0.1rem;
+        padding-bottom: 1rem;
       }
 
       .nav-group {

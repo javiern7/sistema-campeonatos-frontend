@@ -58,11 +58,14 @@ import { TopbarComponent } from '../topbar/topbar.component';
       .shell-sidebar {
         width: 292px;
         border-right: 1px solid rgba(255, 255, 255, 0.12);
+        background:
+          linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0) 34%),
+          linear-gradient(160deg, #0b302d 0%, #0d4f48 56%, #233b63 100%);
         box-shadow: 8px 0 28px rgba(15, 23, 42, 0.1);
       }
 
       .sidebar-content {
-        height: 100%;
+        min-height: 100%;
       }
 
       .mobile-nav-toggle {

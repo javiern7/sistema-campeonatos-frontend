@@ -70,7 +70,9 @@ type PublicTeamPreview = {
             <p class="hero-summary">{{ tournament()!.description || 'Informacion del campeonato por confirmar.' }}</p>
             <div class="hero-actions">
               <a mat-stroked-button routerLink="/portal/tournaments">Ver otros campeonatos</a>
-              <a mat-flat-button color="primary" href="#calendario">Ver calendario</a>
+              <button mat-flat-button color="primary" type="button" (click)="scrollToSection('calendario')">
+                Ver calendario
+              </button>
             </div>
           </div>
 
@@ -88,10 +90,10 @@ type PublicTeamPreview = {
         </section>
 
         <nav class="section-nav" aria-label="Secciones del campeonato">
-          <a href="#calendario">Calendario</a>
-          <a href="#resultados">Resultados</a>
-          <a href="#tabla">Tabla</a>
-          <a href="#equipos">Equipos</a>
+          <button type="button" (click)="scrollToSection('calendario')">Calendario</button>
+          <button type="button" (click)="scrollToSection('resultados')">Resultados</button>
+          <button type="button" (click)="scrollToSection('tabla')">Tabla</button>
+          <button type="button" (click)="scrollToSection('equipos')">Equipos</button>
         </nav>
 
         <section class="metrics-grid">
@@ -268,15 +270,19 @@ type PublicTeamPreview = {
         box-shadow: var(--shadow-soft);
       }
 
-      .section-nav a {
+      .section-nav button {
         padding: 0.5rem 0.75rem;
+        border: 0;
         border-radius: 8px;
+        background: transparent;
         color: var(--primary-strong);
+        font: inherit;
         font-weight: 700;
-        text-decoration: none;
+        cursor: pointer;
       }
 
-      .section-nav a:hover {
+      .section-nav button:hover,
+      .section-nav button:focus-visible {
         background: var(--primary-soft);
       }
 
@@ -384,7 +390,7 @@ type PublicTeamPreview = {
           flex-wrap: nowrap;
         }
 
-        .section-nav a {
+        .section-nav button {
           flex: 0 0 auto;
         }
 
@@ -394,7 +400,8 @@ type PublicTeamPreview = {
           flex-direction: column;
         }
 
-        .hero-actions a {
+        .hero-actions a,
+        .hero-actions button {
           width: 100%;
         }
 
@@ -532,6 +539,10 @@ export class TournamentDetailComponent {
     const start = this.dateLabel(startDate);
     const end = this.dateLabel(endDate);
     return start && end ? `${start} - ${end}` : start || end || 'Fechas por confirmar';
+  }
+
+  protected scrollToSection(sectionId: string): void {
+    document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   private loadTournament(slug: string): void {
