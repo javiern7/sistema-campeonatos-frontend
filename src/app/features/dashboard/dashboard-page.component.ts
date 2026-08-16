@@ -699,7 +699,7 @@ type DashboardAction = {
           <div class="section-heading">
             <div>
               <h2>Borradores y pruebas</h2>
-              <p class="muted">Torneos que hoy conviene mantener fuera del reporting ejecutivo principal para reducir ruido.</p>
+              <p class="muted">Torneos que hoy conviene mantener fuera del resumen ejecutivo principal para reducir ruido.</p>
             </div>
             <span class="section-badge">{{ sandboxSummaries().length }} separados</span>
           </div>

@@ -53,6 +53,15 @@ button {
   overflow-wrap: anywhere;
 }
 
+a:focus-visible,
+button:focus-visible,
+[role="button"]:focus-visible,
+.mat-mdc-button-base:focus-visible,
+.mat-mdc-icon-button:focus-visible {
+  outline: 3px solid rgba(13, 120, 148, 0.55);
+  outline-offset: 3px;
+}
+
 .mat-mdc-button-base {
   border-radius: 8px !important;
   min-height: 40px;

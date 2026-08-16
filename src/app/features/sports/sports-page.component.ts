@@ -3,6 +3,7 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { finalize } from 'rxjs';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatTableModule } from '@angular/material/table';
@@ -10,6 +11,7 @@ import { MatTableModule } from '@angular/material/table';
 import { AuthorizationService } from '../../core/auth/authorization.service';
 import { ErrorMapper } from '../../core/error/error.mapper';
 import { NotificationService } from '../../core/error/notification.service';
+import { ConfirmationDialogComponent } from '../../shared/confirmation-dialog/confirmation-dialog.component';
 import { LoadingStateComponent } from '../../shared/loading-state/loading-state.component';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
 import { CompetitionFormat, Sport, SportPosition } from './sport.models';
@@ -22,6 +24,7 @@ import { SportsService } from './sports.service';
     ReactiveFormsModule,
     MatButtonModule,
     MatCheckboxModule,
+    MatDialogModule,
     MatFormFieldModule,
     MatInputModule,
     MatTableModule,
@@ -381,6 +384,7 @@ export class SportsPageComponent {
   private readonly notifications = inject(NotificationService);
   private readonly errorMapper = inject(ErrorMapper);
   private readonly authorization = inject(AuthorizationService);
+  private readonly dialog = inject(MatDialog);
 
   protected readonly sportsLoading = signal(true);
   protected readonly positionsLoading = signal(false);
@@ -565,24 +569,36 @@ export class SportsPageComponent {
       return;
     }
 
-    if (!window.confirm(`Se eliminara el deporte "${sport.name}" si no tiene torneos ni posiciones asociadas.`)) {
-      return;
-    }
+    this.dialog
+      .open(ConfirmationDialogComponent, {
+        data: {
+          title: 'Eliminar deporte',
+          description: `Se eliminara "${sport.name}" si no tiene campeonatos ni posiciones asociadas.`,
+          confirmLabel: 'Eliminar',
+          destructive: true
+        }
+      })
+      .afterClosed()
+      .subscribe((confirmed) => {
+        if (!confirmed) {
+          return;
+        }
 
-    this.sportsLoading.set(true);
-    this.sportsService
-      .delete(sport.id)
-      .pipe(finalize(() => this.sportsLoading.set(false)))
-      .subscribe({
-        next: () => {
-          this.notifications.success('Deporte eliminado correctamente');
-          if (this.selectedSport()?.id === sport.id) {
-            this.selectedSport.set(null);
-            this.positions.set([]);
-          }
-          this.loadSports();
-        },
-        error: (error: unknown) => this.notifications.error(this.errorMapper.map(error).message)
+        this.sportsLoading.set(true);
+        this.sportsService
+          .delete(sport.id)
+          .pipe(finalize(() => this.sportsLoading.set(false)))
+          .subscribe({
+            next: () => {
+              this.notifications.success('Deporte eliminado correctamente');
+              if (this.selectedSport()?.id === sport.id) {
+                this.selectedSport.set(null);
+                this.positions.set([]);
+              }
+              this.loadSports();
+            },
+            error: (error: unknown) => this.notifications.error(this.errorMapper.map(error).message)
+          });
       });
   }
 
@@ -653,20 +669,32 @@ export class SportsPageComponent {
       return;
     }
 
-    if (!window.confirm(`Se eliminara la posicion "${position.name}" del deporte "${sport.name}".`)) {
-      return;
-    }
+    this.dialog
+      .open(ConfirmationDialogComponent, {
+        data: {
+          title: 'Eliminar posicion',
+          description: `Se eliminara "${position.name}" del deporte "${sport.name}".`,
+          confirmLabel: 'Eliminar',
+          destructive: true
+        }
+      })
+      .afterClosed()
+      .subscribe((confirmed) => {
+        if (!confirmed) {
+          return;
+        }
 
-    this.positionsLoading.set(true);
-    this.sportsService
-      .deletePosition(sport.id, position.id)
-      .pipe(finalize(() => this.positionsLoading.set(false)))
-      .subscribe({
-        next: () => {
-          this.notifications.success('Posicion eliminada correctamente');
-          this.loadPositions();
-        },
-        error: (error: unknown) => this.notifications.error(this.errorMapper.map(error).message)
+        this.positionsLoading.set(true);
+        this.sportsService
+          .deletePosition(sport.id, position.id)
+          .pipe(finalize(() => this.positionsLoading.set(false)))
+          .subscribe({
+            next: () => {
+              this.notifications.success('Posicion eliminada correctamente');
+              this.loadPositions();
+            },
+            error: (error: unknown) => this.notifications.error(this.errorMapper.map(error).message)
+          });
       });
   }
 }
