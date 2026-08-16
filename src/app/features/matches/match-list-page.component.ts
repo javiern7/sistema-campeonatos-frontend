@@ -64,6 +64,9 @@ const parseQueryNumber = (value: string | null): number | '' => {
   template: `
     <section class="app-page">
       <app-page-header title="Partidos" subtitle="Gestion operativa del fixture y sus resultados.">
+        @if (selectedTournamentId()) {
+          <a mat-stroked-button [routerLink]="['/tournaments', selectedTournamentId()]">Volver al campeonato</a>
+        }
         @if (canManage()) {
           <a mat-flat-button color="primary" routerLink="/matches/new">Nuevo partido</a>
         }
@@ -133,6 +136,21 @@ const parseQueryNumber = (value: string | null): number | '' => {
             <span class="muted">Total filtrado: {{ page()?.totalElements ?? 0 }} partidos</span>
           </div>
 
+          <div class="operation-actions">
+            @if (canManage()) {
+              <a mat-flat-button color="primary" routerLink="/matches/new" [queryParams]="{ tournamentId: selectedTournamentId() || '' }">
+                Programar partido
+              </a>
+              <a mat-stroked-button routerLink="/matches" [queryParams]="{ tournamentId: selectedTournamentId() || '', status: 'SCHEDULED' }">
+                Registrar resultado
+              </a>
+            }
+            @if (selectedTournamentId()) {
+              <a mat-stroked-button routerLink="/standings" [queryParams]="{ tournamentId: selectedTournamentId() }">Revisar tabla</a>
+              <a mat-stroked-button [routerLink]="['/tournaments', selectedTournamentId()]">Gestionar campeonato</a>
+            }
+          </div>
+
           <div class="summary-grid">
             @for (card of summaryCards(); track card.label) {
               <article class="summary-card card" [class.accent]="card.accent">
@@ -156,7 +174,7 @@ const parseQueryNumber = (value: string | null): number | '' => {
                   <td mat-cell *matCellDef="let row">
                     <div class="stack-sm">
                       <strong>{{ tournamentTeamLabel(row.homeTournamentTeamId) }} vs {{ tournamentTeamLabel(row.awayTournamentTeamId) }}</strong>
-                      <span class="muted">Partido #{{ row.id }}</span>
+                      <span class="muted">{{ matchOperationLabel(row) }}</span>
                     </div>
                   </td>
                 </ng-container>
@@ -197,11 +215,14 @@ const parseQueryNumber = (value: string | null): number | '' => {
                 <ng-container matColumnDef="actions">
                   <th mat-header-cell *matHeaderCellDef>Acciones</th>
                   <td mat-cell *matCellDef="let row">
-                    <a mat-button [routerLink]="['/matches', row.id, 'events']">Eventos</a>
-                    <a mat-button [routerLink]="['/matches', row.id, 'discipline']">Disciplina</a>
                     @if (canManage()) {
-                      <a mat-button [routerLink]="['/matches', row.id, 'edit']">Editar</a>
+                      <a mat-flat-button color="primary" [routerLink]="['/matches', row.id, 'edit']">
+                        {{ row.status === 'SCHEDULED' ? 'Registrar resultado' : 'Editar resultado' }}
+                      </a>
                     }
+                    <a mat-button [routerLink]="['/matches', row.id, 'events']">Eventos</a>
+                    <a mat-button [routerLink]="['/tournaments', row.tournamentId]">Campeonato</a>
+                    <a mat-button [routerLink]="['/matches', row.id, 'discipline']">Disciplina</a>
                     @if (canDelete()) {
                       <button mat-button type="button" color="warn" (click)="remove(row)">Eliminar</button>
                     }
@@ -224,6 +245,30 @@ const parseQueryNumber = (value: string | null): number | '' => {
       </section>
     </section>
   `,
+  styles: [
+    `
+      .table-wrapper td:last-child {
+        min-width: 280px;
+      }
+
+      .table-wrapper td:last-child a,
+      .table-wrapper td:last-child button {
+        margin: 0.15rem 0.25rem 0.15rem 0;
+      }
+
+      .operation-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.6rem;
+      }
+
+      @media (max-width: 720px) {
+        .table-wrapper td:last-child {
+          min-width: 240px;
+        }
+      }
+    `
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class MatchListPageComponent {
@@ -239,7 +284,7 @@ export class MatchListPageComponent {
   private readonly notifications = inject(NotificationService);
   private readonly errorMapper = inject(ErrorMapper);
   private readonly authorization = inject(AuthorizationService);
-  private readonly selectedTournamentId = signal(0);
+  protected readonly selectedTournamentId = signal(0);
   private readonly selectedStageId = signal(0);
   private readonly selectedStatus = signal<MatchStatus | ''>('');
 
@@ -509,6 +554,22 @@ export class MatchListPageComponent {
     }
 
     return `${row.homeScore} - ${row.awayScore}`;
+  }
+
+  protected matchOperationLabel(row: MatchGame): string {
+    if (row.status === 'SCHEDULED') {
+      return row.scheduledAt ? 'Pendiente de jugar y registrar resultado' : 'Pendiente de programar fecha';
+    }
+
+    if (row.status === 'PLAYED') {
+      return 'Resultado registrado';
+    }
+
+    if (row.status === 'FORFEIT') {
+      return 'Definido por ausencia';
+    }
+
+    return 'Partido cancelado';
   }
 
   protected winnerLabel(row: MatchGame): string {

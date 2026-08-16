@@ -5,7 +5,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { catchError, finalize, forkJoin, of } from 'rxjs';
 
-import { AuthorizationService } from '../../core/auth/authorization.service';
+import { AuthorizationResource, AuthorizationService } from '../../core/auth/authorization.service';
 import { ErrorMapper } from '../../core/error/error.mapper';
 import { NotificationService } from '../../core/error/notification.service';
 import { LoadingStateComponent } from '../../shared/loading-state/loading-state.component';
@@ -36,6 +36,16 @@ type DashboardCard = {
   accent?: boolean;
 };
 
+type DashboardAction = {
+  label: string;
+  description: string;
+  cta: string;
+  path: string;
+  queryParams: Record<string, string | number>;
+  resource?: AuthorizationResource;
+  action?: 'read' | 'manage';
+};
+
 @Component({
   selector: 'app-dashboard-page',
   standalone: true,
@@ -57,9 +67,46 @@ type DashboardCard = {
         </div>
       } @else {
         <div class="context-banner">
-          <strong>Resumen transversal del sistema</strong>
+          <strong>Centro de control</strong>
           <span class="muted">{{ healthMessage() }}</span>
         </div>
+
+        <section class="control-hero card">
+          <div class="control-copy">
+            <span class="section-badge">Hoy en tus campeonatos</span>
+            <h2>{{ controlHeadline() }}</h2>
+            <p class="muted">{{ controlMessage() }}</p>
+          </div>
+
+          <div class="control-metrics">
+            @for (card of controlCards(); track card.label) {
+              <article class="control-metric" [class.accent]="card.accent">
+                <span class="summary-label">{{ card.label }}</span>
+                <strong>{{ card.value }}</strong>
+                <span class="summary-meta">{{ card.meta }}</span>
+              </article>
+            }
+          </div>
+        </section>
+
+        <section class="card page-card app-page">
+          <div class="section-heading">
+            <div>
+              <h2>Acciones principales</h2>
+              <p class="muted">Atajos para operar campeonatos sin buscar modulos manualmente.</p>
+            </div>
+          </div>
+
+          <div class="dashboard-actions-grid">
+            @for (action of primaryActions(); track action.label) {
+              <article class="dashboard-action-card">
+                <strong>{{ action.label }}</strong>
+                <p class="muted">{{ action.description }}</p>
+                <a mat-button [routerLink]="action.path" [queryParams]="action.queryParams">{{ action.cta }}</a>
+              </article>
+            }
+          </div>
+        </section>
 
         <div class="executive-grid">
           @for (card of executiveCards(); track card.label) {
@@ -71,14 +118,74 @@ type DashboardCard = {
           }
         </div>
 
+        <section class="card page-card app-page">
+          <div class="section-heading">
+            <div>
+              <h2>Campeonatos para operar ahora</h2>
+              <p class="muted">Entradas directas al hub guiado del campeonato y su siguiente paso recomendado.</p>
+            </div>
+            <span class="section-badge">{{ highlightedTournaments().length }} destacados</span>
+          </div>
+
+          @if (highlightedTournaments().length === 0) {
+            <div class="empty-state">
+              <strong>No hay campeonatos activos para operar.</strong>
+              <p class="muted">Crea o abre un campeonato para iniciar el flujo guiado.</p>
+              @if (canManageTournaments()) {
+                <a mat-flat-button color="primary" routerLink="/tournaments/new">Crear campeonato</a>
+              }
+            </div>
+          } @else {
+            <div class="featured-tournament-grid">
+              @for (tournament of highlightedTournaments(); track tournament.tournamentId) {
+                <article class="featured-tournament-card card">
+                  <div class="alert-header">
+                    <div class="stack-sm">
+                      <strong>{{ tournament.tournamentName }}</strong>
+                      <span class="muted">{{ tournament.sportName }} / {{ statusLabel(tournament.status) }}</span>
+                    </div>
+                    <span class="health-pill" [class]="healthClass(tournament.health)">{{ healthLabel(tournament.health) }}</span>
+                  </div>
+
+                  <div class="progress-metrics">
+                    <div>
+                      <span class="progress-label">Avance</span>
+                      <strong>{{ tournament.readinessScore }}%</strong>
+                    </div>
+                    <div>
+                      <span class="progress-label">Partidos</span>
+                      <strong>{{ tournament.playedMatchCount }}/{{ tournament.matchCount }}</strong>
+                    </div>
+                    <div>
+                      <span class="progress-label">Tabla</span>
+                      <strong>{{ tournament.standingsCount }}</strong>
+                    </div>
+                  </div>
+
+                  <p class="muted">{{ tournament.nextAction }}</p>
+
+                  <div class="card-actions">
+                    <a mat-flat-button color="primary" [routerLink]="['/tournaments', tournament.tournamentId]">Gestionar campeonato</a>
+                    @if (tournament.playedMatchCount > 0) {
+                      <a mat-button routerLink="/standings" [queryParams]="{ tournamentId: tournament.tournamentId }">Ver tabla</a>
+                    } @else {
+                      <a mat-button routerLink="/matches" [queryParams]="{ tournamentId: tournament.tournamentId }">Ver partidos</a>
+                    }
+                  </div>
+                </article>
+              }
+            </div>
+          }
+        </section>
+
         @if (operationsVisible()) {
           <section class="card page-card app-page">
             <div class="section-heading">
               <div>
-              <h2>Actividad reciente</h2>
-                <p class="muted">Resumen de acciones recientes y seguimiento administrativo.</p>
+              <h2>Administracion avanzada</h2>
+                <p class="muted">Auditoria, actividad reciente y permisos para seguimiento interno.</p>
               </div>
-              <span class="section-badge">Administracion</span>
+              <span class="section-badge">Avanzado</span>
             </div>
 
             @if (operationsLoading()) {
@@ -368,7 +475,7 @@ type DashboardCard = {
                   </div>
                   <div class="card-actions">
                     <a mat-button [routerLink]="alert.actionPath" [queryParams]="alert.actionQueryParams">{{ alert.actionLabel }}</a>
-                    <a mat-button [routerLink]="['/tournaments', alert.tournamentId]">Detalle</a>
+                    <a mat-button [routerLink]="['/tournaments', alert.tournamentId]">Gestionar campeonato</a>
                   </div>
                 </article>
               }
@@ -467,7 +574,7 @@ type DashboardCard = {
                   <p class="muted">{{ tournament.nextAction }}</p>
 
                   <div class="card-actions">
-                    <a mat-button [routerLink]="['/tournaments', tournament.tournamentId]">Abrir detalle</a>
+                    <a mat-button [routerLink]="['/tournaments', tournament.tournamentId]">Gestionar campeonato</a>
                   </div>
                 </article>
               }
@@ -502,7 +609,7 @@ type DashboardCard = {
                   <p class="muted">{{ alert.detail }}</p>
                   <div class="card-actions">
                     <a mat-button [routerLink]="alert.actionPath" [queryParams]="alert.actionQueryParams">{{ alert.actionLabel }}</a>
-                    <a mat-button [routerLink]="['/tournaments', alert.tournamentId]">Detalle</a>
+                    <a mat-button [routerLink]="['/tournaments', alert.tournamentId]">Gestionar campeonato</a>
                   </div>
                 </article>
               }
@@ -580,7 +687,7 @@ type DashboardCard = {
                   <p class="muted">{{ tournament.nextAction }}</p>
 
                   <div class="card-actions">
-                    <a mat-button [routerLink]="['/tournaments', tournament.tournamentId]">Abrir detalle</a>
+                    <a mat-button [routerLink]="['/tournaments', tournament.tournamentId]">Gestionar campeonato</a>
                   </div>
                 </article>
               }
@@ -613,7 +720,7 @@ type DashboardCard = {
                   <p class="muted">{{ tournament.auditMessage }}</p>
                   <p class="muted">{{ tournament.nextAction }}</p>
                   <div class="card-actions">
-                    <a mat-button [routerLink]="['/tournaments', tournament.tournamentId]">Abrir detalle</a>
+                    <a mat-button [routerLink]="['/tournaments', tournament.tournamentId]">Gestionar campeonato</a>
                   </div>
                 </article>
               }
@@ -650,6 +757,94 @@ type DashboardCard = {
         color: var(--primary-strong);
         font-size: 0.85rem;
         font-weight: 800;
+      }
+
+      .control-hero {
+        display: grid;
+        gap: 1.25rem;
+        grid-template-columns: minmax(0, 1.2fr) minmax(320px, 1.8fr);
+        padding: 1.25rem;
+        border-left: 4px solid var(--primary);
+      }
+
+      .control-copy {
+        display: grid;
+        align-content: center;
+        gap: 0.65rem;
+      }
+
+      .control-copy h2 {
+        margin: 0;
+        font-size: 1.65rem;
+      }
+
+      .control-copy p {
+        margin: 0;
+      }
+
+      .control-copy .section-badge {
+        width: fit-content;
+      }
+
+      .control-metrics,
+      .dashboard-actions-grid,
+      .featured-tournament-grid {
+        display: grid;
+        gap: 1rem;
+      }
+
+      .control-metrics {
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      }
+
+      .control-metric {
+        display: grid;
+        gap: 0.35rem;
+        padding: 1rem;
+        border-radius: 8px;
+        background: var(--surface-alt);
+      }
+
+      .control-metric.accent {
+        background: linear-gradient(135deg, #064d43 0%, #0a6b58 62%, #0d7894 100%);
+        color: #f8fffd;
+      }
+
+      .control-metric.accent .summary-label,
+      .control-metric.accent .summary-meta {
+        color: inherit;
+      }
+
+      .control-metric strong {
+        font-size: 2rem;
+        line-height: 1;
+      }
+
+      .dashboard-actions-grid {
+        grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      }
+
+      .dashboard-action-card,
+      .featured-tournament-card {
+        display: grid;
+        gap: 0.75rem;
+        min-width: 0;
+        padding: 1rem;
+        border-radius: 8px;
+        background: var(--surface-alt);
+      }
+
+      .dashboard-action-card p,
+      .featured-tournament-card p {
+        margin: 0;
+      }
+
+      .dashboard-action-card a {
+        justify-self: start;
+      }
+
+      .featured-tournament-grid {
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
       }
 
       .alert-grid,
@@ -1000,6 +1195,10 @@ type DashboardCard = {
       }
 
       @media (max-width: 720px) {
+        .control-hero {
+          grid-template-columns: 1fr;
+        }
+
         .priority-item {
           grid-template-columns: 1fr;
           align-items: start;
@@ -1036,6 +1235,7 @@ export class DashboardPageComponent {
   protected readonly governanceReason = signal('');
   protected readonly selectedGovernancePermissions = signal<string[]>([]);
   protected readonly operationsVisible = computed(() => this.authorization.canReadOperationalAudit());
+  protected readonly canManageTournaments = computed(() => this.authorization.canManage('tournaments'));
   protected readonly canManageGovernance = computed(() => this.authorization.canManagePermissionGovernance());
   protected readonly governanceWriteEnabled = computed(() => this.governanceSummary()?.writeEnabled ?? false);
   protected readonly mutableRoleCodes = computed(() => this.governanceSummary()?.mutableRoles ?? []);
@@ -1079,6 +1279,101 @@ export class DashboardPageComponent {
         accent: summary?.writeEnabled ?? false
       }
     ];
+  });
+  protected readonly controlCards = computed<DashboardCard[]>(() => {
+    const summary = this.summary();
+
+    return [
+      {
+        label: 'Campeonatos activos',
+        value: summary?.activeTournamentCount ?? 0,
+        meta: `${summary?.liveTournamentCount ?? 0} en curso`,
+        accent: (summary?.activeTournamentCount ?? 0) > 0
+      },
+      {
+        label: 'Borradores',
+        value: (summary?.setupTournamentCount ?? 0) + (summary?.sandboxTournamentCount ?? 0),
+        meta: 'Por preparar o separar del foco'
+      },
+      {
+        label: 'Partidos por jugar',
+        value: summary?.scheduledMatchCount ?? 0,
+        meta: 'Pendientes de resultado'
+      },
+      {
+        label: 'Alertas',
+        value: summary?.attentionTournamentCount ?? 0,
+        meta: 'Campeonatos que requieren accion',
+        accent: (summary?.attentionTournamentCount ?? 0) > 0
+      }
+    ];
+  });
+  protected readonly primaryActions = computed<DashboardAction[]>(() => {
+    const actions: DashboardAction[] = [
+      {
+        label: 'Crear campeonato',
+        description: 'Inicia una nueva competencia con datos basicos, formato y reglas.',
+        cta: 'Crear',
+        path: '/tournaments/new',
+        queryParams: {},
+        resource: 'tournaments',
+        action: 'manage'
+      },
+      {
+        label: 'Gestionar campeonatos',
+        description: 'Abre el listado y entra al hub guiado de cada campeonato.',
+        cta: 'Abrir campeonatos',
+        path: '/tournaments',
+        queryParams: {},
+        resource: 'tournaments',
+        action: 'read'
+      },
+      {
+        label: 'Programar partido',
+        description: 'Carga el siguiente encuentro cuando la base competitiva este lista.',
+        cta: 'Programar',
+        path: '/matches/new',
+        queryParams: {},
+        resource: 'matches',
+        action: 'manage'
+      },
+      {
+        label: 'Registrar resultado',
+        description: 'Revisa partidos pendientes y completa marcadores para alimentar tabla.',
+        cta: 'Ver partidos',
+        path: '/matches',
+        queryParams: { status: 'SCHEDULED' },
+        resource: 'matches',
+        action: 'read'
+      },
+      {
+        label: 'Revisar tabla',
+        description: 'Valida posiciones y detecta campeonatos con resultados sin tabla.',
+        cta: 'Abrir tabla',
+        path: '/standings',
+        queryParams: {},
+        resource: 'standings',
+        action: 'read'
+      },
+      {
+        label: 'Ver reportes',
+        description: 'Accede a reportes y exportaciones para seguimiento operativo.',
+        cta: 'Abrir reportes',
+        path: '/reporting',
+        queryParams: {},
+        resource: 'tournaments',
+        action: 'read'
+      },
+      {
+        label: 'Abrir portal publico',
+        description: 'Revisa la experiencia publica disponible para participantes y visitantes.',
+        cta: 'Ver portal',
+        path: '/portal',
+        queryParams: {}
+      }
+    ];
+
+    return actions.filter((action) => this.canUseAction(action));
   });
   protected readonly overviewCards = computed<DashboardCard[]>(() => {
     const summary = this.summary();
@@ -1233,6 +1528,19 @@ export class DashboardPageComponent {
   protected readonly tournamentSummaries = computed<DashboardTournamentSummary[]>(
     () => this.summary()?.tournamentSummaries ?? []
   );
+  protected readonly highlightedTournaments = computed<DashboardTournamentSummary[]>(() =>
+    [...this.tournamentSummaries()]
+      .filter((item) => item.reportingSegment !== 'sandbox')
+      .sort((left, right) => {
+        const healthDiff = this.dashboardPriority(right) - this.dashboardPriority(left);
+        if (healthDiff !== 0) {
+          return healthDiff;
+        }
+
+        return right.readinessScore - left.readinessScore;
+      })
+      .slice(0, 4)
+  );
   protected readonly operationalSummaries = computed<DashboardTournamentSummary[]>(() =>
     this.tournamentSummaries().filter((item) => item.reportingSegment === 'operational')
   );
@@ -1262,6 +1570,40 @@ export class DashboardPageComponent {
     }
 
     return 'La plataforma ya muestra una vista general de la salud de los campeonatos.';
+  });
+  protected readonly controlHeadline = computed(() => {
+    const summary = this.summary();
+
+    if (!summary || summary.tournamentCount === 0) {
+      return 'Crea tu primer campeonato para activar el centro de control';
+    }
+
+    if (summary.attentionTournamentCount > 0) {
+      return `${summary.attentionTournamentCount} campeonato(s) necesitan atencion`;
+    }
+
+    if (summary.scheduledMatchCount > 0) {
+      return `${summary.scheduledMatchCount} partido(s) esperan seguimiento`;
+    }
+
+    return 'Tus campeonatos tienen una lectura estable';
+  });
+  protected readonly controlMessage = computed(() => {
+    const summary = this.summary();
+
+    if (!summary || summary.tournamentCount === 0) {
+      return 'Empieza creando un campeonato y luego continua por inscripciones, planteles, partidos y tabla.';
+    }
+
+    if (summary.attentionTournamentCount > 0) {
+      return 'Entra al hub guiado del campeonato destacado para resolver el siguiente paso sin recorrer modulos sueltos.';
+    }
+
+    if (summary.scheduledMatchCount > 0) {
+      return 'Revisa partidos programados y registra resultados para mantener la tabla al dia.';
+    }
+
+    return 'Puedes revisar reportes, tabla o portal publico desde los accesos principales.';
   });
 
   constructor() {
@@ -1568,6 +1910,38 @@ export class DashboardPageComponent {
     };
 
     return labels[permissionCode] ?? this.humanizeCode(permissionCode);
+  }
+
+  private canUseAction(action: DashboardAction): boolean {
+    if (!action.resource || !action.action) {
+      return true;
+    }
+
+    return action.action === 'manage'
+      ? this.authorization.canManage(action.resource)
+      : this.authorization.canRead(action.resource);
+  }
+
+  private dashboardPriority(tournament: DashboardTournamentSummary): number {
+    let score = 0;
+
+    if (tournament.health === 'attention') {
+      score += 40;
+    } else if (tournament.health === 'warning') {
+      score += 20;
+    }
+
+    if (tournament.status === 'IN_PROGRESS') {
+      score += 30;
+    } else if (tournament.status === 'OPEN') {
+      score += 20;
+    }
+
+    if (tournament.rosterGapCount > 0 || (tournament.playedMatchCount > 0 && tournament.standingsCount === 0)) {
+      score += 10;
+    }
+
+    return score;
   }
 
   protected updateGovernanceReason(event: Event): void {

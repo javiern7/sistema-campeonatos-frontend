@@ -88,7 +88,15 @@ const eventRulesValidator: ValidatorFn = (control: AbstractControl): ValidationE
   template: `
     <section class="app-page">
       <app-page-header title="Eventos del partido" [subtitle]="pageSubtitle()">
-        <a mat-stroked-button routerLink="/matches">Volver a partidos</a>
+        @if (match()) {
+          <a mat-stroked-button [routerLink]="['/tournaments', match()!.tournamentId]">Volver al campeonato</a>
+          <a mat-stroked-button routerLink="/matches" [queryParams]="{ tournamentId: match()!.tournamentId }">Volver a partidos</a>
+          @if (canManage()) {
+            <a mat-flat-button color="primary" [routerLink]="['/matches', match()!.id, 'edit']">Registrar resultado</a>
+          }
+        } @else {
+          <a mat-stroked-button routerLink="/matches">Volver a partidos</a>
+        }
       </app-page-header>
 
       <section class="card page-card app-page">
@@ -106,9 +114,18 @@ const eventRulesValidator: ValidatorFn = (control: AbstractControl): ValidationE
           </div>
 
           <form [formGroup]="form" (ngSubmit)="save()" class="app-page">
+            <section class="event-capture card">
+              <div class="section-heading">
+                <div>
+                  <h2>Captura del partido</h2>
+                  <p class="muted">Registra anotaciones, tarjetas, sustituciones, incidencias u observaciones con equipo, jugador y minuto.</p>
+                </div>
+                <span class="status-pill played">{{ events().length }} evento(s)</span>
+              </div>
+
             <div class="form-grid">
               <mat-form-field appearance="outline">
-                <mat-label>Tipo</mat-label>
+                <mat-label>Tipo de evento</mat-label>
                 <mat-select formControlName="eventType">
                   @for (type of eventTypes; track type) {
                     <mat-option [value]="type">{{ eventTypeLabel(type) }}</mat-option>
@@ -171,7 +188,7 @@ const eventRulesValidator: ValidatorFn = (control: AbstractControl): ValidationE
               </mat-form-field>
 
               <mat-form-field appearance="outline">
-                <mat-label>Valor</mat-label>
+                <mat-label>Valor del evento</mat-label>
                 <input matInput type="number" formControlName="eventValue">
                 @if (form.controls.eventValue.hasError('min')) {
                   <mat-error>El valor debe ser mayor a 0.</mat-error>
@@ -208,6 +225,7 @@ const eventRulesValidator: ValidatorFn = (control: AbstractControl): ValidationE
                 {{ saving() ? 'Guardando...' : editingEventId() ? 'Guardar evento' : 'Registrar evento' }}
               </button>
             </div>
+            </section>
           </form>
 
           @if (loadingEvents()) {
@@ -220,7 +238,7 @@ const eventRulesValidator: ValidatorFn = (control: AbstractControl): ValidationE
           } @else if (events().length === 0) {
             <div class="empty-state">
               <strong>Este partido aun no tiene eventos.</strong>
-              <p class="muted">Registra hechos relevantes del partido para mantener el historial actualizado.</p>
+              <p class="muted">Cuando el partido tenga anotaciones, tarjetas, cambios o incidencias, registralos aqui para mantener el historial deportivo.</p>
             </div>
           } @else {
             <div class="table-wrapper">
@@ -284,6 +302,32 @@ const eventRulesValidator: ValidatorFn = (control: AbstractControl): ValidationE
       </section>
     </section>
   `,
+  styles: [
+    `
+      .event-capture {
+        display: grid;
+        gap: 1rem;
+        padding: 1rem;
+      }
+
+      .section-heading {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        align-items: start;
+        justify-content: space-between;
+      }
+
+      .section-heading h2 {
+        margin: 0;
+        font-size: 1rem;
+      }
+
+      .section-heading p {
+        margin: 0.3rem 0 0;
+      }
+    `
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class MatchEventsPageComponent {

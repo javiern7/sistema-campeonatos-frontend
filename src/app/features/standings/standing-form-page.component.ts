@@ -84,9 +84,14 @@ const parseOptionalNumber = (value: string | number | null | undefined): number 
   template: `
     <section class="app-page">
       <app-page-header
-        [title]="isEditMode() ? 'Editar standing' : 'Nuevo standing'"
+        [title]="isEditMode() ? 'Editar posicion en tabla' : 'Nuevo ajuste de tabla'"
         [subtitle]="pageSubtitle()"
-      />
+      >
+        @if (selectedTournamentId()) {
+          <a mat-stroked-button [routerLink]="['/tournaments', selectedTournamentId()]">Volver al campeonato</a>
+        }
+        <a mat-stroked-button routerLink="/standings" [queryParams]="{ tournamentId: selectedTournamentId() || '' }">Volver a tabla</a>
+      </app-page-header>
 
       <section class="card page-card">
         @if (pageLoading()) {
@@ -96,7 +101,7 @@ const parseOptionalNumber = (value: string | number | null | undefined): number 
             <div class="context-banner">
               <strong>Registro de tabla</strong>
               <span class="muted">
-                El recalculo automatico sigue disponible en la tabla. Usa este formulario solo para ajustes puntuales.
+                La actualizacion automatica sigue disponible en la tabla. Usa este formulario solo para ajustes puntuales.
               </span>
             </div>
 
@@ -136,7 +141,7 @@ const parseOptionalNumber = (value: string | number | null | undefined): number 
               </mat-form-field>
 
               <mat-form-field appearance="outline">
-                <mat-label>Inscripcion</mat-label>
+                  <mat-label>Equipo en competencia</mat-label>
                 <mat-select formControlName="tournamentTeamId">
                   @for (item of tournamentTeams(); track item.id) {
                     <mat-option [value]="item.id">{{ tournamentTeamLabel(item) }}</mat-option>
@@ -201,9 +206,9 @@ const parseOptionalNumber = (value: string | number | null | undefined): number 
             }
 
             <div class="form-actions">
-              <a mat-stroked-button routerLink="/standings">Cancelar</a>
+              <a mat-stroked-button routerLink="/standings" [queryParams]="{ tournamentId: selectedTournamentId() || '' }">Cancelar</a>
               <button mat-flat-button color="primary" type="submit" [disabled]="form.invalid || saving()">
-                {{ saving() ? 'Guardando...' : 'Guardar' }}
+                {{ saving() ? 'Guardando...' : 'Guardar ajuste' }}
               </button>
             </div>
           </form>
@@ -236,7 +241,7 @@ export class StandingFormPageComponent {
   private readonly allStages = signal<TournamentStage[]>([]);
   private readonly allGroups = signal<StageGroup[]>([]);
   private readonly allTournamentTeams = signal<TournamentTeam[]>([]);
-  private readonly selectedTournamentId = signal(0);
+  protected readonly selectedTournamentId = signal(0);
   private readonly selectedStageId = signal(0);
   protected readonly pageSubtitle = computed(() => {
     const labels = [
@@ -424,7 +429,10 @@ export class StandingFormPageComponent {
     request$.pipe(finalize(() => this.saving.set(false))).subscribe({
       next: () => {
         this.notifications.success('Registro de tabla guardado correctamente');
-        void this.router.navigateByUrl('/standings');
+        const tournamentId = Number(this.form.controls.tournamentId.getRawValue());
+        void this.router.navigate(['/standings'], {
+          queryParams: tournamentId ? { tournamentId } : {}
+        });
       },
       error: (error: unknown) => this.notifications.error(this.errorMapper.map(error).message)
     });

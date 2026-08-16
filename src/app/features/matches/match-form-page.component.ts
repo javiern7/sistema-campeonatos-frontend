@@ -125,9 +125,14 @@ const matchConsistencyValidator: ValidatorFn = (control: AbstractControl): Valid
   template: `
     <section class="app-page">
       <app-page-header
-        [title]="isEditMode() ? 'Editar partido' : 'Nuevo partido'"
+        [title]="isEditMode() ? 'Registrar resultado del partido' : 'Programar partido'"
         [subtitle]="pageSubtitle()"
-      />
+      >
+        @if (selectedTournamentId()) {
+          <a mat-stroked-button [routerLink]="['/tournaments', selectedTournamentId()]">Volver al campeonato</a>
+        }
+        <a mat-stroked-button routerLink="/matches" [queryParams]="{ tournamentId: selectedTournamentId() || '' }">Volver a partidos</a>
+      </app-page-header>
 
       <section class="card page-card">
         @if (pageLoading()) {
@@ -141,7 +146,13 @@ const matchConsistencyValidator: ValidatorFn = (control: AbstractControl): Valid
               </div>
             }
 
-            <div class="form-grid">
+            <section class="form-section">
+              <div class="form-section-heading">
+                <h2>Campeonato y fase</h2>
+                <p class="muted">Ubica el partido dentro del campeonato, etapa y grupo correspondiente.</p>
+              </div>
+
+              <div class="form-grid">
               @if (!isEditMode()) {
                 <app-search-select
                   formControlName="tournamentId"
@@ -172,7 +183,16 @@ const matchConsistencyValidator: ValidatorFn = (control: AbstractControl): Valid
                 [searchTextFn]="groupOptionLabel"
                 emptyOptionLabel="Sin grupo"
               />
+              </div>
+            </section>
 
+            <section class="form-section">
+              <div class="form-section-heading">
+                <h2>Equipos</h2>
+                <p class="muted">Selecciona los participantes del partido. Ambos deben pertenecer al campeonato.</p>
+              </div>
+
+              <div class="form-grid">
               <app-search-select
                 formControlName="homeTournamentTeamId"
                 label="Equipo local"
@@ -194,16 +214,16 @@ const matchConsistencyValidator: ValidatorFn = (control: AbstractControl): Valid
                 [showError]="form.controls.awayTournamentTeamId.invalid && form.controls.awayTournamentTeamId.touched"
                 errorText="Selecciona un equipo visita valido."
               />
+              </div>
+            </section>
 
-              <mat-form-field appearance="outline">
-                <mat-label>Estado</mat-label>
-                <mat-select formControlName="status">
-                  @for (status of statuses; track status) {
-                    <mat-option [value]="status">{{ statusLabel(status) }}</mat-option>
-                  }
-                </mat-select>
-              </mat-form-field>
+            <section class="form-section">
+              <div class="form-section-heading">
+                <h2>Fecha y lugar</h2>
+                <p class="muted">Programa el encuentro para que el fixture sea claro para el organizador.</p>
+              </div>
 
+              <div class="form-grid">
               <mat-form-field appearance="outline">
                 <mat-label>Ronda</mat-label>
                 <input matInput type="number" formControlName="roundNumber">
@@ -246,6 +266,24 @@ const matchConsistencyValidator: ValidatorFn = (control: AbstractControl): Valid
                   <mat-error>La sede no puede superar 150 caracteres.</mat-error>
                 }
               </mat-form-field>
+              </div>
+            </section>
+
+            <section class="form-section result-section">
+              <div class="form-section-heading">
+                <h2>Resultado y estado</h2>
+                <p class="muted">Usa esta seccion para cerrar el partido, registrar marcador o marcar una ausencia/cancelacion.</p>
+              </div>
+
+              <div class="form-grid">
+              <mat-form-field appearance="outline">
+                <mat-label>Estado del partido</mat-label>
+                <mat-select formControlName="status">
+                  @for (status of statuses; track status) {
+                    <mat-option [value]="status">{{ statusLabel(status) }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
 
               <mat-form-field appearance="outline">
                 <mat-label>Marcador local</mat-label>
@@ -278,7 +316,8 @@ const matchConsistencyValidator: ValidatorFn = (control: AbstractControl): Valid
                 <mat-label>Notas</mat-label>
                 <textarea matInput rows="3" formControlName="notes"></textarea>
               </mat-form-field>
-            </div>
+              </div>
+            </section>
 
             @if (form.hasError('sameTeams')) {
               <p class="muted">El equipo local y visita no pueden ser el mismo.</p>
@@ -303,9 +342,9 @@ const matchConsistencyValidator: ValidatorFn = (control: AbstractControl): Valid
             }
 
             <div class="form-actions">
-              <a mat-stroked-button routerLink="/matches">Cancelar</a>
+              <a mat-stroked-button routerLink="/matches" [queryParams]="{ tournamentId: selectedTournamentId() || '' }">Cancelar</a>
               <button mat-flat-button color="primary" type="submit" [disabled]="form.invalid || saving()">
-                {{ saving() ? 'Guardando...' : 'Guardar' }}
+                {{ saving() ? 'Guardando...' : isEditMode() ? 'Guardar resultado' : 'Guardar partido' }}
               </button>
             </div>
           </form>
@@ -313,6 +352,32 @@ const matchConsistencyValidator: ValidatorFn = (control: AbstractControl): Valid
       </section>
     </section>
   `,
+  styles: [
+    `
+      .form-section {
+        display: grid;
+        gap: 1rem;
+        padding: 1rem;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: var(--surface-alt);
+      }
+
+      .result-section {
+        border-color: rgba(10, 107, 88, 0.22);
+        background: linear-gradient(135deg, rgba(10, 107, 88, 0.08), rgba(255, 255, 255, 0.72));
+      }
+
+      .form-section-heading h2 {
+        margin: 0;
+        font-size: 1rem;
+      }
+
+      .form-section-heading p {
+        margin: 0.3rem 0 0;
+      }
+    `
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class MatchFormPageComponent {
@@ -334,7 +399,7 @@ export class MatchFormPageComponent {
   protected readonly isEditMode = signal(this.matchId > 0);
   protected readonly pageLoading = signal(true);
   protected readonly saving = signal(false);
-  private readonly selectedTournamentId = signal(0);
+  protected readonly selectedTournamentId = signal(0);
   private readonly selectedStageId = signal(0);
   private readonly selectedHomeTournamentTeamId = signal(0);
   private readonly selectedAwayTournamentTeamId = signal(0);
@@ -658,7 +723,10 @@ export class MatchFormPageComponent {
     request$.pipe(finalize(() => this.saving.set(false))).subscribe({
       next: () => {
         this.notifications.success('Partido guardado correctamente');
-        void this.router.navigateByUrl('/matches');
+        const tournamentId = Number(this.form.controls.tournamentId.getRawValue());
+        void this.router.navigate(['/matches'], {
+          queryParams: tournamentId ? { tournamentId } : {}
+        });
       },
       error: (error: unknown) => this.notifications.error(this.errorMapper.map(error).message)
     });

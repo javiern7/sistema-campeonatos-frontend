@@ -76,8 +76,11 @@ const parseQueryNumber = (value: string | null): number | '' => {
   template: `
     <section class="app-page">
       <app-page-header title="Tabla de posiciones" subtitle="Seguimiento competitivo y recalculo por contexto.">
+        @if (selectedTournamentId()) {
+          <a mat-stroked-button [routerLink]="['/tournaments', selectedTournamentId()]">Volver al campeonato</a>
+        }
         @if (canManage()) {
-          <a mat-stroked-button routerLink="/standings/new">Nuevo registro</a>
+          <a mat-stroked-button routerLink="/standings/new">Ajustar tabla</a>
         }
         @if (canRecalculate()) {
           <button
@@ -172,7 +175,15 @@ const parseQueryNumber = (value: string | null): number | '' => {
           @if (rows().length === 0) {
             <div class="empty-state">
               <strong>No hay tabla para este contexto.</strong>
-              <p class="muted">Aplica filtros, recalcula la tabla o valida que ya existan partidos jugados en ese alcance.</p>
+              <p class="muted">Aun no hay resultados suficientes o la tabla no fue recalculada para este alcance. Revisa partidos jugados y luego actualiza la tabla.</p>
+              <div class="form-actions">
+                @if (selectedTournamentId()) {
+                  <a mat-stroked-button routerLink="/matches" [queryParams]="{ tournamentId: selectedTournamentId() }">Ver partidos</a>
+                }
+                @if (canRecalculate() && selectedTournamentId()) {
+                  <button mat-flat-button color="primary" type="button" (click)="recalculate()" [disabled]="recalculating()">Actualizar tabla</button>
+                }
+              </div>
             </div>
           } @else {
             <div class="context-banner neutral-banner">
@@ -428,7 +439,7 @@ export class StandingsPageComponent {
     }
     return columns;
   });
-  private readonly selectedTournamentId = signal(0);
+  protected readonly selectedTournamentId = signal(0);
   private readonly selectedStageId = signal(0);
   protected readonly selectedContextLabel = computed(() => {
     const labels = [
