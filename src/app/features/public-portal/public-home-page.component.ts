@@ -25,41 +25,54 @@ type PublicMetric = {
       @if (loading()) {
         <section class="card public-card">
           <div class="hero-copy">
-            <span class="hero-kicker">Web publica</span>
-            <h1>Cargando campeonatos visibles...</h1>
+            <span class="hero-kicker">Portal de campeonatos</span>
+            <h1>Cargando campeonatos...</h1>
           </div>
           <app-loading-state />
         </section>
       } @else if (errorMessage()) {
         <section class="card public-card">
           <div class="empty-state">
-            <strong>No fue posible cargar la home publica.</strong>
+            <strong>No fue posible cargar el portal.</strong>
             <p class="muted">{{ errorMessage() }}</p>
-            <a class="text-link" routerLink="/portal/tournaments">Ir al listado publico</a>
+            <a class="text-link" routerLink="/portal/tournaments">Ver campeonatos</a>
           </div>
         </section>
       } @else if (home()) {
         <section class="hero-panel card">
           <div class="hero-copy">
-            <span class="hero-kicker">Web publica</span>
+            <span class="hero-kicker">Portal de campeonatos</span>
             <h1>{{ home()!.portalName }}</h1>
             <p class="hero-summary">
-              Campeonatos, tablas y resultados disponibles para consulta publica.
+              Sigue tus campeonatos desde un solo lugar: calendario, resultados y tabla de posiciones.
             </p>
             <div class="hero-actions">
-              <a class="primary-link" routerLink="/portal/tournaments">Explorar campeonatos</a>
-              <a class="ghost-link" routerLink="/login">Ingreso administradores</a>
+              <a class="primary-link" routerLink="/portal/tournaments">Ver campeonatos</a>
+              <a class="ghost-link" routerLink="/login">Soy organizador</a>
             </div>
           </div>
 
           <div class="hero-aside">
             <span class="meta-chip">Actualizado {{ generatedAtLabel() }}</span>
-            <span class="meta-chip" [class.enabled]="home()!.modules.standingsEnabled">Tablas visibles</span>
-            <span class="meta-chip" [class.enabled]="home()!.modules.resultsEnabled">Resultados visibles</span>
-            <span class="meta-chip muted-chip">
-              Publicaciones: {{ home()!.modules.approvedPiecesEnabled ? 'activas' : 'ocultas' }}
-            </span>
+            <span class="meta-chip enabled">Calendario disponible</span>
+            <span class="meta-chip" [class.enabled]="home()!.modules.resultsEnabled">Resultados</span>
+            <span class="meta-chip" [class.enabled]="home()!.modules.standingsEnabled">Tabla de posiciones</span>
           </div>
+        </section>
+
+        <section class="portal-benefits">
+          <article class="benefit-card">
+            <strong>Calendario claro</strong>
+            <span>Fechas, rivales y sedes para seguir cada jornada.</span>
+          </article>
+          <article class="benefit-card">
+            <strong>Resultados al dia</strong>
+            <span>Marcadores publicados para jugadores, equipos y familias.</span>
+          </article>
+          <article class="benefit-card">
+            <strong>Tabla de posiciones</strong>
+            <span>Lectura rapida del rendimiento de cada equipo.</span>
+          </article>
         </section>
 
         <section class="metrics-grid">
@@ -76,7 +89,7 @@ type PublicMetric = {
           <div class="section-heading">
             <div>
               <h2>Campeonatos destacados</h2>
-              <p class="muted">Campeonatos publicados y listos para consulta externa.</p>
+              <p class="muted">Elige un campeonato para ver su calendario, resultados y tabla.</p>
             </div>
             <a class="text-link" routerLink="/portal/tournaments">Ver todos</a>
           </div>
@@ -92,20 +105,20 @@ type PublicMetric = {
                     </span>
                   </div>
                   <h3>{{ tournament.name }}</h3>
-                  <p class="muted">{{ tournament.description || 'Sin descripcion publica cargada.' }}</p>
+                  <p class="muted">{{ tournament.description || 'Informacion del campeonato por confirmar.' }}</p>
                   <div class="meta-grid">
                     <span>{{ tournament.seasonName }}</span>
                     <span>{{ formatLabel(tournament.format) }}</span>
                     <span>{{ dateRangeLabel(tournament.startDate, tournament.endDate) }}</span>
                   </div>
-                  <a class="text-link" [routerLink]="['/portal/tournaments', tournament.slug]">Ver detalle</a>
+                  <a class="text-link" [routerLink]="['/portal/tournaments', tournament.slug]">Ver campeonato</a>
                 </article>
               }
             </div>
           } @else {
             <div class="empty-state">
-              <strong>No hay campeonatos destacados visibles.</strong>
-              <p class="muted">La home publica se habilita cuando existen campeonatos visibles.</p>
+              <strong>Aun no hay campeonatos disponibles.</strong>
+              <p class="muted">Cuando el organizador habilite un campeonato, aparecera en este portal.</p>
             </div>
           }
         </section>
@@ -235,7 +248,8 @@ type PublicMetric = {
       }
 
       .metrics-grid,
-      .tournament-grid {
+      .tournament-grid,
+      .portal-benefits {
         display: grid;
         gap: 1rem;
       }
@@ -246,6 +260,25 @@ type PublicMetric = {
 
       .tournament-grid {
         grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      }
+
+      .portal-benefits {
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      }
+
+      .benefit-card {
+        display: grid;
+        gap: 0.35rem;
+        padding: 1rem;
+        border-radius: 8px;
+        border: 1px solid rgba(10, 107, 88, 0.14);
+        background: rgba(255, 255, 255, 0.82);
+        box-shadow: var(--shadow-soft);
+      }
+
+      .benefit-card span {
+        color: var(--text-soft);
+        line-height: 1.4;
       }
 
       .tournament-card {
@@ -326,10 +359,10 @@ export class PublicHomePageComponent {
     }
 
     return [
-      { label: 'Campeonatos visibles', value: home.visibleTournamentCount, detail: 'Base publica disponible', accent: true },
-      { label: 'En curso', value: home.liveTournamentCount, detail: 'Actividad en vivo o activa' },
-      { label: 'Proximos', value: home.upcomingTournamentCount, detail: 'Listos para abrir' },
-      { label: 'Finalizados', value: home.completedTournamentCount, detail: 'Con lectura historica' }
+      { label: 'Campeonatos disponibles', value: home.visibleTournamentCount, detail: 'Para jugadores, equipos y familias', accent: true },
+      { label: 'En curso', value: home.liveTournamentCount, detail: 'Con actividad deportiva vigente' },
+      { label: 'Proximos', value: home.upcomingTournamentCount, detail: 'Por iniciar o abrir inscripciones' },
+      { label: 'Finalizados', value: home.completedTournamentCount, detail: 'Con resultados para revisar' }
     ];
   });
 
@@ -392,10 +425,10 @@ export class PublicHomePageComponent {
   }
 
   private updateMetadata(home: PublicHome): void {
-    this.title.setTitle(`${home.portalName} | Campeonatos publicos`);
+    this.title.setTitle(`${home.portalName} | Portal de campeonatos`);
     this.meta.updateTag({
       name: 'description',
-      content: 'Campeonatos, tablas y resultados visibles en Sistema Campeonatos.'
+      content: 'Consulta calendario, resultados y tabla de posiciones en Sistema Campeonatos.'
     });
   }
 }

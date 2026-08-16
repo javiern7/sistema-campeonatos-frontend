@@ -13,7 +13,7 @@ import { PublicMatchStatus, PublicTournamentResultEntry, PublicTournamentResults
       <div class="section-heading">
         <div>
           <h2>Resultados publicados</h2>
-          <p class="muted">Partidos cerrados disponibles para consulta publica.</p>
+          <p class="muted">Marcadores cerrados para seguir el avance del campeonato.</p>
         </div>
         @if (results) {
           <span class="meta-chip">{{ results.totalClosedMatches }} cerrados</span>
@@ -25,8 +25,8 @@ import { PublicMatchStatus, PublicTournamentResultEntry, PublicTournamentResults
           @for (entry of results!.results; track entry.match.matchId) {
             <article class="result-card">
               <div class="card-head">
-                <span class="meta-chip">{{ entry.match.stageName || 'Sin etapa visible' }}</span>
-                <span class="meta-chip">{{ matchStatusLabel(entry.match.status) }}</span>
+                <span class="meta-chip">{{ entry.match.stageName || 'Etapa por confirmar' }}</span>
+                <span class="meta-chip" [class]="matchStatusClass(entry.match.status)">{{ matchStatusLabel(entry.match.status) }}</span>
               </div>
               <div class="scoreboard">
                 <app-visual-identity
@@ -50,8 +50,8 @@ import { PublicMatchStatus, PublicTournamentResultEntry, PublicTournamentResults
         </div>
       } @else {
         <div class="empty-state">
-          <strong>No hay resultados publicos.</strong>
-          <p class="muted">Solo se muestran partidos cerrados y listos para consulta publica.</p>
+          <strong>Aun no hay resultados.</strong>
+          <p class="muted">Los marcadores apareceran cuando se registren partidos finalizados.</p>
         </div>
       }
     </section>
@@ -124,6 +124,21 @@ import { PublicMatchStatus, PublicTournamentResultEntry, PublicTournamentResults
         font-weight: 700;
       }
 
+      .meta-chip.played {
+        background: #dcfce7;
+        color: #166534;
+      }
+
+      .meta-chip.cancelled {
+        background: #fee2e2;
+        color: #b91c1c;
+      }
+
+      .meta-chip.forfeit {
+        background: #fef3c7;
+        color: #92400e;
+      }
+
       @media (max-width: 640px) {
         .public-card {
           padding: 1rem;
@@ -150,7 +165,7 @@ export class ResultsSectionComponent {
   }
 
   protected scopeLabel(entry: PublicTournamentResultEntry): string {
-    return entry.affectsStandings ? `Impacta tabla (${this.standingScopeLabel(entry.standingScope)})` : 'Sin impacto visible en tabla';
+    return entry.affectsStandings ? `Cuenta para la tabla (${this.standingScopeLabel(entry.standingScope)})` : 'Resultado informativo';
   }
 
   protected matchStatusLabel(status: PublicMatchStatus | null): string {
@@ -168,6 +183,10 @@ export class ResultsSectionComponent {
     };
 
     return labels[status] ?? status;
+  }
+
+  protected matchStatusClass(status: PublicMatchStatus | null): string {
+    return status ? status.toLowerCase().replace('_', '-') : '';
   }
 
   private standingScopeLabel(scope: string | null): string {

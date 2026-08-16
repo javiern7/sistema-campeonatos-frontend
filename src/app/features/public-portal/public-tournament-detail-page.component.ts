@@ -25,6 +25,13 @@ type DetailMetric = {
   detail: string;
 };
 
+type PublicTeamPreview = {
+  key: string;
+  name: string;
+  shortName: string | null;
+  code: string | null;
+};
+
 @Component({
   selector: 'app-public-tournament-detail-page',
   standalone: true,
@@ -45,9 +52,9 @@ type DetailMetric = {
       } @else if (errorMessage()) {
         <section class="card public-card">
           <div class="empty-state">
-            <strong>No fue posible abrir el detalle publico.</strong>
+            <strong>No fue posible abrir el campeonato.</strong>
             <p class="muted">{{ errorMessage() }}</p>
-            <a class="text-link" routerLink="/portal/tournaments">Volver al listado</a>
+            <a class="text-link" routerLink="/portal/tournaments">Volver a campeonatos</a>
           </div>
         </section>
       } @else if (tournament()) {
@@ -60,10 +67,10 @@ type DetailMetric = {
               </span>
             </div>
             <h1>{{ tournament()!.name }}</h1>
-            <p class="hero-summary">{{ tournament()!.description || 'Sin descripcion publica cargada.' }}</p>
+            <p class="hero-summary">{{ tournament()!.description || 'Informacion del campeonato por confirmar.' }}</p>
             <div class="hero-actions">
-              <a mat-stroked-button routerLink="/portal/tournaments">Volver al listado</a>
-              <a mat-flat-button color="primary" routerLink="/portal">Inicio publico</a>
+              <a mat-stroked-button routerLink="/portal/tournaments">Ver otros campeonatos</a>
+              <a mat-flat-button color="primary" href="#calendario">Ver calendario</a>
             </div>
           </div>
 
@@ -72,16 +79,20 @@ type DetailMetric = {
             <span class="meta-chip">{{ formatLabel(tournament()!.format) }}</span>
             <span class="meta-chip">Actualizado {{ dateTimeLabel(tournament()!.updatedAt) }}</span>
             <span class="meta-chip" [class.enabled]="tournament()!.modules.standingsEnabled">
-              Tablas {{ tournament()!.modules.standingsEnabled ? 'activas' : 'ocultas' }}
+              {{ tournament()!.modules.standingsEnabled ? 'Tabla disponible' : 'Tabla por confirmar' }}
             </span>
             <span class="meta-chip" [class.enabled]="tournament()!.modules.resultsEnabled">
-              Resultados {{ tournament()!.modules.resultsEnabled ? 'activos' : 'ocultos' }}
-            </span>
-            <span class="meta-chip muted-chip">
-              Publicaciones {{ tournament()!.modules.approvedPiecesEnabled ? 'activas' : 'deshabilitadas' }}
+              {{ tournament()!.modules.resultsEnabled ? 'Resultados disponibles' : 'Resultados por confirmar' }}
             </span>
           </div>
         </section>
+
+        <nav class="section-nav" aria-label="Secciones del campeonato">
+          <a href="#calendario">Calendario</a>
+          <a href="#resultados">Resultados</a>
+          <a href="#tabla">Tabla</a>
+          <a href="#equipos">Equipos</a>
+        </nav>
 
         <section class="metrics-grid">
           @for (metric of metrics(); track metric.label) {
@@ -93,20 +104,43 @@ type DetailMetric = {
           }
         </section>
 
-        <app-calendar-section [calendar]="calendar()" />
-        <app-results-section [results]="results()" />
-        <app-standings-section [standings]="standings()" />
+        <div id="calendario">
+          <app-calendar-section [calendar]="calendar()" />
+        </div>
+        <div id="resultados">
+          <app-results-section [results]="results()" />
+        </div>
+        <div id="tabla">
+          <app-standings-section [standings]="standings()" [closedMatches]="results()?.totalClosedMatches ?? 0" />
+        </div>
 
-        @if (!tournament()!.modules.approvedPiecesEnabled) {
-          <section class="card public-card">
-            <div class="context-banner">
-            <strong>Publicaciones adicionales no disponibles</strong>
-              <p class="muted">
-                Este campeonato no tiene publicaciones adicionales habilitadas.
-              </p>
+        <section id="equipos" class="card public-card">
+          <div class="section-heading">
+            <div>
+              <h2>Equipos participantes</h2>
+              <p class="muted">Equipos identificados en la tabla y los partidos del campeonato.</p>
             </div>
+            <span class="meta-chip">{{ teams().length }} equipos</span>
+          </div>
+
+          @if (teams().length) {
+            <div class="teams-grid">
+              @for (team of teams(); track team.key) {
+                <article class="team-card">
+                  <strong>{{ team.name }}</strong>
+                  @if (team.shortName || team.code) {
+                    <span class="muted">{{ team.shortName || team.code }}</span>
+                  }
+                </article>
+              }
+            </div>
+          } @else {
+            <div class="empty-state">
+              <strong>Equipos por confirmar.</strong>
+              <p class="muted">Los equipos apareceran cuando el organizador publique partidos o tabla de posiciones.</p>
+            </div>
+          }
           </section>
-        }
       }
     </section>
   `,
@@ -220,6 +254,48 @@ type DetailMetric = {
         grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
       }
 
+      .section-nav {
+        position: sticky;
+        top: 74px;
+        z-index: 5;
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+        padding: 0.7rem;
+        border: 1px solid rgba(10, 107, 88, 0.14);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.9);
+        box-shadow: var(--shadow-soft);
+      }
+
+      .section-nav a {
+        padding: 0.5rem 0.75rem;
+        border-radius: 8px;
+        color: var(--primary-strong);
+        font-weight: 700;
+        text-decoration: none;
+      }
+
+      .section-nav a:hover {
+        background: var(--primary-soft);
+      }
+
+      .teams-grid {
+        display: grid;
+        gap: 0.75rem;
+        grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+      }
+
+      .team-card {
+        display: grid;
+        gap: 0.2rem;
+        min-width: 0;
+        padding: 0.9rem 1rem;
+        border: 1px solid rgba(23, 33, 43, 0.08);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.78);
+      }
+
       .meta-chip,
       .sport-chip,
       .status-badge {
@@ -302,6 +378,16 @@ type DetailMetric = {
           padding: 1rem;
         }
 
+        .section-nav {
+          top: 138px;
+          overflow-x: auto;
+          flex-wrap: nowrap;
+        }
+
+        .section-nav a {
+          flex: 0 0 auto;
+        }
+
         .hero-actions,
         .section-heading {
           align-items: stretch;
@@ -338,10 +424,46 @@ export class TournamentDetailComponent {
   protected readonly standings = signal<PublicTournamentStandings | null>(null);
   protected readonly results = signal<PublicTournamentResults | null>(null);
   protected readonly errorMessage = signal('');
+  protected readonly teams = computed<PublicTeamPreview[]>(() => {
+    const teams = new Map<string, PublicTeamPreview>();
+    const addTeam = (team: { teamName?: string | null; teamShortName?: string | null; teamCode?: string | null; shortName?: string | null; code?: string | null } | null): void => {
+      if (!team) {
+        return;
+      }
+
+      const name = team.teamName?.trim();
+      if (!name) {
+        return;
+      }
+
+      const key = (team.teamCode || team.code || name).toLowerCase();
+      if (!teams.has(key)) {
+        teams.set(key, {
+          key,
+          name,
+          shortName: team.teamShortName ?? team.shortName ?? null,
+          code: team.teamCode ?? team.code ?? null
+        });
+      }
+    };
+
+    this.standings()?.standings.forEach((entry) => addTeam(entry));
+    this.calendar()?.matches.forEach((match) => {
+      addTeam(match.homeTeam);
+      addTeam(match.awayTeam);
+    });
+    this.results()?.results.forEach((entry) => {
+      addTeam(entry.match.homeTeam);
+      addTeam(entry.match.awayTeam);
+    });
+
+    return Array.from(teams.values()).sort((a, b) => a.name.localeCompare(b.name, 'es'));
+  });
   protected readonly metrics = computed<DetailMetric[]>(() => {
     const tournament = this.tournament();
     const standings = this.standings();
     const results = this.results();
+    const calendar = this.calendar();
 
     if (!tournament) {
       return [];
@@ -349,9 +471,10 @@ export class TournamentDetailComponent {
 
     return [
       { label: 'Formato', value: this.formatLabel(tournament.format), detail: tournament.seasonName },
-      { label: 'Fechas', value: this.dateRangeLabel(tournament.startDate, tournament.endDate), detail: 'Ventana publica visible' },
-      { label: 'Entradas tabla', value: standings?.totalEntries ?? 0, detail: 'Equipos con tabla visible' },
-      { label: 'Resultados cerrados', value: results?.totalClosedMatches ?? 0, detail: 'Partidos publicados' }
+      { label: 'Fechas', value: this.dateRangeLabel(tournament.startDate, tournament.endDate), detail: 'Periodo del campeonato' },
+      { label: 'Partidos', value: calendar?.totalMatches ?? 0, detail: 'Programados o disputados' },
+      { label: 'Resultados', value: results?.totalClosedMatches ?? 0, detail: 'Marcadores disponibles' },
+      { label: 'Equipos', value: this.teams().length || standings?.totalEntries || 0, detail: 'Participantes identificados' }
     ];
   });
 
@@ -359,7 +482,7 @@ export class TournamentDetailComponent {
     this.route.paramMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
       const slug = params.get('slug');
       if (!slug) {
-        this.errorMessage.set('No se encontro el identificador publico del campeonato.');
+        this.errorMessage.set('No se encontro el campeonato solicitado.');
         this.loading.set(false);
         return;
       }
@@ -451,7 +574,7 @@ export class TournamentDetailComponent {
       name: 'description',
       content:
         tournament.description ||
-        `${tournament.name} publica tablas y resultados visibles en Sistema Campeonatos.`
+        `${tournament.name}: consulta calendario, resultados y tabla de posiciones en Sistema Campeonatos.`
     });
   }
 }

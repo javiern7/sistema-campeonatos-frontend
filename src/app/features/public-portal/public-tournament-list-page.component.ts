@@ -36,9 +36,9 @@ type FilterState = {
       <section class="card public-card">
         <div class="section-heading">
           <div>
-            <span class="hero-kicker">Listado publico</span>
-            <h1>Campeonatos visibles</h1>
-            <p class="muted">Consulta publica de campeonatos disponibles.</p>
+            <span class="hero-kicker">Cartelera deportiva</span>
+            <h1>Campeonatos disponibles</h1>
+            <p class="muted">Encuentra el campeonato que quieres seguir y revisa su calendario, resultados y tabla.</p>
           </div>
           <a mat-stroked-button routerLink="/portal">Volver al inicio</a>
         </div>
@@ -73,7 +73,7 @@ type FilterState = {
       } @else if (errorMessage()) {
         <section class="card public-card">
           <div class="empty-state">
-            <strong>No fue posible obtener el listado publico.</strong>
+            <strong>No fue posible cargar los campeonatos.</strong>
             <p class="muted">{{ errorMessage() }}</p>
           </div>
         </section>
@@ -82,7 +82,7 @@ type FilterState = {
           <div class="section-heading">
             <div>
               <h2>{{ totalLabel() }}</h2>
-              <p class="muted">Solo se muestran campeonatos disponibles para consulta publica.</p>
+              <p class="muted">Campeonatos habilitados para que jugadores, equipos y familias puedan seguir la competencia.</p>
             </div>
           </div>
 
@@ -97,20 +97,20 @@ type FilterState = {
                     </span>
                   </div>
                   <h3>{{ tournament.name }}</h3>
-                  <p class="muted">{{ tournament.description || 'Sin descripcion publica cargada.' }}</p>
+                  <p class="muted">{{ tournament.description || 'Informacion del campeonato por confirmar.' }}</p>
                   <div class="meta-grid">
                     <span>{{ tournament.seasonName }}</span>
                     <span>{{ formatLabel(tournament.format) }}</span>
                     <span>{{ dateRangeLabel(tournament.startDate, tournament.endDate) }}</span>
                   </div>
-                  <a class="text-link" [routerLink]="['/portal/tournaments', tournament.slug]">Abrir detalle</a>
+                  <a class="text-link" [routerLink]="['/portal/tournaments', tournament.slug]">Ver campeonato</a>
                 </article>
               }
             </div>
           } @else {
             <div class="empty-state">
-              <strong>No hay campeonatos visibles con esos filtros.</strong>
-              <p class="muted">Ajusta nombre o estado para revisar la cartelera disponible.</p>
+              <strong>No encontramos campeonatos con esos filtros.</strong>
+              <p class="muted">Prueba con otro nombre o estado para revisar la cartelera disponible.</p>
             </div>
           }
         </section>
@@ -239,17 +239,17 @@ export class TournamentListComponent {
   protected readonly tournaments = signal<PublicTournamentSummary[]>([]);
   protected readonly totalElements = signal(0);
   protected readonly errorMessage = signal('');
-  protected readonly totalLabel = computed(() => `Total visible: ${this.totalElements()}`);
+  protected readonly totalLabel = computed(() => `${this.totalElements()} campeonatos encontrados`);
   protected readonly draftFilters: FilterState = {
     name: '',
     status: ''
   };
 
   constructor() {
-    this.title.setTitle('Campeonatos visibles | Sistema Campeonatos');
+    this.title.setTitle('Campeonatos disponibles | Sistema Campeonatos');
     this.meta.updateTag({
       name: 'description',
-      content: 'Listado publico de campeonatos visibles en Sistema Campeonatos.'
+      content: 'Listado de campeonatos disponibles para consultar calendario, resultados y tabla.'
     });
     this.loadTournaments();
   }

@@ -11,11 +11,11 @@ import { PublicTournamentStandings } from './public-portal.models';
     <section class="card public-card">
       <div class="section-heading">
         <div>
-          <h2>Tabla publica</h2>
+          <h2>Tabla de posiciones</h2>
           <p class="muted">{{ standingsContextLabel() }}</p>
         </div>
         @if (standings) {
-          <span class="meta-chip">{{ standings.totalEntries }} entradas</span>
+          <span class="meta-chip">{{ standings.totalEntries }} equipos</span>
         }
       </div>
 
@@ -62,8 +62,8 @@ import { PublicTournamentStandings } from './public-portal.models';
         </div>
       } @else {
         <div class="empty-state">
-          <strong>No hay tabla publicada aun.</strong>
-          <p class="muted">No hay posiciones visibles para este contexto.</p>
+          <strong>{{ emptyTitle() }}</strong>
+          <p class="muted">{{ emptyDescription() }}</p>
         </div>
       }
     </section>
@@ -147,13 +147,26 @@ import { PublicTournamentStandings } from './public-portal.models';
 })
 export class StandingsSectionComponent {
   @Input({ required: true }) standings: PublicTournamentStandings | null = null;
+  @Input() closedMatches = 0;
 
   protected standingsContextLabel(): string {
     if (!this.standings) {
-      return 'Cargando contexto de tabla...';
+      return 'Cargando tabla de posiciones...';
     }
 
     const context = [this.standings.stageName, this.standings.groupName].filter(Boolean).join(' / ');
-    return context || 'Lectura consolidada sin filtro adicional de etapa o grupo.';
+    return context || 'Clasificacion general del campeonato.';
+  }
+
+  protected emptyTitle(): string {
+    return this.closedMatches > 0
+      ? 'Tabla pendiente de actualizacion.'
+      : 'La tabla estara disponible cuando se registren resultados.';
+  }
+
+  protected emptyDescription(): string {
+    return this.closedMatches > 0
+      ? 'El organizador ya cuenta con marcadores registrados y podra publicar las posiciones cuando correspondan.'
+      : 'Vuelve a revisarla cuando el campeonato tenga partidos finalizados.';
   }
 }

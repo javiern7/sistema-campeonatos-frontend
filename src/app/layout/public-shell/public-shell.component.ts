@@ -9,14 +9,14 @@ import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
     <div class="public-shell">
       <header class="public-topbar">
         <a class="brand" routerLink="/portal">
-          <span class="brand-kicker">Web publica</span>
+          <span class="brand-kicker">Portal de campeonatos</span>
           <strong>Sistema Campeonatos</strong>
         </a>
 
         <nav class="public-nav" aria-label="Navegacion publica">
           <a routerLink="/portal" [routerLinkActive]="'active'" [routerLinkActiveOptions]="{ exact: true }">Inicio</a>
           <a routerLink="/portal/tournaments" routerLinkActive="active">Campeonatos</a>
-          <a routerLink="/login">Ingreso administradores</a>
+          <a routerLink="/login">Organizadores</a>
         </nav>
       </header>
 

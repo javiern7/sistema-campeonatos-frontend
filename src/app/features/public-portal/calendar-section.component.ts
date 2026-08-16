@@ -11,7 +11,7 @@ import { PublicMatchSummary, PublicTournamentCalendar } from './public-portal.mo
       <div class="section-heading">
         <div>
           <h2>Calendario</h2>
-          <p class="muted">Partidos programados y resultados publicados.</p>
+          <p class="muted">Proximos partidos, horarios, sedes y estado de cada encuentro.</p>
         </div>
         @if (calendar) {
           <span class="meta-chip">{{ calendar.totalMatches }} partidos</span>
@@ -27,7 +27,7 @@ import { PublicMatchSummary, PublicTournamentCalendar } from './public-portal.mo
                 <p class="muted">{{ contextLabel(match) }}</p>
               </div>
               <div class="match-meta">
-                <span class="status-chip">{{ statusLabel(match.status) }}</span>
+                <span class="status-chip" [class]="statusClass(match.status)">{{ statusLabel(match.status) }}</span>
                 <span>{{ dateTimeLabel(match.scheduledAt) }}</span>
                 <span>{{ match.venueName || 'Sede no publicada' }}</span>
               </div>
@@ -36,8 +36,8 @@ import { PublicMatchSummary, PublicTournamentCalendar } from './public-portal.mo
         </div>
       } @else {
         <div class="empty-state">
-          <strong>No hay partidos en calendario.</strong>
-          <p class="muted">No hay partidos visibles para este campeonato.</p>
+          <strong>Calendario por confirmar.</strong>
+          <p class="muted">Los partidos apareceran cuando el organizador publique la programacion.</p>
         </div>
       }
     </section>
@@ -106,6 +106,21 @@ import { PublicMatchSummary, PublicTournamentCalendar } from './public-portal.mo
         color: var(--primary);
       }
 
+      .status-chip.played {
+        background: #dcfce7;
+        color: #166534;
+      }
+
+      .status-chip.cancelled {
+        background: #fee2e2;
+        color: #b91c1c;
+      }
+
+      .status-chip.forfeit {
+        background: #fef3c7;
+        color: #92400e;
+      }
+
       @media (max-width: 640px) {
         .public-card {
           padding: 1rem;
@@ -135,7 +150,7 @@ export class CalendarSectionComponent {
       .filter(Boolean)
       .join(' / ');
 
-    return context || 'Sin etapa publica';
+    return context || 'Etapa por confirmar';
   }
 
   protected statusLabel(status: string): string {
@@ -143,12 +158,16 @@ export class CalendarSectionComponent {
       SCHEDULED: 'Programado',
       IN_PROGRESS: 'En curso',
       PLAYED: 'Jugado',
-      FORFEIT: 'W.O.',
+      FORFEIT: 'Resultado por ausencia',
       CANCELLED: 'Cancelado',
       POSTPONED: 'Postergado'
     };
 
     return labels[status] ?? status;
+  }
+
+  protected statusClass(status: string): string {
+    return status.toLowerCase().replace('_', '-');
   }
 
   protected dateTimeLabel(value: string | null): string {
