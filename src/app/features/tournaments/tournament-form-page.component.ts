@@ -304,7 +304,7 @@ export class TournamentFormPageComponent {
 
     request$.pipe(finalize(() => this.saving.set(false))).subscribe({
       next: () => {
-        this.notifications.success('Torneo guardado correctamente');
+        this.notifications.success('Campeonato guardado correctamente');
         void this.router.navigateByUrl('/tournaments');
       },
       error: (error: unknown) => this.notifications.error(this.errorMapper.map(error).message)

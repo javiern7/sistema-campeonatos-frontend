@@ -5,6 +5,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatSelectModule } from '@angular/material/select';
 import { MatTableModule } from '@angular/material/table';
@@ -13,6 +14,7 @@ import { AuthorizationService } from '../../core/auth/authorization.service';
 import { ErrorMapper } from '../../core/error/error.mapper';
 import { NotificationService } from '../../core/error/notification.service';
 import { CatalogLoaderService } from '../../core/pagination/catalog-loader.service';
+import { ConfirmationDialogComponent } from '../../shared/confirmation-dialog/confirmation-dialog.component';
 import { parseBackendDateTime } from '../../shared/date/date-time.utils';
 import { LoadingStateComponent } from '../../shared/loading-state/loading-state.component';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
@@ -65,6 +67,7 @@ const parseQueryNumber = (value: string | null): number | '' => {
     ReactiveFormsModule,
     RouterLink,
     MatButtonModule,
+    MatDialogModule,
     MatFormFieldModule,
     MatPaginatorModule,
     MatSelectModule,
@@ -412,6 +415,7 @@ export class StandingsPageComponent {
   private readonly notifications = inject(NotificationService);
   private readonly errorMapper = inject(ErrorMapper);
   private readonly authorization = inject(AuthorizationService);
+  private readonly dialog = inject(MatDialog);
 
   protected readonly loading = signal(false);
   protected readonly recalculating = signal(false);
@@ -586,7 +590,7 @@ export class StandingsPageComponent {
     }
 
     if (playedMatches > 0 && standingsCount === 0) {
-      return 'Hay partidos jugados en este torneo pero el filtro actual no muestra standings. Recalcula o revisa el contexto cargado.';
+        return 'Hay partidos jugados en este campeonato pero el filtro actual no muestra tabla. Actualiza o revisa el contexto cargado.';
     }
 
     if (rosterReadyCount < approvedRegistrations.length) {
@@ -850,20 +854,32 @@ export class StandingsPageComponent {
   }
 
   protected remove(row: Standing): void {
-    if (!window.confirm(`Se eliminara el standing #${row.id}. Esta accion no se puede deshacer.`)) {
-      return;
-    }
+    this.dialog
+      .open(ConfirmationDialogComponent, {
+        data: {
+          title: 'Eliminar posicion de tabla',
+          description: `Se eliminara la posicion de ${this.tournamentTeamLabel(row.tournamentTeamId)}. Esta accion no cambia los partidos cargados, pero puede afectar la lectura de la tabla.`,
+          confirmLabel: 'Eliminar posicion',
+          destructive: true
+        }
+      })
+      .afterClosed()
+      .subscribe((confirmed) => {
+        if (!confirmed) {
+          return;
+        }
 
-    this.loading.set(true);
-    this.standingsService
-      .delete(row.id)
-      .pipe(finalize(() => this.loading.set(false)))
-      .subscribe({
-        next: () => {
-          this.notifications.success('Registro de tabla eliminado correctamente');
-          this.load();
-        },
-        error: (error: unknown) => this.notifications.error(this.errorMapper.map(error).message)
+        this.loading.set(true);
+        this.standingsService
+          .delete(row.id)
+          .pipe(finalize(() => this.loading.set(false)))
+          .subscribe({
+            next: () => {
+              this.notifications.success('Registro de tabla eliminado correctamente');
+              this.load();
+            },
+            error: (error: unknown) => this.notifications.error(this.errorMapper.map(error).message)
+          });
       });
   }
 }

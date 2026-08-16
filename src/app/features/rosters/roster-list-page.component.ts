@@ -4,6 +4,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatSelectModule } from '@angular/material/select';
 import { MatTableModule } from '@angular/material/table';
@@ -12,6 +13,7 @@ import { AuthorizationService } from '../../core/auth/authorization.service';
 import { ErrorMapper } from '../../core/error/error.mapper';
 import { NotificationService } from '../../core/error/notification.service';
 import { CatalogLoaderService } from '../../core/pagination/catalog-loader.service';
+import { ConfirmationDialogComponent } from '../../shared/confirmation-dialog/confirmation-dialog.component';
 import { LoadingStateComponent } from '../../shared/loading-state/loading-state.component';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
 import { SearchSelectComponent } from '../../shared/search-select/search-select.component';
@@ -49,6 +51,7 @@ const parseQueryNumber = (value: string | null): number | '' => {
     ReactiveFormsModule,
     RouterLink,
     MatButtonModule,
+    MatDialogModule,
     MatFormFieldModule,
     MatPaginatorModule,
     MatSelectModule,
@@ -59,7 +62,7 @@ const parseQueryNumber = (value: string | null): number | '' => {
   ],
   template: `
     <section class="app-page">
-      <app-page-header title="Planteles" subtitle="Jugadores habilitados por inscripcion y torneo.">
+      <app-page-header title="Planteles" subtitle="Jugadores habilitados por inscripcion y campeonato.">
         @if (canManage()) {
           <a mat-flat-button color="primary" routerLink="/rosters/new">Nuevo registro</a>
         }
@@ -124,7 +127,7 @@ const parseQueryNumber = (value: string | null): number | '' => {
           @if (rows().length === 0) {
             <div class="empty-state">
               <strong>No hay registros de plantel para este filtro.</strong>
-              <p class="muted">Crea un nuevo registro o ajusta el filtro para continuar la operacion del torneo.</p>
+              <p class="muted">Crea un nuevo registro o ajusta el filtro para continuar la operacion del campeonato.</p>
             </div>
           } @else {
             <div class="table-wrapper">
@@ -203,6 +206,7 @@ export class RosterListPageComponent {
   private readonly notifications = inject(NotificationService);
   private readonly errorMapper = inject(ErrorMapper);
   private readonly authorization = inject(AuthorizationService);
+  private readonly dialog = inject(MatDialog);
 
   protected readonly loading = signal(true);
   protected readonly page = signal<RosterPage | null>(null);
@@ -343,7 +347,7 @@ export class RosterListPageComponent {
     const team = this.teams().find((item) => item.id === registration.teamId);
     const tournament = this.tournaments().find((item) => item.id === registration.tournamentId);
     const teamLabel = team?.name ?? `Equipo ${registration.teamId}`;
-    const tournamentLabel = tournament?.name ?? `Torneo ${registration.tournamentId}`;
+    const tournamentLabel = tournament?.name ?? `Campeonato ${registration.tournamentId}`;
     return `${teamLabel} / ${tournamentLabel}`;
   }
 
@@ -372,20 +376,32 @@ export class RosterListPageComponent {
   }
 
   protected remove(row: RosterEntry): void {
-    if (!window.confirm(`Se eliminara el registro de plantel #${row.id}. Esta accion no se puede deshacer.`)) {
-      return;
-    }
+    this.dialog
+      .open(ConfirmationDialogComponent, {
+        data: {
+          title: 'Eliminar jugador del plantel',
+          description: `Se quitara a ${this.playerName(row.playerId) || 'este jugador'} del plantel seleccionado. Esta accion no se puede deshacer.`,
+          confirmLabel: 'Eliminar registro',
+          destructive: true
+        }
+      })
+      .afterClosed()
+      .subscribe((confirmed) => {
+        if (!confirmed) {
+          return;
+        }
 
-    this.loading.set(true);
-    this.rostersService
-      .delete(row.id)
-      .pipe(finalize(() => this.loading.set(false)))
-      .subscribe({
-        next: () => {
-          this.notifications.success('Registro eliminado correctamente');
-          this.load();
-        },
-        error: (error: unknown) => this.notifications.error(this.errorMapper.map(error).message)
+        this.loading.set(true);
+        this.rostersService
+          .delete(row.id)
+          .pipe(finalize(() => this.loading.set(false)))
+          .subscribe({
+            next: () => {
+              this.notifications.success('Registro eliminado correctamente');
+              this.load();
+            },
+            error: (error: unknown) => this.notifications.error(this.errorMapper.map(error).message)
+          });
       });
   }
 }

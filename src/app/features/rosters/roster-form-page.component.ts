@@ -101,8 +101,8 @@ const rosterOperationalValidator: ValidatorFn = (control: AbstractControl): Vali
               @if (!isEditMode()) {
                 <app-search-select
                   formControlName="tournamentId"
-                  label="Torneo"
-                  placeholder="Busca un torneo"
+                  label="Campeonato"
+                  placeholder="Busca un campeonato"
                   [options]="tournaments()"
                   [labelFn]="tournamentOptionLabel"
                   [searchTextFn]="tournamentOptionLabel"
@@ -117,7 +117,7 @@ const rosterOperationalValidator: ValidatorFn = (control: AbstractControl): Vali
                   [options]="filteredTournamentTeams()"
                   [labelFn]="tournamentTeamOptionLabel"
                   [searchTextFn]="tournamentTeamOptionLabel"
-                  [hint]="filteredTournamentTeams().length === 0 ? 'No hay inscripciones registradas para el torneo seleccionado.' : ''"
+                  [hint]="filteredTournamentTeams().length === 0 ? 'No hay inscripciones registradas para el campeonato seleccionado.' : ''"
                   [showError]="form.controls.tournamentTeamId.invalid && form.controls.tournamentTeamId.touched"
                   errorText="Selecciona una inscripcion valida."
                 />
@@ -390,7 +390,7 @@ export class RosterFormPageComponent {
     const team = this.teams().find((entry) => entry.id === item.teamId);
     const tournament = this.tournaments().find((entry) => entry.id === item.tournamentId);
     const teamLabel = team?.name ?? `Equipo ${item.teamId}`;
-    const tournamentLabel = tournament?.name ?? `Torneo ${item.tournamentId}`;
+    const tournamentLabel = tournament?.name ?? `Campeonato ${item.tournamentId}`;
     return `${teamLabel} / ${tournamentLabel} (#${item.id})`;
   }
 

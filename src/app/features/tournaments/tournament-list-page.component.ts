@@ -5,6 +5,7 @@ import { finalize } from 'rxjs';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatSelectModule } from '@angular/material/select';
 import { MatTableModule } from '@angular/material/table';
@@ -12,6 +13,7 @@ import { MatTableModule } from '@angular/material/table';
 import { AuthorizationService } from '../../core/auth/authorization.service';
 import { ErrorMapper } from '../../core/error/error.mapper';
 import { NotificationService } from '../../core/error/notification.service';
+import { ConfirmationDialogComponent } from '../../shared/confirmation-dialog/confirmation-dialog.component';
 import { LoadingStateComponent } from '../../shared/loading-state/loading-state.component';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
 import { Sport } from '../sports/sport.models';
@@ -33,6 +35,7 @@ type SummaryCard = {
     ReactiveFormsModule,
     RouterLink,
     MatButtonModule,
+    MatDialogModule,
     MatFormFieldModule,
     MatInputModule,
     MatPaginatorModule,
@@ -186,6 +189,7 @@ export class TournamentListPageComponent {
   private readonly notifications = inject(NotificationService);
   private readonly errorMapper = inject(ErrorMapper);
   private readonly authorization = inject(AuthorizationService);
+  private readonly dialog = inject(MatDialog);
 
   protected readonly loading = signal(true);
   protected readonly page = signal<TournamentPage | null>(null);
@@ -337,38 +341,61 @@ export class TournamentListPageComponent {
   }
 
   protected transitionStatus(tournament: Tournament, targetStatus: TournamentStatus, actionLabel: string): void {
-    if (!window.confirm(`Se intentara ${actionLabel.toLowerCase()} el campeonato "${tournament.name}".`)) {
-      return;
-    }
+    this.dialog
+      .open(ConfirmationDialogComponent, {
+        data: {
+          title: `${actionLabel} campeonato`,
+          description: `Se actualizara el estado de "${tournament.name}". Revisa que inscripciones, planteles y partidos esten listos para este paso.`,
+          confirmLabel: actionLabel
+        }
+      })
+      .afterClosed()
+      .subscribe((confirmed) => {
+        if (!confirmed) {
+          return;
+        }
 
-    this.transitioningTournamentId.set(tournament.id);
-    this.tournamentsService
-      .transitionStatus(tournament.id, targetStatus)
-      .pipe(finalize(() => this.transitioningTournamentId.set(null)))
-      .subscribe({
-        next: () => {
-          this.notifications.success(`Torneo ${actionLabel.toLowerCase()} correctamente`);
-          this.load();
-        },
-        error: (error: unknown) => this.notifications.error(this.errorMapper.map(error).message)
+        this.transitioningTournamentId.set(tournament.id);
+        this.tournamentsService
+          .transitionStatus(tournament.id, targetStatus)
+          .pipe(finalize(() => this.transitioningTournamentId.set(null)))
+          .subscribe({
+            next: () => {
+              this.notifications.success(`Campeonato ${actionLabel.toLowerCase()} correctamente`);
+              this.load();
+            },
+            error: (error: unknown) => this.notifications.error(this.errorMapper.map(error).message)
+          });
       });
   }
 
   protected remove(tournament: Tournament): void {
-    if (!window.confirm(`Se eliminara el campeonato "${tournament.name}". Esta accion no se puede deshacer.`)) {
-      return;
-    }
+    this.dialog
+      .open(ConfirmationDialogComponent, {
+        data: {
+          title: 'Eliminar campeonato',
+          description: `Se eliminara "${tournament.name}" si no tiene informacion asociada. Esta accion no se puede deshacer.`,
+          confirmLabel: 'Eliminar campeonato',
+          destructive: true
+        }
+      })
+      .afterClosed()
+      .subscribe((confirmed) => {
+        if (!confirmed) {
+          return;
+        }
 
-    this.loading.set(true);
-    this.tournamentsService
-      .delete(tournament.id)
-      .pipe(finalize(() => this.loading.set(false)))
-      .subscribe({
-        next: () => {
-          this.notifications.success('Torneo eliminado correctamente');
-          this.load();
-        },
-        error: (error: unknown) => this.notifications.error(this.errorMapper.map(error).message)
+        this.loading.set(true);
+        this.tournamentsService
+          .delete(tournament.id)
+          .pipe(finalize(() => this.loading.set(false)))
+          .subscribe({
+            next: () => {
+              this.notifications.success('Campeonato eliminado correctamente');
+              this.load();
+            },
+            error: (error: unknown) => this.notifications.error(this.errorMapper.map(error).message)
+          });
       });
   }
 

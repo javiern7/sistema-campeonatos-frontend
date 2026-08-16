@@ -6,6 +6,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatTableModule } from '@angular/material/table';
 
@@ -14,6 +15,7 @@ import { ErrorMapper } from '../../core/error/error.mapper';
 import { NotificationService } from '../../core/error/notification.service';
 import { LoadingStateComponent } from '../../shared/loading-state/loading-state.component';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
+import { ConfirmationDialogComponent } from '../../shared/confirmation-dialog/confirmation-dialog.component';
 import { VisualIdentityComponent } from '../../shared/visual-identity/visual-identity.component';
 import { Team, TeamPage } from './team.models';
 import { TeamsService } from './teams.service';
@@ -33,6 +35,7 @@ type TeamVisualMetric = {
     RouterLink,
     MatButtonModule,
     MatCheckboxModule,
+    MatDialogModule,
     MatFormFieldModule,
     MatInputModule,
     MatPaginatorModule,
@@ -189,6 +192,7 @@ export class TeamListPageComponent {
   private readonly notifications = inject(NotificationService);
   private readonly errorMapper = inject(ErrorMapper);
   private readonly authorization = inject(AuthorizationService);
+  private readonly dialog = inject(MatDialog);
 
   protected readonly loading = signal(true);
   protected readonly page = signal<TeamPage | null>(null);
@@ -279,20 +283,32 @@ export class TeamListPageComponent {
   }
 
   protected remove(team: Team): void {
-    if (!window.confirm(`Se eliminara el equipo "${team.name}". Esta accion no se puede deshacer.`)) {
-      return;
-    }
+    this.dialog
+      .open(ConfirmationDialogComponent, {
+        data: {
+          title: 'Eliminar equipo',
+          description: `Se eliminara "${team.name}" si no tiene informacion asociada. Esta accion no se puede deshacer.`,
+          confirmLabel: 'Eliminar equipo',
+          destructive: true
+        }
+      })
+      .afterClosed()
+      .subscribe((confirmed) => {
+        if (!confirmed) {
+          return;
+        }
 
-    this.loading.set(true);
-    this.teamsService
-      .delete(team.id)
-      .pipe(finalize(() => this.loading.set(false)))
-      .subscribe({
-        next: () => {
-          this.notifications.success('Equipo eliminado correctamente');
-          this.load();
-        },
-        error: (error: unknown) => this.notifications.error(this.errorMapper.map(error).message)
+        this.loading.set(true);
+        this.teamsService
+          .delete(team.id)
+          .pipe(finalize(() => this.loading.set(false)))
+          .subscribe({
+            next: () => {
+              this.notifications.success('Equipo eliminado correctamente');
+              this.load();
+            },
+            error: (error: unknown) => this.notifications.error(this.errorMapper.map(error).message)
+          });
       });
   }
 

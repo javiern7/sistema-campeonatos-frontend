@@ -12,6 +12,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatTableModule } from '@angular/material/table';
@@ -20,6 +21,10 @@ import { AuthorizationService } from '../../core/auth/authorization.service';
 import { ErrorMapper } from '../../core/error/error.mapper';
 import { NotificationService } from '../../core/error/notification.service';
 import { CatalogLoaderService } from '../../core/pagination/catalog-loader.service';
+import {
+  ActionReasonDialogComponent,
+  ActionReasonDialogResult
+} from '../../shared/action-reason-dialog/action-reason-dialog.component';
 import { parseBackendDateTime } from '../../shared/date/date-time.utils';
 import { LoadingStateComponent } from '../../shared/loading-state/loading-state.component';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
@@ -77,6 +82,7 @@ const eventRulesValidator: ValidatorFn = (control: AbstractControl): ValidationE
     ReactiveFormsModule,
     RouterLink,
     MatButtonModule,
+    MatDialogModule,
     MatFormFieldModule,
     MatInputModule,
     MatSelectModule,
@@ -242,7 +248,7 @@ const eventRulesValidator: ValidatorFn = (control: AbstractControl): ValidationE
             </div>
           } @else {
             <div class="table-wrapper">
-              <table mat-table [dataSource]="events()" class="w-100">
+              <table mat-table [dataSource]="events()" class="w-100 events-table">
                 <ng-container matColumnDef="time">
                   <th mat-header-cell *matHeaderCellDef>Tiempo</th>
                   <td mat-cell *matCellDef="let row">
@@ -326,6 +332,31 @@ const eventRulesValidator: ValidatorFn = (control: AbstractControl): ValidationE
       .section-heading p {
         margin: 0.3rem 0 0;
       }
+
+      .events-table {
+        min-width: 760px;
+      }
+
+      .events-table th,
+      .events-table td {
+        vertical-align: top;
+      }
+
+      .events-table .mat-column-time {
+        min-width: 140px;
+      }
+
+      .events-table .mat-column-type {
+        min-width: 150px;
+      }
+
+      .events-table .mat-column-subject {
+        min-width: 230px;
+      }
+
+      .events-table .status-pill {
+        min-width: 82px;
+      }
     `
   ],
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -342,6 +373,7 @@ export class MatchEventsPageComponent {
   private readonly notifications = inject(NotificationService);
   private readonly errorMapper = inject(ErrorMapper);
   private readonly authorization = inject(AuthorizationService);
+  private readonly dialog = inject(MatDialog);
 
   protected readonly matchId = Number(this.route.snapshot.paramMap.get('id') ?? 0);
   protected readonly pageLoading = signal(true);
@@ -487,25 +519,37 @@ export class MatchEventsPageComponent {
   }
 
   protected annul(event: MatchEvent): void {
-    const notes = window.prompt('Motivo de anulacion', 'Correccion de registro');
-    if (notes === null) {
-      return;
-    }
-
-    this.loadingEvents.set(true);
-    this.matchesService
-      .annulEvent(this.matchId, event.id, { notes: notes || null })
-      .pipe(finalize(() => this.loadingEvents.set(false)))
-      .subscribe({
-        next: () => {
-          this.notifications.success('Evento anulado correctamente');
-          this.loadEvents();
-        },
-        error: (error: unknown) => {
-          const appError = this.errorMapper.map(error);
-          this.eventsError.set(appError.message);
-          this.notifications.error(appError.message);
+    this.dialog
+      .open<ActionReasonDialogComponent, unknown, ActionReasonDialogResult>(ActionReasonDialogComponent, {
+        data: {
+          title: 'Anular evento',
+          description: 'Indica por que se anula este evento. El historial quedara marcado como anulado.',
+          confirmLabel: 'Anular evento',
+          reasonLabel: 'Motivo',
+          defaultReason: 'Correccion de registro'
         }
+      })
+      .afterClosed()
+      .subscribe((result) => {
+        if (!result) {
+          return;
+        }
+
+        this.loadingEvents.set(true);
+        this.matchesService
+          .annulEvent(this.matchId, event.id, { notes: result.reason || null })
+          .pipe(finalize(() => this.loadingEvents.set(false)))
+          .subscribe({
+            next: () => {
+              this.notifications.success('Evento anulado correctamente');
+              this.loadEvents();
+            },
+            error: (error: unknown) => {
+              const appError = this.errorMapper.map(error);
+              this.eventsError.set(appError.message);
+              this.notifications.error(appError.message);
+            }
+          });
       });
   }
 

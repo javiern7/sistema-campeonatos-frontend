@@ -156,8 +156,8 @@ const matchConsistencyValidator: ValidatorFn = (control: AbstractControl): Valid
               @if (!isEditMode()) {
                 <app-search-select
                   formControlName="tournamentId"
-                  label="Torneo"
-                  placeholder="Busca un torneo"
+                  label="Campeonato"
+                  placeholder="Busca un campeonato"
                   [options]="tournaments()"
                   [labelFn]="tournamentOptionLabel"
                   [searchTextFn]="tournamentOptionLabel"
@@ -189,7 +189,7 @@ const matchConsistencyValidator: ValidatorFn = (control: AbstractControl): Valid
             <section class="form-section">
               <div class="form-section-heading">
                 <h2>Equipos</h2>
-                <p class="muted">Selecciona los participantes del partido. Ambos deben pertenecer al campeonato.</p>
+                <p class="muted">Selecciona los participantes del partido. Ambos deben estar inscritos en el campeonato.</p>
               </div>
 
               <div class="form-grid">
@@ -220,7 +220,7 @@ const matchConsistencyValidator: ValidatorFn = (control: AbstractControl): Valid
             <section class="form-section">
               <div class="form-section-heading">
                 <h2>Fecha y lugar</h2>
-                <p class="muted">Programa el encuentro para que el fixture sea claro para el organizador.</p>
+                <p class="muted">Programa el encuentro para que el calendario sea claro para el organizador.</p>
               </div>
 
               <div class="form-grid">
@@ -326,7 +326,7 @@ const matchConsistencyValidator: ValidatorFn = (control: AbstractControl): Valid
               <p class="muted">El ganador debe coincidir con uno de los equipos del partido.</p>
             }
             @if (form.hasError('invalidTournamentTeams')) {
-              <p class="muted">Los equipos seleccionados deben pertenecer al torneo activo.</p>
+              <p class="muted">Los equipos seleccionados deben pertenecer al campeonato activo.</p>
             }
             @if (form.hasError('incompleteScore')) {
               <p class="muted">Si informas un score, debes completar ambos marcadores.</p>
@@ -488,7 +488,7 @@ export class MatchFormPageComponent {
     }
 
     if (approvedCount === 0) {
-      return 'Este torneo aun no tiene inscripciones aprobadas. Completa ese paso antes de programar competencia.';
+      return 'Este campeonato aun no tiene inscripciones aprobadas. Completa ese paso antes de programar competencia.';
     }
 
     if (rosterReadyCount < 2) {
@@ -736,7 +736,7 @@ export class MatchFormPageComponent {
     const team = this.teams().find((entry) => entry.id === item.teamId);
     const tournament = this.tournaments().find((entry) => entry.id === item.tournamentId);
     const teamLabel = team?.name ?? `Equipo ${item.teamId}`;
-    const tournamentLabel = tournament?.name ?? `Torneo ${item.tournamentId}`;
+    const tournamentLabel = tournament?.name ?? `Campeonato ${item.tournamentId}`;
     return `${teamLabel} / ${tournamentLabel} (#${item.id})`;
   }
 
@@ -745,7 +745,7 @@ export class MatchFormPageComponent {
       return '';
     }
 
-    return this.tournaments().find((item) => item.id === id)?.name ?? `Torneo ${id}`;
+    return this.tournaments().find((item) => item.id === id)?.name ?? `Campeonato ${id}`;
   }
 
   protected stageName(id: number): string {

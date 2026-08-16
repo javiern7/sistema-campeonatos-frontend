@@ -63,7 +63,7 @@ const parseOptionalNumber = (value: string | number | null | undefined): number 
           <form [formGroup]="form" (ngSubmit)="save()" class="app-page">
             @if (registrationWarning()) {
               <div class="context-banner">
-                <strong>Auditoria Sprint 7</strong>
+                <strong>Siguiente paso recomendado</strong>
                 <span class="muted">{{ registrationWarning() }}</span>
               </div>
             }
@@ -72,8 +72,8 @@ const parseOptionalNumber = (value: string | number | null | undefined): number 
               @if (!isEditMode()) {
                 <app-search-select
                   formControlName="tournamentId"
-                  label="Torneo"
-                  placeholder="Busca un torneo"
+                  label="Campeonato"
+                  placeholder="Busca un campeonato"
                   [options]="tournaments()"
                   [labelFn]="tournamentOptionLabel"
                   [searchTextFn]="tournamentOptionLabel"
@@ -102,8 +102,8 @@ const parseOptionalNumber = (value: string | number | null | undefined): number 
                 </mat-select>
               </mat-form-field>
 
-              <mat-form-field appearance="outline">
-                <mat-label>Seed</mat-label>
+                <mat-form-field appearance="outline">
+                <mat-label>Orden de siembra</mat-label>
                 <input matInput type="number" formControlName="seedNumber">
               </mat-form-field>
 

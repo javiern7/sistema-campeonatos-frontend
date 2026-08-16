@@ -42,7 +42,7 @@ import { TournamentsService } from '../tournaments/tournaments.service';
 
         <form [formGroup]="filtersForm" class="filter-row">
           <mat-form-field appearance="outline">
-            <mat-label>Torneo</mat-label>
+            <mat-label>Campeonato</mat-label>
             <mat-select formControlName="tournamentId">
               <mat-option value="">Todos</mat-option>
               @for (tournament of tournamentOptions(); track tournament.id) {

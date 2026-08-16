@@ -33,7 +33,7 @@ import { TeamsService } from './teams.service';
     <section class="app-page">
       <app-page-header
         [title]="isEditMode() ? 'Editar equipo' : 'Nuevo equipo'"
-        subtitle="Datos visibles del equipo sin abrir logos, imagenes ni CMS."
+        subtitle="Datos que identifican al equipo en campeonatos, tablas y resultados."
       />
 
       <section class="card page-card">
@@ -48,9 +48,9 @@ import { TeamsService } from './teams.service';
                 [code]="form.controls.code.value"
                 [primary]="form.controls.primaryColor.value"
                 [secondary]="form.controls.secondaryColor.value"
-                meta="Vista previa operativa"
+                meta="Vista previa del equipo"
               />
-              <p class="muted">La identidad usa abreviatura, codigo o iniciales. No requiere assets externos.</p>
+              <p class="muted">La vista previa ayuda a reconocer al equipo en listados, partidos y reportes.</p>
             </div>
 
             <div class="form-grid">

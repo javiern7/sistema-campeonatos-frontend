@@ -5,6 +5,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatSelectModule } from '@angular/material/select';
 import { MatTableModule } from '@angular/material/table';
@@ -13,6 +14,7 @@ import { AuthorizationService } from '../../core/auth/authorization.service';
 import { ErrorMapper } from '../../core/error/error.mapper';
 import { NotificationService } from '../../core/error/notification.service';
 import { CatalogLoaderService } from '../../core/pagination/catalog-loader.service';
+import { ConfirmationDialogComponent } from '../../shared/confirmation-dialog/confirmation-dialog.component';
 import { parseBackendDateTime } from '../../shared/date/date-time.utils';
 import { LoadingStateComponent } from '../../shared/loading-state/loading-state.component';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
@@ -53,6 +55,7 @@ const parseQueryNumber = (value: string | null): number | '' => {
     ReactiveFormsModule,
     RouterLink,
     MatButtonModule,
+    MatDialogModule,
     MatFormFieldModule,
     MatPaginatorModule,
     MatSelectModule,
@@ -63,7 +66,7 @@ const parseQueryNumber = (value: string | null): number | '' => {
   ],
   template: `
     <section class="app-page">
-      <app-page-header title="Partidos" subtitle="Gestion operativa del fixture y sus resultados.">
+      <app-page-header title="Partidos" subtitle="Programacion, resultados y seguimiento de la competencia.">
         @if (selectedTournamentId()) {
           <a mat-stroked-button [routerLink]="['/tournaments', selectedTournamentId()]">Volver al campeonato</a>
         }
@@ -76,8 +79,8 @@ const parseQueryNumber = (value: string | null): number | '' => {
         <form [formGroup]="filtersForm" class="filter-row">
           <app-search-select
             formControlName="tournamentId"
-            label="Torneo"
-            placeholder="Busca un torneo"
+            label="Campeonato"
+            placeholder="Busca un campeonato"
             [options]="tournaments()"
             [labelFn]="tournamentOptionLabel"
             [searchTextFn]="tournamentOptionLabel"
@@ -284,6 +287,7 @@ export class MatchListPageComponent {
   private readonly notifications = inject(NotificationService);
   private readonly errorMapper = inject(ErrorMapper);
   private readonly authorization = inject(AuthorizationService);
+  private readonly dialog = inject(MatDialog);
   protected readonly selectedTournamentId = signal(0);
   private readonly selectedStageId = signal(0);
   private readonly selectedStatus = signal<MatchStatus | ''>('');
@@ -319,7 +323,7 @@ export class MatchListPageComponent {
       this.statusLabel(this.selectedStatus())
     ].filter((label) => Boolean(label));
 
-    return labels.length > 0 ? labels.join(' / ') : 'Todos los torneos y estados';
+    return labels.length > 0 ? labels.join(' / ') : 'Todos los campeonatos y estados';
   });
   protected readonly catalogErrorSummary = computed(() => this.catalogErrors().join(' '));
   protected readonly summaryCards = computed<SummaryCard[]>(() => {
@@ -473,20 +477,32 @@ export class MatchListPageComponent {
   }
 
   protected remove(row: MatchGame): void {
-    if (!window.confirm(`Se eliminara el partido #${row.id}. Esta accion no se puede deshacer.`)) {
-      return;
-    }
+    this.dialog
+      .open(ConfirmationDialogComponent, {
+        data: {
+          title: 'Eliminar partido',
+          description: `Se eliminara el partido ${this.tournamentTeamLabel(row.homeTournamentTeamId)} vs ${this.tournamentTeamLabel(row.awayTournamentTeamId)}. Esta accion puede afectar resultados, eventos y tabla.`,
+          confirmLabel: 'Eliminar partido',
+          destructive: true
+        }
+      })
+      .afterClosed()
+      .subscribe((confirmed) => {
+        if (!confirmed) {
+          return;
+        }
 
-    this.loading.set(true);
-    this.matchesService
-      .delete(row.id)
-      .pipe(finalize(() => this.loading.set(false)))
-      .subscribe({
-        next: () => {
-          this.notifications.success('Partido eliminado correctamente');
-          this.load();
-        },
-        error: (error: unknown) => this.notifications.error(this.errorMapper.map(error).message)
+        this.loading.set(true);
+        this.matchesService
+          .delete(row.id)
+          .pipe(finalize(() => this.loading.set(false)))
+          .subscribe({
+            next: () => {
+              this.notifications.success('Partido eliminado correctamente');
+              this.load();
+            },
+            error: (error: unknown) => this.notifications.error(this.errorMapper.map(error).message)
+          });
       });
   }
 
@@ -505,7 +521,7 @@ export class MatchListPageComponent {
       return '';
     }
 
-    return this.tournaments().find((item) => item.id === id)?.name ?? `Torneo ${id}`;
+    return this.tournaments().find((item) => item.id === id)?.name ?? `Campeonato ${id}`;
   }
 
   protected stageName(id: number): string {

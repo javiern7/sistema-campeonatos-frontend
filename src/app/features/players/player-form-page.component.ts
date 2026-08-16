@@ -39,7 +39,7 @@ import { PlayersService } from './players.service';
     <section class="app-page">
       <app-page-header
         [title]="isEditMode() ? 'Editar jugador' : 'Nuevo jugador'"
-        subtitle="Datos personales visibles con avatar generado por iniciales."
+        subtitle="Datos del jugador para planteles, partidos y reportes."
       />
 
       <section class="card page-card">
@@ -52,9 +52,9 @@ import { PlayersService } from './players.service';
                 kind="player"
                 [label]="form.controls.firstName.value + ' ' + form.controls.lastName.value"
                 [shortLabel]="playerInitialSource()"
-                meta="Vista previa operativa"
+                meta="Vista previa del jugador"
               />
-              <p class="muted">El avatar usa iniciales; no requiere foto adicional.</p>
+              <p class="muted">La vista previa ayuda a reconocer al jugador en planteles y eventos.</p>
             </div>
 
             <div class="form-grid">

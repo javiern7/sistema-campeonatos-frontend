@@ -6,6 +6,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatTableModule } from '@angular/material/table';
 
@@ -14,6 +15,7 @@ import { ErrorMapper } from '../../core/error/error.mapper';
 import { NotificationService } from '../../core/error/notification.service';
 import { LoadingStateComponent } from '../../shared/loading-state/loading-state.component';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
+import { ConfirmationDialogComponent } from '../../shared/confirmation-dialog/confirmation-dialog.component';
 import { VisualIdentityComponent } from '../../shared/visual-identity/visual-identity.component';
 import { Player, PlayerPage } from './player.models';
 import { PlayersService } from './players.service';
@@ -33,6 +35,7 @@ type PlayerVisualMetric = {
     RouterLink,
     MatButtonModule,
     MatCheckboxModule,
+    MatDialogModule,
     MatFormFieldModule,
     MatInputModule,
     MatPaginatorModule,
@@ -173,6 +176,7 @@ export class PlayerListPageComponent {
   private readonly notifications = inject(NotificationService);
   private readonly errorMapper = inject(ErrorMapper);
   private readonly authorization = inject(AuthorizationService);
+  private readonly dialog = inject(MatDialog);
 
   protected readonly loading = signal(true);
   protected readonly page = signal<PlayerPage | null>(null);
@@ -272,20 +276,33 @@ export class PlayerListPageComponent {
   }
 
   protected remove(player: Player): void {
-    if (!window.confirm(`Se eliminara el jugador "${player.firstName} ${player.lastName}". Esta accion no se puede deshacer.`)) {
-      return;
-    }
+    const playerName = `${player.firstName} ${player.lastName}`.trim();
+    this.dialog
+      .open(ConfirmationDialogComponent, {
+        data: {
+          title: 'Eliminar jugador',
+          description: `Se eliminara "${playerName}" si no tiene informacion asociada. Esta accion no se puede deshacer.`,
+          confirmLabel: 'Eliminar jugador',
+          destructive: true
+        }
+      })
+      .afterClosed()
+      .subscribe((confirmed) => {
+        if (!confirmed) {
+          return;
+        }
 
-    this.loading.set(true);
-    this.playersService
-      .delete(player.id)
-      .pipe(finalize(() => this.loading.set(false)))
-      .subscribe({
-        next: () => {
-          this.notifications.success('Jugador eliminado correctamente');
-          this.load();
-        },
-        error: (error: unknown) => this.notifications.error(this.errorMapper.map(error).message)
+        this.loading.set(true);
+        this.playersService
+          .delete(player.id)
+          .pipe(finalize(() => this.loading.set(false)))
+          .subscribe({
+            next: () => {
+              this.notifications.success('Jugador eliminado correctamente');
+              this.load();
+            },
+            error: (error: unknown) => this.notifications.error(this.errorMapper.map(error).message)
+          });
       });
   }
 

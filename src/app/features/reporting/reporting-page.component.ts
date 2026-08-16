@@ -47,7 +47,7 @@ type SummaryCard = {
 };
 
 const REPORT_OPTIONS: ReportOption[] = [
-  { type: 'summary', label: 'Resumen de torneo', description: 'Totales operativos del torneo.', source: 'tournaments:read' },
+  { type: 'summary', label: 'Resumen del campeonato', description: 'Totales operativos del campeonato.', source: 'tournaments:read' },
   { type: 'matches', label: 'Partidos', description: 'Listado de partidos y resultados oficiales.', source: 'matches:read' },
   { type: 'standings', label: 'Tabla de posiciones', description: 'Lectura oficial existente, sin recalculo.', source: 'standings:read' },
   { type: 'events', label: 'Eventos', description: 'Eventos filtrables por partido, equipo, jugador o rango.', source: 'matches:read' },
@@ -76,8 +76,8 @@ const REPORT_OPTIONS: ReportOption[] = [
     <section class="app-page">
       <app-page-header title="Reporteria y exportacion" [subtitle]="headerSubtitle()">
         <div class="header-actions">
-          <a mat-stroked-button routerLink="/reporting">Cambiar torneo</a>
-          <a mat-stroked-button [routerLink]="['/tournaments', tournamentId()]">Volver al torneo</a>
+          <a mat-stroked-button routerLink="/reporting">Cambiar campeonato</a>
+          <a mat-stroked-button [routerLink]="['/tournaments', tournamentId()]">Volver al campeonato</a>
         </div>
       </app-page-header>
 
@@ -86,7 +86,7 @@ const REPORT_OPTIONS: ReportOption[] = [
       } @else if (!tournament()) {
         <section class="card page-card app-page">
           <div class="empty-state">
-            <strong>No se encontro el torneo solicitado.</strong>
+            <strong>No se encontro el campeonato solicitado.</strong>
             <p class="muted">Abre nuevamente los reportes desde el panel principal.</p>
           </div>
         </section>
@@ -468,7 +468,7 @@ export class ReportingPageComponent {
       filters.to ? `Hasta ${filters.to}` : ''
     ].filter(Boolean);
 
-    return labels.length > 0 ? labels.join(' / ') : 'Torneo completo';
+    return labels.length > 0 ? labels.join(' / ') : 'Campeonato completo';
   }
 
   protected matchLabel(match: MatchGame): string {
@@ -509,7 +509,14 @@ export class ReportingPageComponent {
   protected readonly playerOptionLabel = (player: Player): string => this.playerName(player.id);
 
   protected sourceLabel(): string {
-    return this.report()?.metadata?.source || 'Reportes del sistema';
+    const source = this.report()?.metadata?.source;
+    const labels: Record<string, string> = {
+      'tournaments:read': 'Datos del campeonato',
+      'matches:read': 'Partidos y eventos',
+      'standings:read': 'Tabla de posiciones'
+    };
+
+    return source ? labels[source] ?? 'Reportes del sistema' : 'Reportes del sistema';
   }
 
   protected reportAreaLabel(type: ReportType): string {
