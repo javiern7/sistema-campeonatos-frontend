@@ -26,7 +26,7 @@ type PublicMetric = {
         <section class="card public-card">
           <div class="hero-copy">
             <span class="hero-kicker">Web publica</span>
-            <h1>Cargando torneos visibles...</h1>
+            <h1>Cargando campeonatos visibles...</h1>
           </div>
           <app-loading-state />
         </section>
@@ -47,7 +47,7 @@ type PublicMetric = {
               Campeonatos, tablas y resultados disponibles para consulta publica.
             </p>
             <div class="hero-actions">
-              <a class="primary-link" routerLink="/portal/tournaments">Explorar torneos</a>
+              <a class="primary-link" routerLink="/portal/tournaments">Explorar campeonatos</a>
               <a class="ghost-link" routerLink="/login">Ingreso administradores</a>
             </div>
           </div>
@@ -75,8 +75,8 @@ type PublicMetric = {
         <section class="card public-card">
           <div class="section-heading">
             <div>
-              <h2>Torneos destacados</h2>
-              <p class="muted">Torneos publicados y listos para consulta externa.</p>
+              <h2>Campeonatos destacados</h2>
+              <p class="muted">Campeonatos publicados y listos para consulta externa.</p>
             </div>
             <a class="text-link" routerLink="/portal/tournaments">Ver todos</a>
           </div>
@@ -104,8 +104,8 @@ type PublicMetric = {
             </div>
           } @else {
             <div class="empty-state">
-              <strong>No hay torneos destacados visibles.</strong>
-              <p class="muted">La home publica se habilita cuando existen torneos visibles.</p>
+              <strong>No hay campeonatos destacados visibles.</strong>
+              <p class="muted">La home publica se habilita cuando existen campeonatos visibles.</p>
             </div>
           }
         </section>
@@ -392,7 +392,7 @@ export class PublicHomePageComponent {
   }
 
   private updateMetadata(home: PublicHome): void {
-    this.title.setTitle(`${home.portalName} | Torneos publicos`);
+    this.title.setTitle(`${home.portalName} | Campeonatos publicos`);
     this.meta.updateTag({
       name: 'description',
       content: 'Campeonatos, tablas y resultados visibles en Sistema Campeonatos.'

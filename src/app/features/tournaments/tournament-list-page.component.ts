@@ -45,7 +45,7 @@ type SummaryCard = {
     <section class="app-page">
       <app-page-header title="Campeonatos" subtitle="Gestiona campeonatos, estados y avance de cada competencia.">
         @if (canManage()) {
-          <a mat-flat-button color="primary" routerLink="/tournaments/new">Nuevo torneo</a>
+          <a mat-flat-button color="primary" routerLink="/tournaments/new">Nuevo campeonato</a>
         }
       </app-page-header>
 
@@ -215,7 +215,7 @@ export class TournamentListPageComponent {
       {
         label: 'Flujo principal',
         value: operationalCount,
-        meta: 'Torneos visibles para operacion'
+        meta: 'Campeonatos visibles para gestion'
       },
       {
         label: 'Borradores',
@@ -337,7 +337,7 @@ export class TournamentListPageComponent {
   }
 
   protected transitionStatus(tournament: Tournament, targetStatus: TournamentStatus, actionLabel: string): void {
-    if (!window.confirm(`Se intentara ${actionLabel.toLowerCase()} el torneo "${tournament.name}".`)) {
+    if (!window.confirm(`Se intentara ${actionLabel.toLowerCase()} el campeonato "${tournament.name}".`)) {
       return;
     }
 
@@ -355,7 +355,7 @@ export class TournamentListPageComponent {
   }
 
   protected remove(tournament: Tournament): void {
-    if (!window.confirm(`Se eliminara el torneo "${tournament.name}". Esta accion no se puede deshacer.`)) {
+    if (!window.confirm(`Se eliminara el campeonato "${tournament.name}". Esta accion no se puede deshacer.`)) {
       return;
     }
 

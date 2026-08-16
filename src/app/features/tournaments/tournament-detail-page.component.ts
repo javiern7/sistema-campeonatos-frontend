@@ -77,22 +77,22 @@ const qp = (params: Record<string, string | number>): Record<string, string | nu
   template: `
     <section class="app-page">
       @if (loading()) {
-        <app-page-header title="Detalle de torneo" subtitle="Cargando contexto operativo consolidado..." />
+        <app-page-header title="Detalle de campeonato" subtitle="Cargando contexto consolidado..." />
         <app-loading-state />
       } @else if (!tournament()) {
-        <app-page-header title="Detalle de torneo" subtitle="No se encontro el torneo solicitado." />
+        <app-page-header title="Detalle de campeonato" subtitle="No se encontro el campeonato solicitado." />
         <section class="card page-card app-page">
           <div class="empty-state">
-            <strong>El torneo no esta disponible.</strong>
-            <p class="muted">Verifica el identificador o vuelve al listado principal de torneos.</p>
-            <a mat-flat-button color="primary" routerLink="/tournaments">Volver a torneos</a>
+            <strong>El campeonato no esta disponible.</strong>
+            <p class="muted">Verifica el identificador o vuelve al listado principal de campeonatos.</p>
+            <a mat-flat-button color="primary" routerLink="/tournaments">Volver a campeonatos</a>
           </div>
         </section>
       } @else {
         <app-page-header [title]="tournament()!.name" [subtitle]="headerSubtitle()">
           <div class="header-actions">
             <a mat-stroked-button routerLink="/tournaments">Volver</a>
-            <a mat-stroked-button [routerLink]="['/tournaments', tournament()!.id, 'edit']">Editar torneo</a>
+            <a mat-stroked-button [routerLink]="['/tournaments', tournament()!.id, 'edit']">Editar campeonato</a>
             <a
               mat-flat-button
               color="primary"

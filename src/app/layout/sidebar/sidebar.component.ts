@@ -3,7 +3,7 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
 import { MatListModule } from '@angular/material/list';
 
 import { AuthorizationService } from '../../core/auth/authorization.service';
-import { APP_NAV_ITEMS } from '../app-nav';
+import { APP_NAV_GROUPS, type AppNavGroup } from '../app-nav';
 
 @Component({
   selector: 'app-sidebar',
@@ -15,16 +15,21 @@ import { APP_NAV_ITEMS } from '../app-nav';
       <strong>Sistema Campeonatos</strong>
     </div>
 
-    <mat-nav-list>
-      @for (item of navItems(); track item.path) {
-        <a
-          mat-list-item
-          [routerLink]="item.path"
-          routerLinkActive="active-link"
-          [routerLinkActiveOptions]="{ exact: item.path === '/dashboard' }"
-        >
-          {{ item.label }}
-        </a>
+    <mat-nav-list class="nav-list">
+      @for (group of navGroups(); track group.label) {
+        <div class="nav-group">
+          <span class="nav-group-label">{{ group.label }}</span>
+          @for (item of group.items; track item.path) {
+            <a
+              mat-list-item
+              [routerLink]="item.path"
+              routerLinkActive="active-link"
+              [routerLinkActiveOptions]="{ exact: exactActive(item.path) }"
+            >
+              {{ item.label }}
+            </a>
+          }
+        </div>
       }
     </mat-nav-list>
   `,
@@ -58,6 +63,25 @@ import { APP_NAV_ITEMS } from '../app-nav';
         font-size: 1.2rem;
       }
 
+      .nav-list {
+        padding-top: 0.1rem;
+      }
+
+      .nav-group {
+        display: grid;
+        gap: 0.12rem;
+        margin: 0 0 0.65rem;
+      }
+
+      .nav-group-label {
+        padding: 0.45rem 1rem 0.25rem;
+        color: #b9eadf;
+        font-size: 0.72rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+
       a {
         color: #e2e8f0;
         border-radius: 8px;
@@ -73,6 +97,10 @@ import { APP_NAV_ITEMS } from '../app-nav';
         :host {
           overflow-y: auto;
         }
+
+        .nav-group {
+          margin-bottom: 0.5rem;
+        }
       }
     `
   ],
@@ -81,7 +109,14 @@ import { APP_NAV_ITEMS } from '../app-nav';
 export class SidebarComponent {
   private readonly authorization = inject(AuthorizationService);
 
-  protected readonly navItems = computed(() =>
-    APP_NAV_ITEMS.filter((item) => !item.resource || this.authorization.canAccess(item.resource, 'read'))
+  protected readonly navGroups = computed<AppNavGroup[]>(() =>
+    APP_NAV_GROUPS.map((group) => ({
+      ...group,
+      items: group.items.filter((item) => !item.resource || this.authorization.canAccess(item.resource, item.action ?? 'read'))
+    })).filter((group) => group.items.length > 0)
   );
+
+  protected exactActive(path: string): boolean {
+    return path === '/dashboard' || path === '/portal';
+  }
 }

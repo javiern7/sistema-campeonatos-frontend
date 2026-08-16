@@ -34,36 +34,36 @@ type TournamentModuleConfig = {
 const MODULE_CONFIGS: Record<TournamentModuleKey, TournamentModuleConfig> = {
   competitionAdvanced: {
     title: 'Competencia avanzada',
-    subtitle: 'Llaves, grupos y continuidad competitiva por torneo.',
-    banner: 'Selecciona un torneo para revisar su estructura competitiva avanzada.',
+    subtitle: 'Llaves, grupos y continuidad competitiva por campeonato.',
+    banner: 'Selecciona un campeonato para revisar su estructura competitiva avanzada.',
     actionLabel: 'Abrir competencia',
     path: (tournamentId) => `/tournaments/${tournamentId}/competition-advanced`
   },
   statisticsBasic: {
     title: 'Estadisticas basicas',
-    subtitle: 'Resumen, lideres simples y trazabilidad del torneo.',
-    banner: 'Selecciona un torneo para revisar sus metricas basicas consolidadas.',
+    subtitle: 'Resumen, lideres simples y trazabilidad del campeonato.',
+    banner: 'Selecciona un campeonato para revisar sus metricas basicas consolidadas.',
     actionLabel: 'Abrir estadisticas',
     path: (tournamentId) => `/tournaments/${tournamentId}/statistics/basic`
   },
   eventStatistics: {
     title: 'Estadisticas por eventos',
     subtitle: 'Goleadores, tarjetas y resumenes derivados de los eventos registrados.',
-    banner: 'Selecciona un torneo para revisar sus estadisticas derivadas de eventos activos.',
+    banner: 'Selecciona un campeonato para revisar sus estadisticas derivadas de eventos activos.',
     actionLabel: 'Abrir estadisticas',
     path: (tournamentId) => `/tournaments/${tournamentId}/statistics/events`
   },
   discipline: {
     title: 'Disciplina',
-    subtitle: 'Incidencias y sanciones simples por torneo y partido.',
-    banner: 'Selecciona un torneo para revisar su lectura disciplinaria acotada.',
+    subtitle: 'Incidencias y sanciones simples por campeonato y partido.',
+    banner: 'Selecciona un campeonato para revisar su lectura disciplinaria acotada.',
     actionLabel: 'Abrir disciplina',
     path: (tournamentId) => `/tournaments/${tournamentId}/discipline`
   },
   financesBasic: {
     title: 'Finanzas basicas',
     subtitle: 'Ingresos, gastos y balance simple por campeonato.',
-    banner: 'Selecciona un torneo para revisar su lectura financiera acotada.',
+    banner: 'Selecciona un campeonato para revisar su lectura financiera acotada.',
     actionLabel: 'Abrir finanzas',
     path: (tournamentId) => `/tournaments/${tournamentId}/finances/basic`
   }
@@ -85,7 +85,7 @@ const MODULE_CONFIGS: Record<TournamentModuleKey, TournamentModuleConfig> = {
   template: `
     <section class="app-page">
       <app-page-header [title]="moduleConfig().title" [subtitle]="moduleConfig().subtitle">
-        <a mat-stroked-button routerLink="/tournaments">Ver torneos</a>
+        <a mat-stroked-button routerLink="/tournaments">Ver campeonatos</a>
       </app-page-header>
 
       <section class="card page-card app-page">
@@ -106,7 +106,7 @@ const MODULE_CONFIGS: Record<TournamentModuleKey, TournamentModuleConfig> = {
           </mat-form-field>
 
           <mat-form-field appearance="outline">
-            <mat-label>Buscar torneo</mat-label>
+            <mat-label>Buscar campeonato</mat-label>
             <input matInput formControlName="name">
           </mat-form-field>
 
@@ -127,11 +127,11 @@ const MODULE_CONFIGS: Record<TournamentModuleKey, TournamentModuleConfig> = {
         </div>
 
         @if (loading()) {
-          <app-loading-state label="Cargando torneos..." />
+          <app-loading-state label="Cargando campeonatos..." />
         } @else if (tournaments().length === 0) {
           <div class="empty-state">
-            <strong>No hay torneos para este filtro.</strong>
-            <p class="muted">Ajusta la busqueda o vuelve al listado general de torneos.</p>
+            <strong>No hay campeonatos para este filtro.</strong>
+            <p class="muted">Ajusta la busqueda o vuelve al listado general de campeonatos.</p>
           </div>
         } @else {
           <div class="module-grid">

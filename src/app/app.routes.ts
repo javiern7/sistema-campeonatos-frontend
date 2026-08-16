@@ -54,7 +54,7 @@ export const appRoutes: Routes = [
       },
       {
         path: 'operations/users',
-        title: 'Usuarios operativos',
+        title: 'Usuarios',
         canActivate: [authorizationGuard],
         data: { resource: 'users', action: 'read' },
         loadComponent: () =>
@@ -64,7 +64,7 @@ export const appRoutes: Routes = [
       },
       {
         path: 'operations/users/:userId',
-        title: 'Detalle operativo de usuario',
+        title: 'Detalle de usuario',
         canActivate: [authorizationGuard],
         data: { resource: 'users', action: 'read' },
         loadComponent: () =>

@@ -31,7 +31,7 @@ import { TournamentsService } from '../tournaments/tournaments.service';
   template: `
     <section class="app-page">
       <app-page-header title="Reportes" subtitle="Reportes y exportacion simple desde datos consolidados.">
-        <a mat-stroked-button routerLink="/tournaments">Ver torneos</a>
+        <a mat-stroked-button routerLink="/tournaments">Ver campeonatos</a>
       </app-page-header>
 
       <section class="card page-card app-page">
@@ -52,7 +52,7 @@ import { TournamentsService } from '../tournaments/tournaments.service';
           </mat-form-field>
 
           <mat-form-field appearance="outline">
-            <mat-label>Buscar torneo</mat-label>
+            <mat-label>Buscar campeonato</mat-label>
             <input matInput formControlName="name">
           </mat-form-field>
 
@@ -73,10 +73,10 @@ import { TournamentsService } from '../tournaments/tournaments.service';
         </div>
 
         @if (loading()) {
-          <app-loading-state label="Cargando torneos..." />
+          <app-loading-state label="Cargando campeonatos..." />
         } @else if (tournaments().length === 0) {
           <div class="empty-state">
-            <strong>No hay torneos para este filtro.</strong>
+            <strong>No hay campeonatos para este filtro.</strong>
             <p class="muted">Ajusta la busqueda para abrir reportes.</p>
           </div>
         } @else {
@@ -177,7 +177,7 @@ export class ReportingHubComponent {
   protected readonly tournamentOptions = signal<Tournament[]>([]);
   protected readonly statuses: TournamentStatus[] = ['DRAFT', 'OPEN', 'IN_PROGRESS', 'FINISHED', 'CANCELLED'];
   protected readonly entries = computed(() => [
-    { label: 'Torneos', scope: 'Resumen, fuente y fecha de generacion.' },
+    { label: 'Campeonatos', scope: 'Resumen, fuente y fecha de generacion.' },
     { label: 'Partidos', scope: 'Listado por campeonato y rango de fechas.' },
     { label: 'Tabla de posiciones', scope: 'Lectura oficial existente, sin recalculo.' },
     { label: 'Eventos', scope: 'Eventos de partido filtrables por equipo, jugador o partido.' },

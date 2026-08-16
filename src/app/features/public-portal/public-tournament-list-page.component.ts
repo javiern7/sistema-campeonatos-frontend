@@ -37,7 +37,7 @@ type FilterState = {
         <div class="section-heading">
           <div>
             <span class="hero-kicker">Listado publico</span>
-            <h1>Torneos visibles</h1>
+            <h1>Campeonatos visibles</h1>
             <p class="muted">Consulta publica de campeonatos disponibles.</p>
           </div>
           <a mat-stroked-button routerLink="/portal">Volver al inicio</a>
@@ -109,7 +109,7 @@ type FilterState = {
             </div>
           } @else {
             <div class="empty-state">
-              <strong>No hay torneos visibles con esos filtros.</strong>
+              <strong>No hay campeonatos visibles con esos filtros.</strong>
               <p class="muted">Ajusta nombre o estado para revisar la cartelera disponible.</p>
             </div>
           }
@@ -246,10 +246,10 @@ export class TournamentListComponent {
   };
 
   constructor() {
-    this.title.setTitle('Torneos visibles | Sistema Campeonatos');
+    this.title.setTitle('Campeonatos visibles | Sistema Campeonatos');
     this.meta.updateTag({
       name: 'description',
-      content: 'Listado publico de torneos visibles en Sistema Campeonatos.'
+      content: 'Listado publico de campeonatos visibles en Sistema Campeonatos.'
     });
     this.loadTournaments();
   }
