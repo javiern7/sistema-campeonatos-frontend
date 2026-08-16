@@ -52,96 +52,120 @@ import { TournamentsService } from './tournaments.service';
           <app-loading-state />
         } @else {
           <form [formGroup]="form" (ngSubmit)="save()" class="app-page">
-            <div class="form-grid">
-              <mat-form-field appearance="outline">
-                <mat-label>Deporte</mat-label>
-                <mat-select formControlName="sportId">
-                  @for (sport of sports(); track sport.id) {
-                    <mat-option [value]="sport.id">{{ sport.name }}</mat-option>
-                  }
-                </mat-select>
-              </mat-form-field>
+            <section class="form-section">
+              <div class="form-section-heading">
+                <h2>Datos basicos</h2>
+                <p class="muted">Identifica el campeonato para organizadores, equipos y reportes.</p>
+              </div>
 
-              <mat-form-field appearance="outline">
-                <mat-label>Nombre</mat-label>
-                <input matInput formControlName="name">
-              </mat-form-field>
-
-              <mat-form-field appearance="outline">
-                <mat-label>Temporada</mat-label>
-                <input matInput formControlName="seasonName">
-              </mat-form-field>
-
-              <mat-form-field appearance="outline">
-                <mat-label>Formato</mat-label>
-                <mat-select formControlName="format">
-                  @for (format of formats; track format) {
-                    <mat-option [value]="format">{{ formatLabel(format) }}</mat-option>
-                  }
-                </mat-select>
-              </mat-form-field>
-
-              @if (!isEditMode()) {
+              <div class="form-grid">
                 <mat-form-field appearance="outline">
-                  <mat-label>Estado</mat-label>
-                  <mat-select formControlName="status">
-                    @for (status of statuses; track status) {
-                      <mat-option [value]="status">{{ statusLabel(status) }}</mat-option>
+                  <mat-label>Deporte</mat-label>
+                  <mat-select formControlName="sportId">
+                    @for (sport of sports(); track sport.id) {
+                      <mat-option [value]="sport.id">{{ sport.name }}</mat-option>
                     }
                   </mat-select>
                 </mat-form-field>
-              } @else {
+
                 <mat-form-field appearance="outline">
-                  <mat-label>Estado actual</mat-label>
-                  <input matInput [value]="statusLabel(currentStatus())" readonly>
-                  <mat-hint>Los cambios de estado se gestionan desde el listado de campeonatos.</mat-hint>
+                  <mat-label>Nombre del campeonato</mat-label>
+                  <input matInput formControlName="name">
                 </mat-form-field>
-              }
 
-              <mat-form-field appearance="outline">
-                <mat-label>Inicio</mat-label>
-                <input matInput [matDatepicker]="startPicker" formControlName="startDate" placeholder="dd/mm/aaaa">
-                <mat-datepicker-toggle matIconSuffix [for]="startPicker" />
-                <mat-datepicker #startPicker />
-                <mat-hint>dd/mm/aaaa</mat-hint>
-              </mat-form-field>
+                <mat-form-field appearance="outline">
+                  <mat-label>Temporada</mat-label>
+                  <input matInput formControlName="seasonName">
+                </mat-form-field>
 
-              <mat-form-field appearance="outline">
-                <mat-label>Fin</mat-label>
-                <input matInput [matDatepicker]="endPicker" formControlName="endDate" placeholder="dd/mm/aaaa">
-                <mat-datepicker-toggle matIconSuffix [for]="endPicker" />
-                <mat-datepicker #endPicker />
-                <mat-hint>dd/mm/aaaa</mat-hint>
-                @if (form.hasError('dateRange')) {
-                  <mat-error>La fecha fin no puede ser menor que la fecha inicio.</mat-error>
+                <mat-form-field appearance="outline">
+                  <mat-label>Descripcion</mat-label>
+                  <textarea matInput rows="4" formControlName="description"></textarea>
+                </mat-form-field>
+              </div>
+            </section>
+
+            <section class="form-section">
+              <div class="form-section-heading">
+                <h2>Formato y reglas</h2>
+                <p class="muted">Define como se juega y como se calcula la tabla de posiciones.</p>
+              </div>
+
+              <div class="form-grid">
+                <mat-form-field appearance="outline">
+                  <mat-label>Formato de competencia</mat-label>
+                  <mat-select formControlName="format">
+                    @for (format of formats; track format) {
+                      <mat-option [value]="format">{{ formatLabel(format) }}</mat-option>
+                    }
+                  </mat-select>
+                </mat-form-field>
+
+                @if (!isEditMode()) {
+                  <mat-form-field appearance="outline">
+                    <mat-label>Estado inicial</mat-label>
+                    <mat-select formControlName="status">
+                      @for (status of statuses; track status) {
+                        <mat-option [value]="status">{{ statusLabel(status) }}</mat-option>
+                      }
+                    </mat-select>
+                  </mat-form-field>
+                } @else {
+                  <mat-form-field appearance="outline">
+                    <mat-label>Estado actual</mat-label>
+                    <input matInput [value]="statusLabel(currentStatus())" readonly>
+                  </mat-form-field>
                 }
-              </mat-form-field>
 
-              <mat-form-field appearance="outline">
-                <mat-label>Máximo equipos</mat-label>
-                <input matInput type="number" formControlName="maxTeams">
-              </mat-form-field>
+                <mat-form-field appearance="outline">
+                  <mat-label>Maximo de equipos</mat-label>
+                  <input matInput type="number" formControlName="maxTeams">
+                </mat-form-field>
 
-              <mat-form-field appearance="outline">
-                <mat-label>Puntos victoria</mat-label>
-                <input matInput type="number" formControlName="pointsWin">
-              </mat-form-field>
+                <mat-form-field appearance="outline">
+                  <mat-label>Puntos por victoria</mat-label>
+                  <input matInput type="number" formControlName="pointsWin">
+                </mat-form-field>
 
-              <mat-form-field appearance="outline">
-                <mat-label>Puntos empate</mat-label>
-                <input matInput type="number" formControlName="pointsDraw">
-              </mat-form-field>
+                <mat-form-field appearance="outline">
+                  <mat-label>Puntos por empate</mat-label>
+                  <input matInput type="number" formControlName="pointsDraw">
+                </mat-form-field>
 
-              <mat-form-field appearance="outline">
-                <mat-label>Puntos derrota</mat-label>
-                <input matInput type="number" formControlName="pointsLoss">
-              </mat-form-field>
+                <mat-form-field appearance="outline">
+                  <mat-label>Puntos por derrota</mat-label>
+                  <input matInput type="number" formControlName="pointsLoss">
+                </mat-form-field>
+              </div>
+            </section>
 
-              <mat-form-field appearance="outline">
-                <mat-label>Descripción</mat-label>
-                <textarea matInput rows="4" formControlName="description"></textarea>
-              </mat-form-field>
-            </div>
+            <section class="form-section">
+              <div class="form-section-heading">
+                <h2>Fechas</h2>
+                <p class="muted">Ubica el campeonato en una ventana operativa clara.</p>
+              </div>
+
+              <div class="form-grid">
+                <mat-form-field appearance="outline">
+                  <mat-label>Inicio</mat-label>
+                  <input matInput [matDatepicker]="startPicker" formControlName="startDate" placeholder="dd/mm/aaaa">
+                  <mat-datepicker-toggle matIconSuffix [for]="startPicker" />
+                  <mat-datepicker #startPicker />
+                  <mat-hint>dd/mm/aaaa</mat-hint>
+                </mat-form-field>
+
+                <mat-form-field appearance="outline">
+                  <mat-label>Fin</mat-label>
+                  <input matInput [matDatepicker]="endPicker" formControlName="endDate" placeholder="dd/mm/aaaa">
+                  <mat-datepicker-toggle matIconSuffix [for]="endPicker" />
+                  <mat-datepicker #endPicker />
+                  <mat-hint>dd/mm/aaaa</mat-hint>
+                  @if (form.hasError('dateRange')) {
+                    <mat-error>La fecha fin no puede ser menor que la fecha inicio.</mat-error>
+                  }
+                </mat-form-field>
+              </div>
+            </section>
 
             <div class="form-actions">
               <a mat-stroked-button routerLink="/tournaments">Cancelar</a>
@@ -154,6 +178,27 @@ import { TournamentsService } from './tournaments.service';
       </section>
     </section>
   `,
+  styles: [
+    `
+      .form-section {
+        display: grid;
+        gap: 1rem;
+        padding: 1rem;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: var(--surface-alt);
+      }
+
+      .form-section-heading h2 {
+        margin: 0;
+        font-size: 1rem;
+      }
+
+      .form-section-heading p {
+        margin: 0.3rem 0 0;
+      }
+    `
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class TournamentFormPageComponent {

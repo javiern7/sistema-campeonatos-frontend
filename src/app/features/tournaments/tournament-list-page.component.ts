@@ -139,7 +139,7 @@ type SummaryCard = {
               <ng-container matColumnDef="actions">
                 <th mat-header-cell *matHeaderCellDef>Acciones</th>
                 <td mat-cell *matCellDef="let row">
-                  <a mat-button [routerLink]="['/tournaments', row.id]">Detalle</a>
+                  <a mat-flat-button color="primary" [routerLink]="['/tournaments', row.id]">Gestionar campeonato</a>
                   @if (canManage()) {
                     <a mat-button [routerLink]="['/tournaments', row.id, 'edit']">Editar</a>
                   }

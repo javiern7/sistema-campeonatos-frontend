@@ -5,6 +5,7 @@ import { forkJoin } from 'rxjs';
 import { finalize } from 'rxjs/operators';
 import { MatButtonModule } from '@angular/material/button';
 
+import { AuthorizationResource, AuthorizationService } from '../../core/auth/authorization.service';
 import { ErrorMapper } from '../../core/error/error.mapper';
 import { NotificationService } from '../../core/error/notification.service';
 import { CatalogLoaderService } from '../../core/pagination/catalog-loader.service';
@@ -45,6 +46,21 @@ type QuickAction = {
   cta: string;
   path: string;
   queryParams: Record<string, string | number>;
+  resource?: AuthorizationResource;
+  action?: 'read' | 'manage';
+};
+
+type FlowStepStatus = 'pending' | 'ready' | 'attention' | 'notApplicable';
+
+type FlowStep = {
+  label: string;
+  status: FlowStepStatus;
+  description: string;
+  actionLabel: string;
+  path: string;
+  queryParams: Record<string, string | number>;
+  resource?: AuthorizationResource;
+  action?: 'read' | 'manage';
 };
 
 type StateAssistant = {
@@ -211,6 +227,38 @@ const qp = (params: Record<string, string | number>): Record<string, string | nu
                 <span class="assistant-label">{{ card.label }}</span>
                 <strong>{{ card.headline }}</strong>
                 <p class="muted">{{ card.detail }}</p>
+              </article>
+            }
+          </div>
+        </section>
+
+        <section class="card page-card app-page">
+          <div class="section-heading">
+            <div>
+              <h2>Guia de gestion del campeonato</h2>
+              <p class="muted">Pasos recomendados desde la configuracion inicial hasta la operacion diaria.</p>
+            </div>
+            <span class="flow-progress">{{ flowProgress().ready }}/{{ flowProgress().total }} listos</span>
+          </div>
+
+          <div class="flow-progress-track" aria-hidden="true">
+            <span [style.width.%]="flowProgress().percent"></span>
+          </div>
+
+          <div class="flow-checklist">
+            @for (step of flowSteps(); track step.label) {
+              <article class="flow-step" [class]="step.status">
+                <div class="flow-marker">
+                  <span>{{ $index + 1 }}</span>
+                </div>
+                <div class="flow-body">
+                  <div class="flow-step-heading">
+                    <strong>{{ step.label }}</strong>
+                    <span class="flow-status" [class]="step.status">{{ flowStatusLabel(step.status) }}</span>
+                  </div>
+                  <p class="muted">{{ step.description }}</p>
+                  <a mat-button [routerLink]="step.path" [queryParams]="step.queryParams">{{ step.actionLabel }}</a>
+                </div>
               </article>
             }
           </div>
@@ -530,6 +578,121 @@ const qp = (params: Record<string, string | number>): Record<string, string | nu
         grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
       }
 
+      .flow-progress {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.4rem 0.75rem;
+        border-radius: 999px;
+        background: var(--primary-soft);
+        color: var(--primary-strong);
+        font-size: 0.85rem;
+        font-weight: 800;
+      }
+
+      .flow-progress-track {
+        overflow: hidden;
+        height: 0.55rem;
+        border-radius: 999px;
+        background: var(--surface-alt);
+      }
+
+      .flow-progress-track span {
+        display: block;
+        height: 100%;
+        border-radius: inherit;
+        background: linear-gradient(90deg, var(--primary), var(--accent));
+        transition: width 180ms ease;
+      }
+
+      .flow-checklist {
+        display: grid;
+        gap: 0.8rem;
+      }
+
+      .flow-step {
+        display: grid;
+        gap: 0.85rem;
+        grid-template-columns: auto minmax(0, 1fr);
+        padding: 1rem;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: var(--surface-alt);
+      }
+
+      .flow-step.ready {
+        border-color: rgba(22, 101, 52, 0.18);
+        background: #f0fdf4;
+      }
+
+      .flow-step.attention {
+        border-color: rgba(146, 64, 14, 0.22);
+        background: #fffbeb;
+      }
+
+      .flow-step.notApplicable {
+        opacity: 0.82;
+      }
+
+      .flow-marker {
+        display: grid;
+        place-items: center;
+        width: 2rem;
+        height: 2rem;
+        border-radius: 999px;
+        background: #ffffff;
+        color: var(--primary);
+        font-weight: 800;
+        box-shadow: inset 0 0 0 1px var(--border);
+      }
+
+      .flow-body {
+        display: grid;
+        gap: 0.45rem;
+        min-width: 0;
+      }
+
+      .flow-body p {
+        margin: 0;
+      }
+
+      .flow-body a {
+        justify-self: start;
+      }
+
+      .flow-step-heading {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.55rem;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .flow-status {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.25rem 0.6rem;
+        border-radius: 999px;
+        background: #eef2f7;
+        color: var(--text-soft);
+        font-size: 0.75rem;
+        font-weight: 800;
+      }
+
+      .flow-status.ready {
+        background: #dcfce7;
+        color: #166534;
+      }
+
+      .flow-status.attention {
+        background: #fef3c7;
+        color: #92400e;
+      }
+
+      .flow-status.pending {
+        background: #e0f2fe;
+        color: #075985;
+      }
+
       .registration-overview-grid,
       .quick-action-card {
         display: grid;
@@ -644,6 +807,10 @@ const qp = (params: Record<string, string | number>): Record<string, string | nu
         .context-hero {
           grid-template-columns: 1fr;
         }
+
+        .flow-step {
+          grid-template-columns: 1fr;
+        }
       }
     `
   ],
@@ -661,6 +828,7 @@ export class TournamentDetailPageComponent {
   private readonly stagesService = inject(TournamentStagesService);
   private readonly groupsService = inject(StageGroupsService);
   private readonly dashboardService = inject(DashboardService);
+  private readonly authorization = inject(AuthorizationService);
   private readonly catalogLoader = inject(CatalogLoaderService);
   private readonly notifications = inject(NotificationService);
   private readonly errorMapper = inject(ErrorMapper);
@@ -855,6 +1023,185 @@ export class TournamentDetailPageComponent {
       }
     ];
   });
+  protected readonly flowSteps = computed<FlowStep[]>(() => {
+    const tournament = this.tournament();
+    const summary = this.summary();
+
+    if (!tournament) {
+      return [];
+    }
+
+    const approvedCount = summary?.approvedRegistrationCount ?? 0;
+    const rosterGapCount = summary?.rosterGapCount ?? 0;
+    const matchCount = summary?.matchCount ?? this.matches().length;
+    const playedMatchCount = summary?.playedMatchCount ?? this.matches().filter((item) => item.status === 'PLAYED' || item.status === 'FORFEIT').length;
+    const standingsCount = summary?.standingsCount ?? this.standings().length;
+    const hasBasicDates = !!tournament.startDate || !!tournament.endDate;
+    const needsGroups = tournament.format === 'GROUPS_THEN_KNOCKOUT';
+    const firstApprovedWithoutRoster = this.registrationRows().find(
+      (row) => row.registration.registrationStatus === 'APPROVED' && row.activeRosterCount === 0
+    );
+
+    const steps: FlowStep[] = [
+      {
+        label: 'Datos basicos',
+        status: tournament.name && tournament.seasonName && tournament.sportId ? 'ready' : 'attention',
+        description: hasBasicDates
+          ? 'Nombre, deporte, temporada y fechas principales ya orientan la gestion.'
+          : 'La base existe, pero conviene completar fechas para dar contexto operativo.',
+        actionLabel: 'Editar datos',
+        path: `/tournaments/${tournament.id}/edit`,
+        queryParams: qp({}),
+        resource: 'tournaments',
+        action: 'manage'
+      },
+      {
+        label: 'Formato y reglas',
+        status: tournament.format && tournament.pointsWin !== null && tournament.pointsDraw !== null && tournament.pointsLoss !== null ? 'ready' : 'attention',
+        description: `${this.formatLabel(tournament.format)} con puntajes visibles para victoria, empate y derrota.`,
+        actionLabel: 'Revisar reglas',
+        path: `/tournaments/${tournament.id}/edit`,
+        queryParams: qp({}),
+        resource: 'tournaments',
+        action: 'manage'
+      },
+      {
+        label: 'Equipos inscritos',
+        status: approvedCount > 1 ? 'ready' : this.registrations().length > 0 ? 'attention' : 'pending',
+        description:
+          approvedCount > 1
+            ? `${approvedCount} equipos aprobados para competir.`
+            : this.registrations().length > 0
+              ? 'Hay inscripciones, pero todavia falta aprobar una base competitiva suficiente.'
+              : 'Aun no hay equipos vinculados al campeonato.',
+        actionLabel: approvedCount > 0 ? 'Gestionar inscripciones' : 'Agregar equipo',
+        path: approvedCount > 0 ? '/tournament-teams' : '/tournament-teams/new',
+        queryParams: approvedCount > 0 ? qp({ tournamentId: tournament.id }) : qp({ tournamentId: tournament.id }),
+        resource: approvedCount > 0 ? 'tournamentTeams' : 'tournamentTeams',
+        action: approvedCount > 0 ? 'read' : 'manage'
+      },
+      {
+        label: 'Planteles',
+        status: approvedCount === 0 ? 'notApplicable' : rosterGapCount === 0 ? 'ready' : 'attention',
+        description:
+          approvedCount === 0
+            ? 'Primero se necesita una base de equipos aprobados.'
+            : rosterGapCount === 0
+              ? 'Los equipos aprobados tienen soporte de plantel activo.'
+              : `${rosterGapCount} equipo(s) aprobado(s) todavia requieren plantel activo.`,
+        actionLabel: rosterGapCount > 0 ? 'Cargar plantel' : 'Ver planteles',
+        path: rosterGapCount > 0 && firstApprovedWithoutRoster ? '/rosters/new' : '/rosters',
+        queryParams:
+          rosterGapCount > 0 && firstApprovedWithoutRoster
+            ? qp({ tournamentTeamId: firstApprovedWithoutRoster.registration.id })
+            : qp({ rosterStatus: 'ACTIVE' }),
+        resource: 'rosters',
+        action: rosterGapCount > 0 ? 'manage' : 'read'
+      },
+      {
+        label: 'Fases y grupos',
+        status:
+          this.stages().length > 0 && (!needsGroups || this.groups().length > 0)
+            ? 'ready'
+            : needsGroups || tournament.format === 'KNOCKOUT'
+              ? 'attention'
+              : 'notApplicable',
+        description:
+          this.stages().length > 0
+            ? `${this.stages().length} etapa(s)${this.groups().length > 0 ? ` y ${this.groups().length} grupo(s)` : ''} configurados.`
+            : tournament.format === 'LEAGUE'
+              ? 'En formato liga puede operar sin grupos si el calendario esta claro.'
+              : 'El formato seleccionado requiere preparar estructura competitiva.',
+        actionLabel: this.stages().length > 0 ? 'Ver etapas' : 'Configurar fases',
+        path: this.stages().length > 0 ? '/tournament-stages' : '/tournament-stages/new',
+        queryParams: qp({ tournamentId: tournament.id }),
+        resource: 'tournamentStages',
+        action: this.stages().length > 0 ? 'read' : 'manage'
+      },
+      {
+        label: 'Calendario y partidos',
+        status: matchCount > 0 ? 'ready' : approvedCount > 1 ? 'attention' : 'pending',
+        description:
+          matchCount > 0
+            ? `${matchCount} partido(s) visibles para seguimiento.`
+            : approvedCount > 1
+              ? 'Ya hay equipos para empezar a programar partidos.'
+              : 'Primero completa equipos y planteles antes del calendario.',
+        actionLabel: matchCount > 0 ? 'Ver partidos' : 'Programar partido',
+        path: matchCount > 0 ? '/matches' : '/matches/new',
+        queryParams: qp({ tournamentId: tournament.id }),
+        resource: 'matches',
+        action: matchCount > 0 ? 'read' : 'manage'
+      },
+      {
+        label: 'Resultados',
+        status: matchCount === 0 ? 'notApplicable' : playedMatchCount > 0 ? 'ready' : 'attention',
+        description:
+          matchCount === 0
+            ? 'Aun no hay partidos para registrar resultados.'
+            : playedMatchCount > 0
+              ? `${playedMatchCount} resultado(s) ya alimentan la lectura competitiva.`
+              : 'Hay partidos, pero todavia falta registrar resultados.',
+        actionLabel: playedMatchCount > 0 ? 'Revisar resultados' : 'Registrar resultado',
+        path: '/matches',
+        queryParams: qp({ tournamentId: tournament.id }),
+        resource: 'matches',
+        action: playedMatchCount > 0 ? 'read' : 'manage'
+      },
+      {
+        label: 'Tabla y estadisticas',
+        status: standingsCount > 0 ? 'ready' : playedMatchCount > 0 ? 'attention' : 'pending',
+        description:
+          standingsCount > 0
+            ? `${standingsCount} registro(s) de tabla disponibles para consulta.`
+            : playedMatchCount > 0
+              ? 'Ya hay resultados; conviene validar que la tabla refleje la competencia.'
+              : 'La tabla se vuelve relevante cuando existan resultados.',
+        actionLabel: standingsCount > 0 ? 'Ver tabla' : 'Preparar tabla',
+        path: '/standings',
+        queryParams: qp({ tournamentId: tournament.id }),
+        resource: 'standings',
+        action: 'read'
+      },
+      {
+        label: 'Reportes',
+        status: matchCount > 0 || standingsCount > 0 ? 'ready' : 'pending',
+        description:
+          matchCount > 0 || standingsCount > 0
+            ? 'Ya existe informacion para seguimiento y reportes del campeonato.'
+            : 'Los reportes toman valor cuando la operacion empieza a generar actividad.',
+        actionLabel: 'Ver reportes',
+        path: `/tournaments/${tournament.id}/reports`,
+        queryParams: qp({}),
+        resource: 'tournaments',
+        action: 'read'
+      },
+      {
+        label: 'Portal publico',
+        status: tournament.slug ? 'ready' : 'attention',
+        description: tournament.slug
+          ? 'El campeonato tiene una direccion publica disponible para consulta externa.'
+          : 'No se detecto direccion publica para compartir.',
+        actionLabel: 'Ver portal',
+        path: tournament.slug ? `/portal/tournaments/${tournament.slug}` : '/portal',
+        queryParams: qp({})
+      }
+    ];
+
+    return steps.filter((step) => this.canUseFlowStep(step));
+  });
+  protected readonly flowProgress = computed(() => {
+    const steps = this.flowSteps();
+    const applicable = steps.filter((step) => step.status !== 'notApplicable');
+    const ready = applicable.filter((step) => step.status === 'ready').length;
+    const total = applicable.length || 1;
+
+    return {
+      ready,
+      total,
+      percent: Math.round((ready / total) * 100)
+    };
+  });
   protected readonly stateAssistant = computed<StateAssistant>(() => {
     const tournament = this.tournament();
     const summary = this.summary();
@@ -940,21 +1287,27 @@ export class TournamentDetailPageComponent {
         description: 'Leer llaves, calendario, generacion inicial y resultados del bloque competitivo.',
         cta: 'Abrir bloque',
         path: `/tournaments/${tournament.id}/competition-advanced`,
-        queryParams: qp({})
+        queryParams: qp({}),
+        resource: 'tournaments',
+        action: 'read'
       },
       {
         label: 'Estadisticas basicas',
         description: 'Leer resumen estadistico, lideres simples y metricas derivadas del torneo.',
         cta: 'Abrir estadisticas',
         path: `/tournaments/${tournament.id}/statistics/basic`,
-        queryParams: qp({})
+        queryParams: qp({}),
+        resource: 'tournaments',
+        action: 'read'
       },
       {
         label: 'Inscripciones',
         description: 'Revisar y aprobar equipos vinculados al torneo.',
         cta: 'Abrir inscripciones',
         path: '/tournament-teams',
-        queryParams: qp({ tournamentId: tournament.id })
+        queryParams: qp({ tournamentId: tournament.id }),
+        resource: 'tournamentTeams',
+        action: 'read'
       },
       {
         label: 'Planteles',
@@ -963,41 +1316,51 @@ export class TournamentDetailPageComponent {
         path: '/rosters',
         queryParams: firstRegistration
           ? qp({ tournamentTeamId: firstRegistration.registration.id, rosterStatus: 'ACTIVE' })
-          : qp({ rosterStatus: 'ACTIVE' })
+          : qp({ rosterStatus: 'ACTIVE' }),
+        resource: 'rosters',
+        action: 'read'
       },
       {
         label: 'Estadisticas eventos',
         description: 'Leer goleadores, tarjetas y resumenes derivados de eventos activos.',
         cta: 'Abrir lectura',
         path: `/tournaments/${tournament.id}/statistics/events`,
-        queryParams: qp({})
+        queryParams: qp({}),
+        resource: 'matches',
+        action: 'read'
       },
       {
         label: 'Partidos',
         description: 'Programar fixture o revisar resultados cargados.',
         cta: 'Abrir partidos',
         path: '/matches',
-        queryParams: qp({ tournamentId: tournament.id })
+        queryParams: qp({ tournamentId: tournament.id }),
+        resource: 'matches',
+        action: 'read'
       },
       {
         label: 'Tabla',
         description: 'Validar la tabla del torneo y su cobertura competitiva.',
         cta: 'Abrir tabla',
         path: '/standings',
-        queryParams: qp({ tournamentId: tournament.id })
+        queryParams: qp({ tournamentId: tournament.id }),
+        resource: 'standings',
+        action: 'read'
       },
       {
-        label: 'Finanzas basicas',
-        description: 'Revisar ingresos, gastos y balance operativo simple del torneo.',
-        cta: 'Abrir finanzas',
-        path: `/tournaments/${tournament.id}/finances/basic`,
-        queryParams: qp({})
+        label: 'Reportes',
+        description: 'Preparar lectura de cierre, exportaciones y seguimiento del campeonato.',
+        cta: 'Ver reportes',
+        path: `/tournaments/${tournament.id}/reports`,
+        queryParams: qp({}),
+        resource: 'tournaments',
+        action: 'read'
       },
       {
-        label: 'Disciplina',
-        description: 'Revisar sanciones simples y trazables del torneo.',
-        cta: 'Abrir disciplina',
-        path: `/tournaments/${tournament.id}/discipline`,
+        label: 'Portal publico',
+        description: 'Abrir la vista publica para revisar como se muestra el campeonato hacia afuera.',
+        cta: 'Ver portal',
+        path: tournament.slug ? `/portal/tournaments/${tournament.slug}` : '/portal',
         queryParams: qp({})
       }
     ];
@@ -1008,7 +1371,9 @@ export class TournamentDetailPageComponent {
         description: 'El torneo aun no tiene equipos operativos aprobados.',
         cta: 'Crear inscripcion',
         path: '/tournament-teams/new',
-        queryParams: qp({ tournamentId: tournament.id })
+        queryParams: qp({ tournamentId: tournament.id }),
+        resource: 'tournamentTeams',
+        action: 'manage'
       };
     }
 
@@ -1021,7 +1386,9 @@ export class TournamentDetailPageComponent {
         description: 'Existe al menos una inscripcion aprobada sin plantel activo.',
         cta: 'Cargar plantel',
         path: '/rosters/new',
-        queryParams: qp({ tournamentTeamId: firstApprovedWithoutRoster.registration.id })
+        queryParams: qp({ tournamentTeamId: firstApprovedWithoutRoster.registration.id }),
+        resource: 'rosters',
+        action: 'manage'
       };
     }
 
@@ -1031,7 +1398,9 @@ export class TournamentDetailPageComponent {
         description: 'Antes de iniciar operacion conviene dejar visible el bloque de partidos.',
         cta: 'Ir a partidos',
         path: '/matches',
-        queryParams: qp({ tournamentId: tournament.id, status: 'SCHEDULED' })
+        queryParams: qp({ tournamentId: tournament.id, status: 'SCHEDULED' }),
+        resource: 'matches',
+        action: 'read'
       };
     }
 
@@ -1041,11 +1410,13 @@ export class TournamentDetailPageComponent {
         description: 'Ya existen resultados; conviene confirmar que la tabla este alineada.',
         cta: 'Revisar tabla',
         path: '/standings',
-        queryParams: qp({ tournamentId: tournament.id })
+        queryParams: qp({ tournamentId: tournament.id }),
+        resource: 'standings',
+        action: 'read'
       };
     }
 
-    return actions;
+    return actions.filter((action) => this.canUseAction(action));
   });
 
   constructor() {
@@ -1279,6 +1650,37 @@ export class TournamentDetailPageComponent {
 
   protected matchStatusClass(status: MatchGame['status']): string {
     return `status-pill ${status.toLowerCase()}`;
+  }
+
+  protected flowStatusLabel(status: FlowStepStatus): string {
+    const labels: Record<FlowStepStatus, string> = {
+      pending: 'Pendiente',
+      ready: 'Listo',
+      attention: 'Requiere atencion',
+      notApplicable: 'No aplica'
+    };
+
+    return labels[status];
+  }
+
+  private canUseAction(action: QuickAction): boolean {
+    if (!action.resource || !action.action) {
+      return true;
+    }
+
+    return action.action === 'manage'
+      ? this.authorization.canManage(action.resource)
+      : this.authorization.canRead(action.resource);
+  }
+
+  private canUseFlowStep(step: FlowStep): boolean {
+    if (!step.resource || !step.action) {
+      return true;
+    }
+
+    return step.action === 'manage'
+      ? this.authorization.canManage(step.resource)
+      : this.authorization.canRead(step.resource);
   }
 
   private registrationPriority(status: TournamentTeam['registrationStatus']): number {
