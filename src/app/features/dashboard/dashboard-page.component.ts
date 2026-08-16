@@ -151,7 +151,7 @@ type DashboardCard = {
                 <article class="operations-panel card">
                   <div class="panel-heading">
                     <h3>Acciones mas frecuentes</h3>
-                    <span class="muted">Top actions / activity-summary</span>
+                    <span class="muted">Actividad destacada</span>
                   </div>
 
                   @if (activitySummaryError()) {
@@ -170,7 +170,7 @@ type DashboardCard = {
                         <article class="top-action-item">
                           <div class="stack-sm">
                             <strong>{{ actionLabel(item.action) }}</strong>
-                            <span class="muted">{{ item.action }}</span>
+                            <span class="muted">{{ actionCategoryLabel(item.action) }}</span>
                           </div>
                           <span class="top-action-total">{{ item.total }}</span>
                         </article>
@@ -215,10 +215,10 @@ type DashboardCard = {
                   </div>
 
                   <div class="governance-banner" [class.warning]="!governanceWriteEnabled()">
-                    <strong>{{ governanceWriteEnabled() ? 'Escritura habilitada en este ambiente' : 'Escritura deshabilitada en este ambiente' }}</strong>
+                    <strong>{{ governanceWriteEnabled() ? 'Edicion habilitada' : 'Edicion no disponible' }}</strong>
                     <span class="muted">
                       Generado {{ formatOccurredAt(governanceSummary()!.generatedAt) }}.
-                      Roles mutables: {{ mutableRoleCodes().join(', ') || 'ninguno' }}.
+                      Roles editables: {{ mutableRoleCodes().length || 'ninguno' }}.
                     </span>
                   </div>
 
@@ -235,16 +235,16 @@ type DashboardCard = {
                             <div class="alert-header">
                               <div class="stack-sm">
                                 <strong>{{ role.roleName }}</strong>
-                                <span class="muted">{{ role.roleCode }}</span>
+                                <span class="muted">{{ roleLabel(role) }}</span>
                               </div>
                               <span class="health-pill" [class]="role.mutable ? 'healthy' : 'warning'">
-                                {{ role.mutable ? 'Mutable' : 'Inmutable' }}
+                                {{ role.mutable ? 'Editable' : 'Protegido' }}
                               </span>
                             </div>
 
                             <div class="permission-chip-list">
                               @for (permissionCode of role.permissionCodes; track permissionCode) {
-                                <span class="permission-chip">{{ permissionCode }}</span>
+                                <span class="permission-chip">{{ permissionLabel(permissionCode) }}</span>
                               }
                             </div>
 
@@ -287,7 +287,7 @@ type DashboardCard = {
                         <div class="editor-shell">
                           <div class="stack-sm">
                             <strong>{{ editingRole()!.roleName }}</strong>
-                            <span class="muted">{{ editingRole()!.roleCode }}</span>
+                            <span class="muted">{{ roleLabel(editingRole()!) }}</span>
                           </div>
 
                           <label class="reason-field">
@@ -309,7 +309,7 @@ type DashboardCard = {
                                   (change)="toggleGovernancePermission(permission.code)"
                                 />
                                 <div class="stack-sm">
-                                  <strong>{{ permission.code }}</strong>
+                                  <strong>{{ permissionLabel(permission.code) }}</strong>
                                   <span class="muted">{{ permission.name }}</span>
                                   @if (permission.description) {
                                     <span class="muted">{{ permission.description }}</span>
@@ -646,10 +646,10 @@ type DashboardCard = {
         align-items: center;
         padding: 0.4rem 0.75rem;
         border-radius: 999px;
-        background: var(--surface-alt);
-        color: var(--text-soft);
+        background: var(--primary-soft);
+        color: var(--primary-strong);
         font-size: 0.85rem;
-        font-weight: 600;
+        font-weight: 800;
       }
 
       .alert-grid,
@@ -663,11 +663,12 @@ type DashboardCard = {
       }
 
       .executive-grid {
-        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
       }
 
       .operations-grid {
-        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        align-items: start;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
       }
 
       .alert-card,
@@ -677,16 +678,19 @@ type DashboardCard = {
       .tournament-card {
         display: grid;
         gap: 0.85rem;
+        min-width: 0;
         padding: 1rem 1.1rem;
       }
 
       .executive-card {
         align-content: start;
+        min-height: 150px;
+        border-top: 4px solid rgba(10, 107, 88, 0.22);
       }
 
       .executive-card.accent {
-        background: linear-gradient(135deg, #0a6e5a 0%, #11806a 100%);
-        border-color: rgba(10, 110, 90, 0.28);
+        background: linear-gradient(135deg, #064d43 0%, #0a6b58 58%, #0d7894 100%);
+        border-color: rgba(10, 107, 88, 0.28);
         color: #f8fffd;
       }
 
@@ -697,7 +701,7 @@ type DashboardCard = {
       }
 
       .executive-value {
-        font-size: 2.15rem;
+        font-size: 2.25rem;
         line-height: 1;
       }
 
@@ -739,9 +743,11 @@ type DashboardCard = {
 
       .alert-header {
         display: flex;
+        flex-wrap: wrap;
         gap: 0.75rem;
         align-items: center;
         justify-content: space-between;
+        min-width: 0;
       }
 
       .health-pill {
@@ -751,7 +757,8 @@ type DashboardCard = {
         padding: 0.3rem 0.7rem;
         border-radius: 999px;
         font-size: 0.75rem;
-        font-weight: 700;
+        font-weight: 800;
+        text-align: center;
       }
 
       .health-pill.healthy {
@@ -811,7 +818,7 @@ type DashboardCard = {
         grid-template-columns: auto minmax(0, 1fr) auto;
         align-items: center;
         padding: 1rem;
-        border-radius: 1rem;
+        border-radius: 8px;
         background: var(--surface-alt);
       }
 
@@ -851,14 +858,25 @@ type DashboardCard = {
       .top-action-item {
         display: grid;
         gap: 0.45rem;
+        min-width: 0;
         padding: 0.85rem;
-        border-radius: 0.9rem;
+        border-radius: 8px;
         background: var(--surface-alt);
       }
 
       .top-action-item {
         grid-template-columns: minmax(0, 1fr) auto;
         align-items: center;
+      }
+
+      .stack-sm {
+        min-width: 0;
+      }
+
+      .stack-sm strong,
+      .stack-sm span,
+      .event-context {
+        overflow-wrap: anywhere;
       }
 
       .event-context,
@@ -886,7 +904,7 @@ type DashboardCard = {
       .governance-grid {
         display: grid;
         gap: 1rem;
-        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
       }
 
       .governance-banner {
@@ -894,7 +912,7 @@ type DashboardCard = {
         gap: 0.35rem;
         margin: 1rem 0;
         padding: 0.9rem 1rem;
-        border-radius: 1rem;
+        border-radius: 8px;
         background: #ecfdf5;
         color: #166534;
       }
@@ -1397,20 +1415,67 @@ export class DashboardPageComponent {
 
   protected actionLabel(action: string): string {
     const labels: Record<string, string> = {
-      AUTH_LOGIN_SUCCESS: 'Login exitoso',
-      AUTH_LOGIN_FAILED: 'Login fallido',
-      AUTH_REFRESH_SUCCESS: 'Refresh exitoso',
-      AUTH_LOGOUT_SUCCESS: 'Logout exitoso',
+      AUTH_LOGIN_SUCCESS: 'Ingreso exitoso',
+      AUTH_LOGIN_FAILED: 'Ingreso fallido',
+      AUTH_REFRESH_SUCCESS: 'Sesion renovada',
+      AUTH_LOGOUT_SUCCESS: 'Salida del sistema',
       SECURITY_ACCESS_DENIED: 'Acceso denegado',
       OPERATIONAL_ACTIVITY_READ: 'Lectura de actividad operativa',
       TOURNAMENT_OPERATIONAL_SUMMARY_READ: 'Lectura de resumen operativo',
       PERMISSION_GOVERNANCE_SUMMARY: 'Lectura de gobierno de permisos',
       PERMISSION_ROLE_ASSIGNMENTS_UPDATED: 'Actualizacion de permisos por rol',
       PERMISSION_ROLE_ASSIGNMENTS_UPDATE_DENIED: 'Actualizacion denegada de permisos por rol',
-      PERMISSION_ROLE_ASSIGNMENTS_UPDATE_FAILED: 'Actualizacion fallida de permisos por rol'
+      PERMISSION_ROLE_ASSIGNMENTS_UPDATE_FAILED: 'Actualizacion fallida de permisos por rol',
+      TOURNAMENT_CREATE: 'Campeonato creado',
+      TOURNAMENT_UPDATE: 'Campeonato actualizado',
+      TOURNAMENT_STATUS_TRANSITION: 'Cambio de estado de campeonato',
+      TOURNAMENT_TEAM_CREATE: 'Equipo inscrito',
+      TOURNAMENT_TEAM_UPDATE: 'Equipo actualizado',
+      TEAM_CREATE: 'Equipo creado',
+      TEAM_UPDATE: 'Equipo actualizado',
+      PLAYER_CREATE: 'Jugador creado',
+      PLAYER_UPDATE: 'Jugador actualizado',
+      TOURNAMENT_ROSTER_CREATE: 'Plantel creado',
+      TOURNAMENT_ROSTER_UPDATE: 'Plantel actualizado',
+      ROSTER_CREATE: 'Plantel creado',
+      ROSTER_UPDATE: 'Plantel actualizado',
+      STAGE_GROUP_CREATE: 'Grupo creado',
+      STAGE_GROUP_UPDATE: 'Grupo actualizado',
+      MATCH_CREATE: 'Partido creado',
+      MATCH_UPDATE: 'Partido actualizado',
+      MATCH_RESULT_UPDATE: 'Resultado actualizado',
+      MATCH_EVENT_CREATE: 'Evento de partido registrado',
+      STANDINGS_READ: 'Consulta de tabla de posiciones',
+      STANDING_RECALCULATE: 'Tabla recalculada',
+      STANDINGS_RECALCULATE: 'Tabla recalculada',
+      REPORT_EXPORT: 'Reporte exportado'
     };
 
-    return labels[action] ?? action;
+    return labels[action] ?? this.humanizeCode(action);
+  }
+
+  protected actionCategoryLabel(action: string): string {
+    if (action.startsWith('AUTH_')) {
+      return 'Acceso de usuarios';
+    }
+
+    if (action.startsWith('TOURNAMENT_') || action.startsWith('TEAM_') || action.startsWith('PLAYER_') || action.startsWith('ROSTER_')) {
+      return 'Gestion de campeonatos';
+    }
+
+    if (action.startsWith('MATCH_') || action.startsWith('STAGE_')) {
+      return 'Gestion de partidos';
+    }
+
+    if (action.startsWith('PERMISSION_') || action.startsWith('SECURITY_')) {
+      return 'Administracion';
+    }
+
+    if (action.startsWith('REPORT_') || action.startsWith('STANDINGS_')) {
+      return 'Reportes y seguimiento';
+    }
+
+    return 'Actividad operativa';
   }
 
   protected startGovernanceEdit(role: ManagedRolePermission): void {
@@ -1439,6 +1504,70 @@ export class DashboardPageComponent {
 
   protected isGovernancePermissionSelected(permissionCode: string): boolean {
     return this.selectedGovernancePermissions().includes(permissionCode);
+  }
+
+  protected roleLabel(role: ManagedRolePermission): string {
+    if (role.mutable) {
+      return 'Rol editable para operacion diaria';
+    }
+
+    return 'Rol protegido por configuracion del sistema';
+  }
+
+  protected permissionLabel(permissionCode: string): string {
+    const labels: Record<string, string> = {
+      'auth:session:read': 'Ver sesion activa',
+      'dashboard:read': 'Ver inicio',
+      'sports:read': 'Ver deportes',
+      'tournaments:read': 'Ver campeonatos',
+      'tournaments:manage': 'Gestionar campeonatos',
+      'tournaments:delete': 'Eliminar campeonatos',
+      'tournaments:status-transition': 'Cambiar estado de campeonato',
+      'tournaments:generate-knockout-bracket': 'Generar eliminatoria',
+      'tournaments:progress-to-knockout': 'Avanzar a eliminatoria',
+      'teams:read': 'Ver equipos',
+      'teams:manage': 'Gestionar equipos',
+      'teams:delete': 'Eliminar equipos',
+      'players:read': 'Ver jugadores',
+      'players:manage': 'Gestionar jugadores',
+      'players:delete': 'Eliminar jugadores',
+      'tournament-teams:read': 'Ver inscripciones',
+      'tournament-teams:manage': 'Gestionar inscripciones',
+      'tournament-teams:delete': 'Eliminar inscripciones',
+      'tournamentteams:read': 'Ver inscripciones',
+      'tournamentteams:manage': 'Gestionar inscripciones',
+      'tournamentteams:delete': 'Eliminar inscripciones',
+      'stages:read': 'Ver etapas',
+      'stages:manage': 'Gestionar etapas',
+      'stages:delete': 'Eliminar etapas',
+      'tournamentstages:read': 'Ver etapas',
+      'tournamentstages:manage': 'Gestionar etapas',
+      'tournamentstages:delete': 'Eliminar etapas',
+      'stage-groups:read': 'Ver grupos',
+      'stage-groups:manage': 'Gestionar grupos',
+      'stage-groups:delete': 'Eliminar grupos',
+      'stagegroups:read': 'Ver grupos',
+      'stagegroups:manage': 'Gestionar grupos',
+      'stagegroups:delete': 'Eliminar grupos',
+      'rosters:read': 'Ver planteles',
+      'rosters:manage': 'Gestionar planteles',
+      'rosters:delete': 'Eliminar planteles',
+      'matches:read': 'Ver partidos',
+      'matches:manage': 'Gestionar partidos',
+      'matches:delete': 'Eliminar partidos',
+      'standings:read': 'Ver tabla de posiciones',
+      'standings:manage': 'Gestionar tabla de posiciones',
+      'standings:delete': 'Eliminar tabla de posiciones',
+      'standings:recalculate': 'Recalcular tabla de posiciones',
+      'operations:audit:read': 'Ver actividad administrativa',
+      'permissions:govern:manage': 'Gestionar permisos',
+      'configuration:basic:read': 'Ver configuracion basica',
+      'configuration:basic:manage': 'Gestionar configuracion basica',
+      'users:read': 'Ver usuarios',
+      'users:manage': 'Gestionar usuarios'
+    };
+
+    return labels[permissionCode] ?? this.humanizeCode(permissionCode);
   }
 
   protected updateGovernanceReason(event: Event): void {
@@ -1488,7 +1617,24 @@ export class DashboardPageComponent {
 
   protected entityLabel(event: OperationalAuditEvent): string {
     const entityId = event.entityId ? ` #${event.entityId}` : '';
-    return `${event.entityType}${entityId}`;
+    const entityLabels: Record<string, string> = {
+      AUTH_SESSION: 'Sesion',
+      TOURNAMENT: 'Campeonato',
+      TOURNAMENT_TEAM: 'Equipo',
+      TEAM: 'Equipo',
+      PLAYER: 'Jugador',
+      ROSTER: 'Plantel',
+      MATCH: 'Partido',
+      MATCH_EVENT: 'Evento de partido',
+      STANDING: 'Tabla de posiciones',
+      REPORT: 'Reporte',
+      ROLE: 'Rol',
+      PERMISSION: 'Permiso',
+      USER: 'Usuario'
+    };
+
+    const label = entityLabels[event.entityType] ?? this.humanizeCode(event.entityType);
+    return `${label}${entityId}`;
   }
 
   protected eventDetail(event: OperationalAuditEvent): string {
@@ -1504,12 +1650,9 @@ export class DashboardPageComponent {
   }
 
   protected contextLine(event: OperationalAuditEvent): string {
-    const requestPath = this.readContextValue(event.context, 'requestPath');
-    const httpMethod = this.readContextValue(event.context, 'httpMethod');
     const reasonCode = this.readContextValue(event.context, 'reasonCode');
 
-    const parts = [httpMethod, requestPath, reasonCode].filter((item): item is string => !!item);
-    return parts.join(' / ');
+    return reasonCode ? `Motivo: ${this.humanizeCode(reasonCode)}` : '';
   }
 
   protected formatOccurredAt(value: string): string {
@@ -1536,5 +1679,14 @@ export class DashboardPageComponent {
     }
 
     return null;
+  }
+
+  private humanizeCode(value: string): string {
+    return value
+      .toLowerCase()
+      .split(/[_:.-]+/)
+      .filter(Boolean)
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(' ');
   }
 }

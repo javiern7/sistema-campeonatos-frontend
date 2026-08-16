@@ -20,6 +20,9 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
         gap: 0.75rem;
         justify-items: center;
         color: var(--text-soft);
+        padding: 1.5rem;
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.46);
       }
     `
   ],

@@ -50,13 +50,15 @@ import { TopbarComponent } from '../topbar/topbar.component';
       .shell-container {
         min-height: 100vh;
         background:
-          linear-gradient(135deg, rgba(10, 110, 90, 0.07), rgba(14, 116, 144, 0.05) 42%, rgba(124, 58, 237, 0.04)),
+          radial-gradient(circle at 18% 0%, rgba(10, 107, 88, 0.1), transparent 34%),
+          linear-gradient(135deg, rgba(10, 107, 88, 0.05), rgba(13, 120, 148, 0.04) 42%, rgba(87, 85, 183, 0.035)),
           var(--app-bg);
       }
 
       .shell-sidebar {
-        width: 280px;
+        width: 292px;
         border-right: 1px solid rgba(255, 255, 255, 0.12);
+        box-shadow: 8px 0 28px rgba(15, 23, 42, 0.1);
       }
 
       .sidebar-content {
@@ -66,10 +68,11 @@ import { TopbarComponent } from '../topbar/topbar.component';
       .mobile-nav-toggle {
         display: none;
         margin: 0.75rem 1rem 0;
+        background: rgba(255, 255, 255, 0.86);
       }
 
       .shell-content {
-        padding: 1.25rem;
+        padding: 1.35rem;
         max-width: 1600px;
       }
 

@@ -23,6 +23,7 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
         align-items: start;
         justify-content: space-between;
         min-width: 0;
+        padding: 0.25rem 0 0.15rem;
       }
 
       .page-header > div {
@@ -31,7 +32,9 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 
       h1 {
         margin: 0;
-        font-size: 1.75rem;
+        color: var(--text);
+        font-size: 1.82rem;
+        font-weight: 800;
         line-height: 1.15;
         overflow-wrap: anywhere;
       }

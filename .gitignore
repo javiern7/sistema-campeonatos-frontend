@@ -74,6 +74,7 @@ server/
 ##################################
 # Codex / Browser artifacts
 .codex-artifacts/
+visual-review/
 *.journal
 *Database*
 *wal

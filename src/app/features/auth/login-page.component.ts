@@ -29,7 +29,7 @@ import { NotificationService } from '../../core/error/notification.service';
 
         <mat-card class="login-card card">
           <span class="login-kicker">Acceso privado</span>
-          <h1>Ingreso operativo</h1>
+          <h1>Ingreso al sistema</h1>
           <p class="muted">
             Usa tus credenciales para acceder al panel de administracion de campeonatos.
           </p>
@@ -69,9 +69,9 @@ import { NotificationService } from '../../core/error/notification.service';
         min-height: 620px;
         overflow: hidden;
         border-radius: 8px;
-        border: 1px solid rgba(15, 23, 42, 0.12);
+        border: 1px solid rgba(15, 23, 42, 0.1);
         background: var(--surface);
-        box-shadow: 0 24px 70px rgba(15, 23, 42, 0.18);
+        box-shadow: 0 28px 80px rgba(15, 23, 42, 0.18);
       }
 
       .login-visual {
@@ -80,8 +80,8 @@ import { NotificationService } from '../../core/error/notification.service';
         align-items: flex-end;
         padding: 2rem;
         background:
-          linear-gradient(180deg, rgba(7, 89, 73, 0.16), rgba(7, 89, 73, 0.88)),
-          linear-gradient(120deg, rgba(14, 116, 144, 0.25), rgba(109, 91, 208, 0.2)),
+          linear-gradient(180deg, rgba(6, 77, 67, 0.1), rgba(6, 77, 67, 0.9)),
+          linear-gradient(120deg, rgba(13, 120, 148, 0.22), rgba(87, 85, 183, 0.16)),
           url('/assets/login-demo-sports.svg') center / cover;
         color: #ffffff;
       }
@@ -109,7 +109,7 @@ import { NotificationService } from '../../core/error/notification.service';
         display: grid;
         align-content: center;
         gap: 1rem;
-        padding: 2rem;
+        padding: 2.15rem;
         border: 0;
         border-radius: 0;
         box-shadow: none;
@@ -134,6 +134,7 @@ import { NotificationService } from '../../core/error/notification.service';
 
       h1 {
         margin: 0;
+        color: var(--text);
         font-size: 2rem;
         line-height: 1.1;
       }
@@ -157,7 +158,7 @@ import { NotificationService } from '../../core/error/notification.service';
       .login-support span {
         padding: 0.38rem 0.62rem;
         border-radius: 999px;
-        background: rgba(14, 116, 144, 0.1);
+        background: rgba(13, 120, 148, 0.1);
         color: #075985;
         font-size: 0.78rem;
         font-weight: 700;
@@ -172,6 +173,7 @@ import { NotificationService } from '../../core/error/notification.service';
         .login-stage {
           grid-template-columns: 1fr;
           min-height: auto;
+          width: min(560px, 100%);
         }
 
         .login-visual {
@@ -189,6 +191,10 @@ import { NotificationService } from '../../core/error/notification.service';
       }
 
       @media (max-width: 520px) {
+        .login-shell {
+          padding: 0.9rem;
+        }
+
         .login-visual {
           min-height: 210px;
           padding: 1.25rem;

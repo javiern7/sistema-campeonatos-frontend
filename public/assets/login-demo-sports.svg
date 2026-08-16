@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 900" role="img" aria-labelledby="title desc">
-  <title id="title">Cancha deportiva para demo operativa</title>
+  <title id="title">Cancha deportiva para gestion de campeonatos</title>
   <desc id="desc">Ilustracion local versionada con cancha, marcadores y elementos deportivos.</desc>
   <defs>
     <linearGradient id="sky" x1="0" x2="1" y1="0" y2="1">
@@ -46,7 +46,7 @@
   <g filter="url(#softShadow)">
     <rect x="138" y="164" width="302" height="148" rx="8" fill="#f8fafc" opacity="0.95"/>
     <rect x="162" y="188" width="254" height="100" rx="6" fill="#0f172a"/>
-    <text x="206" y="229" fill="#67e8f9" font-family="Arial, sans-serif" font-size="28" font-weight="700">DEMO</text>
+    <text x="206" y="229" fill="#67e8f9" font-family="Arial, sans-serif" font-size="28" font-weight="700">FINAL</text>
     <text x="206" y="263" fill="#ffffff" font-family="Arial, sans-serif" font-size="22">2 - 1</text>
     <circle cx="346" cy="240" r="26" fill="#22c55e"/>
   </g>

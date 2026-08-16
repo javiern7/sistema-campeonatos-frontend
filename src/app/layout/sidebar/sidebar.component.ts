@@ -38,15 +38,17 @@ import { APP_NAV_GROUPS, type AppNavGroup } from '../app-nav';
       :host {
         display: block;
         height: 100%;
-        padding: 1rem 0.75rem;
+        padding: 1rem 0.8rem;
         background:
-          linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0)),
-          linear-gradient(155deg, #123c34 0%, #0f5f5b 52%, #38477a 100%);
+          linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0) 34%),
+          linear-gradient(160deg, #0b302d 0%, #0d4f48 56%, #233b63 100%);
         color: #f8fafc;
       }
 
       .sidebar-brand {
-        padding: 0.75rem 1rem 1.25rem;
+        padding: 0.8rem 0.95rem 1.15rem;
+        margin-bottom: 0.15rem;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.12);
       }
 
       .sidebar-kicker {
@@ -60,7 +62,8 @@ import { APP_NAV_GROUPS, type AppNavGroup } from '../app-nav';
       strong {
         display: block;
         margin-top: 0.2rem;
-        font-size: 1.2rem;
+        font-size: 1.16rem;
+        line-height: 1.18;
       }
 
       .nav-list {
@@ -69,13 +72,13 @@ import { APP_NAV_GROUPS, type AppNavGroup } from '../app-nav';
 
       .nav-group {
         display: grid;
-        gap: 0.12rem;
-        margin: 0 0 0.65rem;
+        gap: 0.08rem;
+        margin: 0 0 0.7rem;
       }
 
       .nav-group-label {
-        padding: 0.45rem 1rem 0.25rem;
-        color: #b9eadf;
+        padding: 0.5rem 0.95rem 0.28rem;
+        color: rgba(210, 246, 238, 0.86);
         font-size: 0.72rem;
         font-weight: 800;
         text-transform: uppercase;
@@ -83,14 +86,25 @@ import { APP_NAV_GROUPS, type AppNavGroup } from '../app-nav';
       }
 
       a {
-        color: #e2e8f0;
+        min-height: 38px;
+        color: rgba(241, 245, 249, 0.9);
         border-radius: 8px;
-        margin-bottom: 0.15rem;
+        margin-bottom: 0.08rem;
+        transition:
+          background 140ms ease,
+          color 140ms ease,
+          transform 140ms ease;
+      }
+
+      a:hover {
+        background: rgba(255, 255, 255, 0.1);
+        color: #ffffff;
       }
 
       .active-link {
-        background: rgba(255, 255, 255, 0.16);
+        background: rgba(255, 255, 255, 0.18);
         color: #ffffff;
+        box-shadow: inset 3px 0 0 #7dd3c7;
       }
 
       @media (max-width: 900px) {

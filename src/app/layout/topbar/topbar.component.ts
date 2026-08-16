@@ -36,15 +36,18 @@ import { NotificationService } from '../../core/error/notification.service';
   styles: [
     `
       .topbar {
-        background: rgba(255, 255, 255, 0.88);
+        background: rgba(255, 255, 255, 0.9);
         border-bottom: 1px solid var(--border);
         backdrop-filter: blur(14px);
         gap: 0.75rem;
-        min-height: 72px;
+        min-height: 70px;
+        padding-inline: 1.25rem;
+        box-shadow: 0 1px 0 rgba(255, 255, 255, 0.86);
       }
 
       .topbar-title {
-        font-weight: 700;
+        color: var(--text);
+        font-weight: 800;
         line-height: 1.2;
       }
 
@@ -63,7 +66,7 @@ import { NotificationService } from '../../core/error/notification.service';
         display: flex;
         flex-direction: column;
         align-items: flex-end;
-        margin-right: 0.75rem;
+        margin-right: 0.65rem;
         color: var(--text-soft);
         max-width: 36rem;
         min-width: 0;
@@ -79,6 +82,8 @@ import { NotificationService } from '../../core/error/notification.service';
         font-size: 0.78rem;
         text-transform: uppercase;
         letter-spacing: 0.04em;
+        color: var(--primary-strong);
+        font-weight: 800;
       }
 
       @media (max-width: 900px) {
