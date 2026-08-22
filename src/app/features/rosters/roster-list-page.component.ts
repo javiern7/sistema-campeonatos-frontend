@@ -71,13 +71,24 @@ const parseQueryNumber = (value: string | null): number | '' => {
       <section class="card page-card app-page">
         <form [formGroup]="filtersForm" class="filter-row">
           <app-search-select
+            formControlName="tournamentId"
+            label="Campeonato"
+            placeholder="Busca un campeonato"
+            [options]="tournaments()"
+            [labelFn]="tournamentOptionLabel"
+            [searchTextFn]="tournamentOptionLabel"
+            emptyOptionLabel="Todos"
+          />
+
+          <app-search-select
             formControlName="tournamentTeamId"
-            label="Inscripcion"
-            placeholder="Busca una inscripcion"
-            [options]="tournamentTeams()"
+            label="Equipo inscrito"
+            placeholder="Busca un equipo inscrito"
+            [options]="filteredTournamentTeams()"
             [labelFn]="tournamentTeamOptionLabel"
             [searchTextFn]="tournamentTeamOptionLabel"
-            emptyOptionLabel="Todos"
+            [emptyOptionLabel]="selectedTournamentId() ? 'Todos los equipos del campeonato' : 'Todos'"
+            [hint]="selectedTournamentId() && filteredTournamentTeams().length === 0 ? 'Este campeonato aun no tiene equipos inscritos.' : ''"
           />
 
           <app-search-select
@@ -162,7 +173,12 @@ const parseQueryNumber = (value: string | null): number | '' => {
                 </ng-container>
                 <ng-container matColumnDef="window">
                   <th mat-header-cell *matHeaderCellDef>Vigencia</th>
-                  <td mat-cell *matCellDef="let row">{{ row.startDate }}{{ row.endDate ? ' a ' + row.endDate : ' en adelante' }}</td>
+                  <td mat-cell *matCellDef="let row">
+                    <div class="stack-sm">
+                      <span>{{ validityLabel(row) }}</span>
+                      <span class="muted">{{ formatRosterDate(row.startDate) }}{{ row.endDate ? ' a ' + formatRosterDate(row.endDate) : ' en adelante' }}</span>
+                    </div>
+                  </td>
                 </ng-container>
                 <ng-container matColumnDef="actions">
                   <th mat-header-cell *matHeaderCellDef>Acciones</th>
@@ -221,9 +237,17 @@ export class RosterListPageComponent {
   protected readonly statuses: RosterStatus[] = ['ACTIVE', 'INACTIVE', 'SUSPENDED'];
   protected readonly canManage = computed(() => this.authorization.canManage('rosters'));
   protected readonly canDelete = computed(() => this.authorization.canDelete('rosters'));
+  protected readonly selectedTournamentId = signal(0);
+  protected readonly filteredTournamentTeams = computed(() => {
+    const tournamentId = this.selectedTournamentId();
+    return tournamentId
+      ? this.tournamentTeams().filter((item) => item.tournamentId === tournamentId)
+      : this.tournamentTeams();
+  });
   protected readonly selectedContextLabel = computed(() => {
     const filters = this.filtersForm.getRawValue();
     const labels = [
+      this.tournamentName(Number(filters.tournamentId)),
       this.tournamentTeamLabel(Number(filters.tournamentTeamId)),
       this.playerName(Number(filters.playerId)),
       this.statusLabel(filters.rosterStatus)
@@ -234,6 +258,7 @@ export class RosterListPageComponent {
   protected readonly summaryCards = computed<SummaryCard[]>(() => {
     const rows = this.rows();
     const active = rows.filter((item) => item.rosterStatus === 'ACTIVE').length;
+    const validToday = rows.filter((item) => this.isRosterCurrentlyValid(item)).length;
     const captains = rows.filter((item) => item.captain).length;
 
     return [
@@ -246,7 +271,12 @@ export class RosterListPageComponent {
       {
         label: 'Activos en pagina',
         value: active,
-        meta: 'Jugadores habilitados'
+        meta: 'Por estado del plantel'
+      },
+      {
+        label: 'Vigentes hoy',
+        value: validToday,
+        meta: 'Activos dentro de fecha'
       },
       {
         label: 'Capitanes en pagina',
@@ -263,6 +293,7 @@ export class RosterListPageComponent {
     return columns;
   });
   protected readonly filtersForm = this.fb.nonNullable.group({
+    tournamentId: [0 as number | ''],
     tournamentTeamId: [0 as number | ''],
     playerId: [0 as number | ''],
     rosterStatus: ['' as RosterStatus | '']
@@ -271,33 +302,89 @@ export class RosterListPageComponent {
   constructor() {
     const queryParams = this.route.snapshot.queryParamMap;
     this.filtersForm.patchValue({
+      tournamentId: parseQueryNumber(queryParams.get('tournamentId')),
       tournamentTeamId: parseQueryNumber(queryParams.get('tournamentTeamId')),
       playerId: parseQueryNumber(queryParams.get('playerId')),
       rosterStatus: (queryParams.get('rosterStatus') as RosterStatus | null) ?? ''
     });
+    this.selectedTournamentId.set(Number(this.filtersForm.controls.tournamentId.getRawValue()));
 
     this.catalogLoader
       .loadAll((page, size) => this.playersService.list({ page, size }))
       .subscribe({ next: (items) => this.players.set(items) });
     this.catalogLoader
       .loadAll((page, size) => this.tournamentTeamsService.list({ page, size }))
-      .subscribe({ next: (items) => this.tournamentTeams.set(items) });
+      .subscribe({
+        next: (items) => {
+          this.tournamentTeams.set(items);
+          const tournamentId = Number(this.filtersForm.controls.tournamentId.getRawValue());
+          const tournamentTeamId = Number(this.filtersForm.controls.tournamentTeamId.getRawValue());
+          if (tournamentId && !tournamentTeamId) {
+            this.load();
+          }
+        }
+      });
     this.catalogLoader
       .loadAll((page, size) => this.teamsService.list({ page, size }))
       .subscribe({ next: (items) => this.teams.set(items) });
     this.catalogLoader
       .loadAll((page, size) => this.tournamentsService.list({ page, size }))
       .subscribe({ next: (items) => this.tournaments.set(items) });
+
+    this.filtersForm.controls.tournamentId.valueChanges.subscribe((value) => {
+      const tournamentId = Number(value);
+      this.selectedTournamentId.set(tournamentId);
+
+      const currentTournamentTeamId = Number(this.filtersForm.controls.tournamentTeamId.getRawValue());
+      const validTeamIds = new Set(
+        this.tournamentTeams()
+          .filter((item) => !tournamentId || item.tournamentId === tournamentId)
+          .map((item) => item.id)
+      );
+
+      if (currentTournamentTeamId && !validTeamIds.has(currentTournamentTeamId)) {
+        this.filtersForm.patchValue({ tournamentTeamId: '' }, { emitEvent: false });
+      }
+    });
     this.load();
   }
 
   protected load(): void {
     this.loading.set(true);
     const filters = this.filtersForm.getRawValue();
+    const tournamentId = filters.tournamentId ? Number(filters.tournamentId) : 0;
+    const tournamentTeamId = filters.tournamentTeamId ? Number(filters.tournamentTeamId) : 0;
+
+    if (tournamentId && !tournamentTeamId) {
+      const tournamentTeamIds = new Set(
+        this.tournamentTeams()
+          .filter((item) => item.tournamentId === tournamentId)
+          .map((item) => item.id)
+      );
+
+      this.catalogLoader
+        .loadAll((page, size) =>
+          this.rostersService.list({
+            playerId: filters.playerId ? Number(filters.playerId) : '',
+            rosterStatus: filters.rosterStatus,
+            page,
+            size
+          })
+        )
+        .pipe(finalize(() => this.loading.set(false)))
+        .subscribe({
+          next: (items) => {
+            const filtered = items.filter((item) => tournamentTeamIds.has(item.tournamentTeamId));
+            this.applyClientPage(filtered);
+          },
+          error: (error: unknown) => this.notifications.error(this.errorMapper.map(error).message)
+        });
+      return;
+    }
 
     this.rostersService
       .list({
-        tournamentTeamId: filters.tournamentTeamId ? Number(filters.tournamentTeamId) : '',
+        tournamentTeamId: tournamentTeamId || '',
         playerId: filters.playerId ? Number(filters.playerId) : '',
         rosterStatus: filters.rosterStatus,
         page: this.pageIndex(),
@@ -314,7 +401,8 @@ export class RosterListPageComponent {
   }
 
   protected resetFilters(): void {
-    this.filtersForm.setValue({ tournamentTeamId: '', playerId: '', rosterStatus: '' });
+    this.filtersForm.setValue({ tournamentId: '', tournamentTeamId: '', playerId: '', rosterStatus: '' });
+    this.selectedTournamentId.set(0);
     this.pageIndex.set(0);
     this.load();
   }
@@ -351,6 +439,16 @@ export class RosterListPageComponent {
     return `${teamLabel} / ${tournamentLabel}`;
   }
 
+  protected tournamentName(id: number): string {
+    if (!id) {
+      return '';
+    }
+
+    return this.tournaments().find((item) => item.id === id)?.name ?? `Campeonato ${id}`;
+  }
+
+  protected readonly tournamentOptionLabel = (item: Tournament): string => item.name;
+
   protected readonly playerOptionLabel = (item: Player): string => `${item.firstName} ${item.lastName}`;
 
   protected readonly tournamentTeamOptionLabel = (item: TournamentTeam): string => this.tournamentTeamLabel(item.id);
@@ -373,6 +471,53 @@ export class RosterListPageComponent {
     };
 
     return statusMap[status];
+  }
+
+  protected validityLabel(row: RosterEntry): string {
+    if (row.rosterStatus !== 'ACTIVE') {
+      return 'No disponible para competir';
+    }
+
+    const today = this.todayIso();
+    if (row.startDate > today) {
+      return 'Activo, inicia despues';
+    }
+
+    if (row.endDate && row.endDate < today) {
+      return 'Activo, pero vencido';
+    }
+
+    return 'Activo y vigente';
+  }
+
+  private isRosterCurrentlyValid(row: RosterEntry): boolean {
+    const today = this.todayIso();
+    return row.rosterStatus === 'ACTIVE' && row.startDate <= today && (!row.endDate || row.endDate >= today);
+  }
+
+  private todayIso(): string {
+    return new Date().toISOString().slice(0, 10);
+  }
+
+  protected formatRosterDate(value: string): string {
+    const [year, month, day] = value.split('-');
+    return `${day}/${month}/${year}`;
+  }
+
+  private applyClientPage(items: RosterEntry[]): void {
+    const start = this.pageIndex() * this.pageSize();
+    const content = items.slice(start, start + this.pageSize());
+    this.page.set({
+      content,
+      page: this.pageIndex(),
+      number: this.pageIndex(),
+      totalElements: items.length,
+      totalPages: Math.max(1, Math.ceil(items.length / this.pageSize())),
+      size: this.pageSize(),
+      first: this.pageIndex() === 0,
+      last: start + this.pageSize() >= items.length
+    });
+    this.rows.set(content);
   }
 
   protected remove(row: RosterEntry): void {

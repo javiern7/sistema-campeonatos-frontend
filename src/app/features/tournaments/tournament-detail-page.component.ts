@@ -1153,10 +1153,10 @@ export class TournamentDetailPageComponent {
         status: standingsCount > 0 ? 'ready' : playedMatchCount > 0 ? 'attention' : 'pending',
         description:
           standingsCount > 0
-            ? `${standingsCount} registro(s) de tabla disponibles para consulta.`
+            ? `${standingsCount} registro(s) de tabla disponibles para ${tournament.name}.`
             : playedMatchCount > 0
-              ? 'Ya hay resultados; conviene validar que la tabla refleje la competencia.'
-              : 'La tabla se vuelve relevante cuando existan resultados.',
+              ? `Ya hay resultados en ${tournament.name}; conviene preparar o recalcular su tabla.`
+              : `La tabla de ${tournament.name} se vuelve relevante cuando existan resultados.`,
         actionLabel: standingsCount > 0 ? 'Ver tabla' : 'Preparar tabla',
         path: '/standings',
         queryParams: qp({ tournamentId: tournament.id }),
@@ -1340,7 +1340,7 @@ export class TournamentDetailPageComponent {
       },
       {
         label: 'Tabla',
-        description: 'Validar la tabla del torneo y su cobertura competitiva.',
+        description: `Validar la tabla de ${tournament.name} y su cobertura competitiva.`,
         cta: 'Abrir tabla',
         path: '/standings',
         queryParams: qp({ tournamentId: tournament.id }),

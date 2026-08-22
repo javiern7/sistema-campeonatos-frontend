@@ -78,7 +78,7 @@ const parseQueryNumber = (value: string | null): number | '' => {
   ],
   template: `
     <section class="app-page">
-      <app-page-header title="Tabla de posiciones" subtitle="Seguimiento competitivo y recalculo por contexto.">
+      <app-page-header title="Tabla de posiciones" [subtitle]="pageSubtitle()">
         @if (selectedTournamentId()) {
           <a mat-stroked-button [routerLink]="['/tournaments', selectedTournamentId()]">Volver al campeonato</a>
         }
@@ -102,8 +102,8 @@ const parseQueryNumber = (value: string | null): number | '' => {
         <form [formGroup]="filtersForm" class="filter-row">
           <app-search-select
             formControlName="tournamentId"
-            label="Torneo"
-            placeholder="Busca un torneo"
+            label="Campeonato"
+            placeholder="Busca un campeonato"
             [options]="tournaments()"
             [labelFn]="tournamentOptionLabel"
             [searchTextFn]="tournamentOptionLabel"
@@ -132,8 +132,8 @@ const parseQueryNumber = (value: string | null): number | '' => {
 
           <app-search-select
             formControlName="tournamentTeamId"
-            label="Inscripcion"
-            placeholder="Busca una inscripcion"
+            label="Equipo inscrito"
+            placeholder="Busca un equipo inscrito"
             [options]="filteredTournamentTeams()"
             [labelFn]="tournamentTeamOptionLabel"
             [searchTextFn]="tournamentTeamOptionLabel"
@@ -178,7 +178,7 @@ const parseQueryNumber = (value: string | null): number | '' => {
           @if (rows().length === 0) {
             <div class="empty-state">
               <strong>No hay tabla para este contexto.</strong>
-              <p class="muted">Aun no hay resultados suficientes o la tabla no fue recalculada para este alcance. Revisa partidos jugados y luego actualiza la tabla.</p>
+              <p class="muted">{{ emptyStateMessage() }}</p>
               <div class="form-actions">
                 @if (selectedTournamentId()) {
                   <a mat-stroked-button routerLink="/matches" [queryParams]="{ tournamentId: selectedTournamentId() }">Ver partidos</a>
@@ -445,6 +445,12 @@ export class StandingsPageComponent {
   });
   protected readonly selectedTournamentId = signal(0);
   private readonly selectedStageId = signal(0);
+  protected readonly pageSubtitle = computed(() => {
+    const tournament = this.tournamentName(this.selectedTournamentId());
+    return tournament
+      ? `Seguimiento competitivo y recalculo de tabla para ${tournament}.`
+      : 'Seguimiento competitivo y recalculo por campeonato.';
+  });
   protected readonly selectedContextLabel = computed(() => {
     const labels = [
       this.tournamentName(this.selectedTournamentId()),
@@ -582,7 +588,7 @@ export class StandingsPageComponent {
     const standingsCount = this.rows().length;
 
     if (approvedRegistrations.length === 0) {
-      return 'Este torneo aun no tiene inscripciones aprobadas. La tabla no deberia ser el siguiente paso operativo.';
+      return 'Este campeonato aun no tiene equipos inscritos aprobados. La tabla no deberia ser el siguiente paso operativo.';
     }
 
     if (playedMatches > 0 && rosterReadyCount === 0) {
@@ -598,6 +604,14 @@ export class StandingsPageComponent {
     }
 
     return '';
+  });
+  protected readonly emptyStateMessage = computed(() => {
+    const tournamentName = this.tournamentName(this.selectedTournamentId());
+    if (!tournamentName) {
+      return 'Selecciona un campeonato para revisar si ya tiene resultados y tabla calculada.';
+    }
+
+    return `Aun no hay tabla visible para ${tournamentName}. Si ya registraste resultados, usa Recalcular tabla para generar o actualizar posiciones.`;
   });
   protected readonly hasPlayedMatchesWithoutRosterSupport = computed(() => {
     const tournamentId = this.selectedTournamentId();
@@ -733,7 +747,7 @@ export class StandingsPageComponent {
   protected recalculate(): void {
     const filters = this.filtersForm.getRawValue();
     if (!filters.tournamentId) {
-      this.notifications.error('Selecciona al menos un torneo para recalcular');
+      this.notifications.error('Selecciona un campeonato para recalcular la tabla');
       return;
     }
 
@@ -798,7 +812,7 @@ export class StandingsPageComponent {
       return '';
     }
 
-    return this.tournaments().find((item) => item.id === id)?.name ?? `Torneo ${id}`;
+    return this.tournaments().find((item) => item.id === id)?.name ?? `Campeonato ${id}`;
   }
 
   protected stageName(id: number): string {

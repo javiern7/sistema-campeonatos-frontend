@@ -20,7 +20,7 @@ import { MatNativeDateModule } from '@angular/material/core';
 import { ErrorMapper } from '../../core/error/error.mapper';
 import { NotificationService } from '../../core/error/notification.service';
 import { CatalogLoaderService } from '../../core/pagination/catalog-loader.service';
-import { parseBackendDate, PICHANGA_DATE_PICKER_PROVIDERS } from '../../shared/date/date-only.utils';
+import { parseBackendDate, PICHANGA_DATE_PICKER_PROVIDERS, toBackendDate } from '../../shared/date/date-only.utils';
 import { toIsoFromDateAndTime, toTimeInputValue } from '../../shared/date/date-time.utils';
 import { LoadingStateComponent } from '../../shared/loading-state/loading-state.component';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
@@ -53,6 +53,15 @@ const parseOptionalNumber = (value: string | number | null | undefined): number 
 
   const parsed = Number(value);
   return Number.isNaN(parsed) ? null : parsed;
+};
+
+type TeamRosterReadiness = {
+  label: string;
+  activeCount: number;
+  validCount: number;
+  futureCount: number;
+  expiredCount: number;
+  hasRosterForMatchDate: boolean;
 };
 
 const matchConsistencyValidator: ValidatorFn = (control: AbstractControl): ValidationErrors | null => {
@@ -215,6 +224,20 @@ const matchConsistencyValidator: ValidatorFn = (control: AbstractControl): Valid
                 errorText="Selecciona un equipo visita valido."
               />
               </div>
+
+              @if (selectedRosterReadinessMessage()) {
+                <div class="context-banner">
+                  <strong>Planteles para este partido</strong>
+                  <span class="muted">{{ selectedRosterReadinessMessage() }}</span>
+                  <a
+                    mat-stroked-button
+                    routerLink="/rosters"
+                    [queryParams]="{ rosterStatus: 'ACTIVE' }"
+                  >
+                    Revisar planteles
+                  </a>
+                </div>
+              }
             </section>
 
             <section class="form-section">
@@ -403,6 +426,7 @@ export class MatchFormPageComponent {
   private readonly selectedStageId = signal(0);
   private readonly selectedHomeTournamentTeamId = signal(0);
   private readonly selectedAwayTournamentTeamId = signal(0);
+  private readonly selectedScheduledDate = signal<string | null>(null);
   protected readonly tournaments = signal<Tournament[]>([]);
   private readonly teams = signal<Team[]>([]);
   private readonly allStages = signal<TournamentStage[]>([]);
@@ -457,7 +481,7 @@ export class MatchFormPageComponent {
   protected readonly rosterReadyTournamentTeamIds = computed(() => {
     const activeRosterIds = new Set(
       this.allRosters()
-        .filter((item) => item.rosterStatus === 'ACTIVE')
+        .filter((item) => item.rosterStatus === 'ACTIVE' && this.isRosterValidForMatchDate(item))
         .map((item) => item.tournamentTeamId)
     );
 
@@ -478,6 +502,46 @@ export class MatchFormPageComponent {
 
     return activeIds.has(homeId) && activeIds.has(awayId);
   });
+  protected readonly selectedRosterReadinessMessage = computed(() => {
+    const status = this.form.controls.status.getRawValue();
+    if (status === 'CANCELLED') {
+      return '';
+    }
+
+    const homeId = this.selectedHomeTournamentTeamId();
+    const awayId = this.selectedAwayTournamentTeamId();
+    if (!homeId || !awayId) {
+      return '';
+    }
+
+    const scheduledDate = this.selectedMatchDate();
+    const readiness = [this.teamRosterReadiness(homeId, scheduledDate), this.teamRosterReadiness(awayId, scheduledDate)];
+    const blocked = readiness.filter((item) => !item.hasRosterForMatchDate);
+    if (blocked.length === 0) {
+      return '';
+    }
+
+    const dateLabel = scheduledDate ? ` para el ${this.formatRosterDate(scheduledDate)}` : '';
+    const details = blocked
+      .map((item) => {
+        if (item.activeCount === 0) {
+          return `${item.label}: no tiene jugadores activos en plantel`;
+        }
+        if (!scheduledDate) {
+          return `${item.label}: tiene jugadores activos, pero falta fecha del partido para validar vigencia`;
+        }
+        if (item.expiredCount > 0 && item.futureCount === 0) {
+          return `${item.label}: sus jugadores activos vencieron antes de la fecha del partido`;
+        }
+        if (item.futureCount > 0 && item.expiredCount === 0) {
+          return `${item.label}: sus jugadores activos empiezan despues de la fecha del partido`;
+        }
+        return `${item.label}: tiene jugadores activos, pero ninguno vigente en la fecha del partido`;
+      })
+      .join('. ');
+
+    return `Antes de guardar, ambos equipos necesitan al menos un jugador con estado Activo y vigencia valida${dateLabel}. ${details}.`;
+  });
   protected readonly readinessWarning = computed(() => {
     const tournamentId = this.selectedTournamentId();
     const approvedCount = this.tournamentTeams().filter((item) => item.registrationStatus === 'APPROVED').length;
@@ -492,7 +556,7 @@ export class MatchFormPageComponent {
     }
 
     if (rosterReadyCount < 2) {
-      return `Solo ${rosterReadyCount} inscripciones aprobadas tienen roster activo. Se recomienda no avanzar a partidos hasta llegar al menos a 2.`;
+      return `Solo ${rosterReadyCount} inscripciones aprobadas tienen plantel activo y vigente para la fecha del partido. Se recomienda no avanzar hasta llegar al menos a 2.`;
     }
 
     return '';
@@ -620,6 +684,10 @@ export class MatchFormPageComponent {
       this.syncWinnerSelection();
     });
 
+    this.form.controls.scheduledDate.valueChanges.pipe(takeUntilDestroyed()).subscribe((value) => {
+      this.selectedScheduledDate.set(toBackendDate(value));
+    });
+
     if (!this.isEditMode()) {
       this.syncSelectedTeamTournamentIds();
       this.pageLoading.set(false);
@@ -653,6 +721,7 @@ export class MatchFormPageComponent {
           );
           this.selectedTournamentId.set(match.tournamentId);
           this.selectedStageId.set(match.stageId ?? 0);
+          this.selectedScheduledDate.set(toBackendDate(parseBackendDate(match.scheduledAt)));
           this.syncSelectedTeamTournamentIds();
           this.syncWinnerSelection();
           this.applyDefaultStageAndGroupForTournament();
@@ -671,14 +740,14 @@ export class MatchFormPageComponent {
     const status = this.form.controls.status.getRawValue();
     if ((status === 'SCHEDULED' || status === 'PLAYED' || status === 'FORFEIT') && this.rosterReadyTournamentTeamIds().size < 2) {
       this.notifications.error(
-        'El campeonato no tiene suficientes planteles activos para avanzar a competencia. Revisa inscripciones aprobadas y planteles antes de guardar.'
+        'El campeonato no tiene suficientes planteles activos y vigentes para avanzar a competencia. Revisa estado, fecha inicio y fecha fin en Planteles.'
       );
       return;
     }
 
     if ((status === 'SCHEDULED' || status === 'PLAYED' || status === 'FORFEIT') && !this.selectedTeamsRosterReady()) {
       this.notifications.error(
-        'Los equipos seleccionados deben tener plantel activo para avanzar a competencia. Revisa las inscripciones elegidas antes de guardar.'
+        'Los equipos seleccionados deben tener plantel activo y vigente para la fecha del partido. Revisa las inscripciones elegidas en Planteles.'
       );
       return;
     }
@@ -782,6 +851,53 @@ export class MatchFormPageComponent {
   protected readonly groupOptionLabel = (item: StageGroup): string => item.name;
 
   protected readonly tournamentTeamOptionLabel = (item: TournamentTeam): string => this.tournamentTeamLabel(item);
+
+  private selectedMatchDate(): string | null {
+    return this.selectedScheduledDate();
+  }
+
+  private isRosterValidForMatchDate(roster: RosterEntry): boolean {
+    if (roster.rosterStatus !== 'ACTIVE') {
+      return false;
+    }
+
+    const matchDate = this.selectedMatchDate();
+    if (!matchDate) {
+      return true;
+    }
+
+    return roster.startDate <= matchDate && (!roster.endDate || roster.endDate >= matchDate);
+  }
+
+  private teamRosterReadiness(tournamentTeamId: number, matchDate: string | null): TeamRosterReadiness {
+    const activeRosters = this.allRosters().filter(
+      (item) => item.tournamentTeamId === tournamentTeamId && item.rosterStatus === 'ACTIVE'
+    );
+    const validCount = matchDate
+      ? activeRosters.filter((item) => item.startDate <= matchDate && (!item.endDate || item.endDate >= matchDate)).length
+      : activeRosters.length;
+    const expiredCount = matchDate ? activeRosters.filter((item) => item.endDate && item.endDate < matchDate).length : 0;
+    const futureCount = matchDate ? activeRosters.filter((item) => item.startDate > matchDate).length : 0;
+
+    return {
+      label: this.tournamentTeamName(tournamentTeamId),
+      activeCount: activeRosters.length,
+      validCount,
+      futureCount,
+      expiredCount,
+      hasRosterForMatchDate: validCount > 0
+    };
+  }
+
+  private tournamentTeamName(id: number): string {
+    const item = this.allTournamentTeams().find((entry) => entry.id === id);
+    return item ? this.tournamentTeamLabel(item) : `Inscripcion ${id}`;
+  }
+
+  private formatRosterDate(value: string): string {
+    const [year, month, day] = value.split('-');
+    return `${day}/${month}/${year}`;
+  }
 
   private applyDefaultTeamsForTournament(tournamentId: number): void {
     if (!tournamentId) {

@@ -50,10 +50,13 @@ export interface PublicTournamentDetail extends PublicTournamentSummary {
 }
 
 export interface PublicStandingEntry {
-  position: number;
-  teamName: string;
-  teamShortName: string | null;
-  teamCode: string | null;
+  standingId?: number;
+  rankPosition?: number;
+  position?: number;
+  team?: PublicResultTeam | null;
+  teamName?: string;
+  teamShortName?: string | null;
+  teamCode?: string | null;
   played: number;
   wins: number;
   draws: number;
@@ -62,6 +65,7 @@ export interface PublicStandingEntry {
   pointsAgainst: number;
   scoreDiff: number;
   points: number;
+  updatedAt?: string;
 }
 
 export interface PublicTournamentStandings {

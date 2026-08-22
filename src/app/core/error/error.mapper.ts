@@ -12,7 +12,7 @@ export class ErrorMapper {
 
     if (error instanceof HttpErrorResponse) {
       const payload = error.error ?? {};
-      const message = payload.message ?? this.defaultMessage(error.status);
+      const message = this.normalizeMessage(payload.message ?? this.defaultMessage(error.status));
       return new AppError(error.status, message, payload.code, payload.errors);
     }
 
@@ -34,5 +34,14 @@ export class ErrorMapper {
       default:
         return 'No se pudo completar la solicitud';
     }
+  }
+
+  private normalizeMessage(message: string): string {
+    const knownMessages: Record<string, string> = {
+      'Los equipos del partido deben tener roster ACTIVE antes de competir':
+        'Los equipos del partido deben tener plantel activo y vigente para la fecha del encuentro. Revisa Planteles: estado Activo, fecha inicio y fecha fin.'
+    };
+
+    return knownMessages[message] ?? message;
   }
 }

@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
 
 import { VisualIdentityComponent } from '../../shared/visual-identity/visual-identity.component';
-import { PublicTournamentStandings } from './public-portal.models';
+import { PublicStandingEntry, PublicTournamentStandings } from './public-portal.models';
 
 @Component({
   selector: 'app-standings-section',
@@ -35,16 +35,16 @@ import { PublicTournamentStandings } from './public-portal.models';
               </tr>
             </thead>
             <tbody>
-              @for (entry of standings!.standings; track entry.position + '-' + entry.teamName) {
+              @for (entry of standings!.standings; track entryKey(entry)) {
                 <tr>
                   <td>
-                    <span class="position-pill" [class.leader]="entry.position === 1">{{ entry.position }}</span>
+                    <span class="position-pill" [class.leader]="entryPosition(entry) === 1">{{ entryPosition(entry) }}</span>
                   </td>
                   <td>
                     <app-visual-identity
-                      [label]="entry.teamName"
-                      [shortLabel]="entry.teamShortName"
-                      [code]="entry.teamCode"
+                      [label]="entryTeamName(entry)"
+                      [shortLabel]="entryTeamShortName(entry)"
+                      [code]="entryTeamCode(entry)"
                       [meta]="entry.scoreDiff > 0 ? 'DG +' + entry.scoreDiff : 'DG ' + entry.scoreDiff"
                       [compact]="true"
                     />
@@ -148,6 +148,26 @@ import { PublicTournamentStandings } from './public-portal.models';
 export class StandingsSectionComponent {
   @Input({ required: true }) standings: PublicTournamentStandings | null = null;
   @Input() closedMatches = 0;
+
+  protected entryKey(entry: PublicStandingEntry): string {
+    return `${entry.standingId ?? this.entryPosition(entry)}-${this.entryTeamName(entry)}`;
+  }
+
+  protected entryPosition(entry: PublicStandingEntry): number {
+    return entry.rankPosition ?? entry.position ?? 0;
+  }
+
+  protected entryTeamName(entry: PublicStandingEntry): string {
+    return entry.team?.teamName ?? entry.teamName ?? 'Equipo por confirmar';
+  }
+
+  protected entryTeamShortName(entry: PublicStandingEntry): string | null {
+    return entry.team?.shortName ?? entry.teamShortName ?? null;
+  }
+
+  protected entryTeamCode(entry: PublicStandingEntry): string | null {
+    return entry.team?.code ?? entry.teamCode ?? null;
+  }
 
   protected standingsContextLabel(): string {
     if (!this.standings) {

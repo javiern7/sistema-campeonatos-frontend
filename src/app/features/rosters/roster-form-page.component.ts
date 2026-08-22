@@ -89,7 +89,7 @@ const rosterOperationalValidator: ValidatorFn = (control: AbstractControl): Vali
         @if (pageLoading()) {
           <app-loading-state />
         } @else {
-          <form [formGroup]="form" (ngSubmit)="save()" class="app-page">
+          <form [formGroup]="form" (ngSubmit)="save()" class="app-page roster-form">
             @if (operationalWarning()) {
               <div class="context-banner">
                 <strong>Validacion del plantel</strong>
@@ -97,7 +97,14 @@ const rosterOperationalValidator: ValidatorFn = (control: AbstractControl): Vali
               </div>
             }
 
-            <div class="form-grid">
+            @if (isEditMode()) {
+              <div class="context-banner">
+                <strong>{{ editContextLabel() }}</strong>
+                <span class="muted">Estas editando datos de vigencia, estado, posicion y camiseta. Para cambiar de jugador o equipo, crea un nuevo registro de plantel.</span>
+              </div>
+            }
+
+            <div class="form-grid roster-form-grid">
               @if (!isEditMode()) {
                 <app-search-select
                   formControlName="tournamentId"
@@ -172,7 +179,7 @@ const rosterOperationalValidator: ValidatorFn = (control: AbstractControl): Vali
                 <input matInput [matDatepicker]="endDatePicker" formControlName="endDate" placeholder="dd/mm/aaaa">
                 <mat-datepicker-toggle matIconSuffix [for]="endDatePicker" />
                 <mat-datepicker #endDatePicker />
-                <mat-hint>dd/mm/aaaa</mat-hint>
+                <mat-hint>Opcional</mat-hint>
                 @if (form.hasError('invalidDateRange') && form.controls.endDate.touched) {
                   <mat-error>La fecha fin no puede ser anterior a la fecha inicio.</mat-error>
                 }
@@ -183,6 +190,9 @@ const rosterOperationalValidator: ValidatorFn = (control: AbstractControl): Vali
 
             @if (form.hasError('activeRosterWithoutApprovedRegistration')) {
               <p class="muted">Un plantel activo requiere una inscripcion aprobada en el campeonato.</p>
+            }
+            @if (activeRosterWithEndDate()) {
+              <p class="muted roster-note">Este jugador quedara activo solo hasta la fecha fin indicada. Si debe competir despues de esa fecha, deja la fecha fin vacia o ampliala antes de registrar partidos.</p>
             }
 
             <div class="form-actions">
@@ -196,6 +206,17 @@ const rosterOperationalValidator: ValidatorFn = (control: AbstractControl): Vali
       </section>
     </section>
   `,
+  styles: [
+    `
+      .roster-form-grid {
+        align-items: start;
+      }
+
+      .roster-note {
+        margin: 0;
+      }
+    `
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class RosterFormPageComponent {
@@ -219,6 +240,7 @@ export class RosterFormPageComponent {
   private readonly selectedTournamentId = signal(0);
   private readonly selectedTournamentTeamId = signal(0);
   private readonly selectedRosterStatus = signal<RosterStatus>('ACTIVE');
+  private readonly selectedRosterHasEndDate = signal(false);
   protected readonly players = signal<Player[]>([]);
   protected readonly teams = signal<Team[]>([]);
   protected readonly tournaments = signal<Tournament[]>([]);
@@ -245,6 +267,16 @@ export class RosterFormPageComponent {
 
     return '';
   });
+  protected readonly activeRosterWithEndDate = computed(() => {
+    return this.selectedRosterStatus() === 'ACTIVE' && this.selectedRosterHasEndDate();
+  });
+  protected readonly editContextLabel = computed(() => {
+    const playerId = Number(this.form.controls.playerId.getRawValue());
+    const tournamentTeamId = Number(this.form.controls.tournamentTeamId.getRawValue());
+    const player = this.playerName(playerId) || 'Jugador del plantel';
+    const registration = this.tournamentTeamName(tournamentTeamId);
+    return registration ? `${player} / ${registration}` : player;
+  });
 
   protected readonly form = this.fb.nonNullable.group(
     {
@@ -263,6 +295,11 @@ export class RosterFormPageComponent {
   );
 
   constructor() {
+    if (this.isEditMode()) {
+      this.form.controls.tournamentId.clearValidators();
+      this.form.controls.tournamentId.updateValueAndValidity({ emitEvent: false });
+    }
+
     this.catalogLoader.loadAll((page, size) => this.playersService.list({ page, size })).subscribe({
       next: (items) => {
         this.players.set(items);
@@ -287,7 +324,9 @@ export class RosterFormPageComponent {
     this.catalogLoader.loadAll((page, size) => this.tournamentTeamsService.list({ page, size })).subscribe({
       next: (items) => {
         this.tournamentTeams.set(items);
-        if (!this.isEditMode() && items.length > 0) {
+        if (this.isEditMode()) {
+          this.syncSelectedRegistrationContext();
+        } else if (items.length > 0) {
           const preferredRegistration = items.find((item) => item.id === this.preferredTournamentTeamId) ?? null;
           const fallbackTournamentId = Number(this.form.controls.tournamentId.getRawValue()) || items[0].tournamentId;
           const tournamentId = preferredRegistration?.tournamentId ?? fallbackTournamentId;
@@ -311,6 +350,9 @@ export class RosterFormPageComponent {
     });
     this.form.controls.rosterStatus.valueChanges.subscribe((value) => {
       this.selectedRosterStatus.set(value);
+    });
+    this.form.controls.endDate.valueChanges.subscribe((value) => {
+      this.selectedRosterHasEndDate.set(Boolean(value));
     });
 
     if (!this.isEditMode()) {
@@ -341,6 +383,8 @@ export class RosterFormPageComponent {
           this.selectedTournamentId.set(tournamentTeam?.tournamentId ?? 0);
           this.selectedTournamentTeamId.set(entry.tournamentTeamId);
           this.selectedRosterStatus.set(entry.rosterStatus);
+          this.selectedRosterHasEndDate.set(Boolean(entry.endDate));
+          this.syncSelectedRegistrationContext();
         },
         error: (error: unknown) => this.notifications.error(this.errorMapper.map(error).message)
       });
@@ -349,7 +393,12 @@ export class RosterFormPageComponent {
   protected save(): void {
     this.form.markAllAsTouched();
 
-    if (this.form.invalid || this.saving()) {
+    if (this.saving()) {
+      return;
+    }
+
+    if (this.form.invalid) {
+      this.notifications.error('Revisa los campos pendientes del plantel antes de guardar.');
       return;
     }
 
@@ -410,6 +459,24 @@ export class RosterFormPageComponent {
     return labels[status];
   }
 
+  private playerName(id: number): string {
+    if (!id) {
+      return '';
+    }
+
+    const player = this.players().find((item) => item.id === id);
+    return player ? `${player.firstName} ${player.lastName}` : `Jugador #${id}`;
+  }
+
+  private tournamentTeamName(id: number): string {
+    if (!id) {
+      return '';
+    }
+
+    const registration = this.tournamentTeams().find((item) => item.id === id);
+    return registration ? this.tournamentTeamLabel(registration) : `Inscripcion #${id}`;
+  }
+
   private applyDefaultTournamentTeamSelection(preferredTournamentTeamId = 0): void {
     const tournamentId = this.selectedTournamentId();
     const availableTournamentTeams = this.tournamentTeams().filter((item) => item.tournamentId === tournamentId);
@@ -435,5 +502,27 @@ export class RosterFormPageComponent {
         ?.registrationStatus ?? '';
 
     this.form.patchValue({ registrationStatus }, { emitEvent: false });
+  }
+
+  private syncSelectedRegistrationContext(): void {
+    const tournamentTeamId = Number(this.form.controls.tournamentTeamId.getRawValue());
+    if (!tournamentTeamId) {
+      return;
+    }
+
+    const registration = this.tournamentTeams().find((item) => item.id === tournamentTeamId) ?? null;
+    if (!registration) {
+      return;
+    }
+
+    this.form.patchValue(
+      {
+        tournamentId: registration.tournamentId,
+        registrationStatus: registration.registrationStatus
+      },
+      { emitEvent: false }
+    );
+    this.selectedTournamentId.set(registration.tournamentId);
+    this.selectedTournamentTeamId.set(registration.id);
   }
 }

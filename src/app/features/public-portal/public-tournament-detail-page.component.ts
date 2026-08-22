@@ -11,6 +11,7 @@ import { LoadingStateComponent } from '../../shared/loading-state/loading-state.
 import { CalendarSectionComponent } from './calendar-section.component';
 import {
   PublicTournamentCalendar,
+  PublicTournamentContextFilters,
   PublicTournamentDetail,
   PublicTournamentResults,
   PublicTournamentStandings
@@ -454,7 +455,7 @@ export class TournamentDetailComponent {
       }
     };
 
-    this.standings()?.standings.forEach((entry) => addTeam(entry));
+    this.standings()?.standings.forEach((entry) => addTeam(entry.team ?? entry));
     this.calendar()?.matches.forEach((match) => {
       addTeam(match.homeTeam);
       addTeam(match.awayTeam);
@@ -563,13 +564,59 @@ export class TournamentDetailComponent {
           this.standings.set(standings);
           this.results.set(results);
           this.updateMetadata(tournament);
-          this.loading.set(false);
+
+          const scopedFilters = this.resolveScopedStandingsFilters(standings, calendar, results);
+          if (!scopedFilters) {
+            this.loading.set(false);
+            return;
+          }
+
+          this.publicPortalService
+            .getStandings(slug, scopedFilters)
+            .pipe(takeUntilDestroyed(this.destroyRef))
+            .subscribe({
+              next: (scopedStandings) => {
+                this.standings.set(scopedStandings);
+                this.loading.set(false);
+              },
+              error: () => {
+                this.loading.set(false);
+              }
+            });
         },
         error: (error) => {
           this.errorMessage.set(this.errorMapper.map(error).message);
           this.loading.set(false);
         }
       });
+  }
+
+  private resolveScopedStandingsFilters(
+    standings: PublicTournamentStandings,
+    calendar: PublicTournamentCalendar,
+    results: PublicTournamentResults
+  ): PublicTournamentContextFilters | null {
+    if (standings.totalEntries > 0 || standings.standings.length > 0 || standings.stageId !== null || standings.groupId !== null) {
+      return null;
+    }
+
+    const availableResult = results.results.find(
+      (entry) => entry.affectsStandings && entry.standingStatus === 'AVAILABLE' && entry.match.stageId !== null
+    );
+    if (availableResult) {
+      return this.contextFiltersFromMatch(availableResult.match.stageId, availableResult.match.groupId);
+    }
+
+    const scopedMatch = calendar.matches.find((match) => match.stageId !== null);
+    return scopedMatch ? this.contextFiltersFromMatch(scopedMatch.stageId, scopedMatch.groupId) : null;
+  }
+
+  private contextFiltersFromMatch(stageId: number | null, groupId: number | null): PublicTournamentContextFilters | null {
+    if (stageId === null) {
+      return null;
+    }
+
+    return groupId === null ? { stageId } : { stageId, groupId };
   }
 
   private dateLabel(value: string | null): string {
